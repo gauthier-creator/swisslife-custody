@@ -1,28 +1,35 @@
-import { API_BASE, STORAGE_KEYS } from '../config/constants';
+import { API_BASE } from '../config/constants';
 
-const getHeaders = () => ({
-  'Content-Type': 'application/json',
-  'x-sf-instance-url': localStorage.getItem(STORAGE_KEYS.SF_INSTANCE_URL) || '',
-  'x-sf-access-token': localStorage.getItem(STORAGE_KEYS.SF_ACCESS_TOKEN) || '',
-});
+const headers = { 'Content-Type': 'application/json' };
+
+// Check if Salesforce is configured server-side
+export async function getSalesforceStatus() {
+  try {
+    const res = await fetch(`${API_BASE}/api/salesforce/status`, { headers });
+    if (!res.ok) return { configured: false };
+    return res.json();
+  } catch {
+    return { configured: false };
+  }
+}
 
 export async function fetchClients(search = '') {
   const soql = search
     ? `SELECT Id, Name, Phone, Industry, Type, AnnualRevenue, CreatedDate, BillingCity, BillingCountry, Website, Description FROM Account WHERE Name LIKE '%${search}%' ORDER BY Name LIMIT 50`
     : `SELECT Id, Name, Phone, Industry, Type, AnnualRevenue, CreatedDate, BillingCity, BillingCountry, Website, Description FROM Account ORDER BY Name LIMIT 50`;
 
-  const res = await fetch(`${API_BASE}/api/salesforce/services/data/v59.0/query/?q=${encodeURIComponent(soql)}`, {
-    headers: getHeaders(),
-  });
-  if (!res.ok) throw new Error('Salesforce query failed');
+  const res = await fetch(`${API_BASE}/api/salesforce/services/data/v59.0/query/?q=${encodeURIComponent(soql)}`, { headers });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    if (err.mock) throw new Error('MOCK_MODE');
+    throw new Error('Salesforce query failed');
+  }
   const data = await res.json();
   return (data.records || []).map(mapAccount);
 }
 
 export async function fetchClientById(id) {
-  const res = await fetch(`${API_BASE}/api/salesforce/services/data/v59.0/sobjects/Account/${id}`, {
-    headers: getHeaders(),
-  });
+  const res = await fetch(`${API_BASE}/api/salesforce/services/data/v59.0/sobjects/Account/${id}`, { headers });
   if (!res.ok) throw new Error('Client not found');
   const data = await res.json();
   return mapAccount(data);
@@ -30,19 +37,19 @@ export async function fetchClientById(id) {
 
 export async function fetchContacts(accountId) {
   const soql = `SELECT Id, FirstName, LastName, Email, Phone, Title, Department FROM Contact WHERE AccountId = '${accountId}' ORDER BY LastName`;
-  const res = await fetch(`${API_BASE}/api/salesforce/services/data/v59.0/query/?q=${encodeURIComponent(soql)}`, {
-    headers: getHeaders(),
-  });
+  const res = await fetch(`${API_BASE}/api/salesforce/services/data/v59.0/query/?q=${encodeURIComponent(soql)}`, { headers });
   if (!res.ok) return [];
   const data = await res.json();
   return data.records || [];
 }
 
 export async function testConnection() {
-  const res = await fetch(`${API_BASE}/api/salesforce/services/data/v59.0/limits`, {
-    headers: getHeaders(),
-  });
-  return res.ok;
+  try {
+    const status = await getSalesforceStatus();
+    return status.configured;
+  } catch {
+    return false;
+  }
 }
 
 function mapAccount(a) {

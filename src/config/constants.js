@@ -11,11 +11,3 @@ export const SUPPORTED_NETWORKS = [
   { id: 'ArbitrumOne', name: 'Arbitrum', symbol: 'ETH', icon: 'A', color: '#28A0F0' },
   { id: 'Base', name: 'Base', symbol: 'ETH', icon: 'B', color: '#0052FF' },
 ];
-
-export const STORAGE_KEYS = {
-  SF_INSTANCE_URL: 'sl_sf_instance_url',
-  SF_ACCESS_TOKEN: 'sl_sf_access_token',
-  DFNS_CONFIGURED: 'sl_dfns_configured',
-  DFNS_TOKEN: 'sl_dfns_token',
-  DFNS_APP_ID: 'sl_dfns_app_id',
-};

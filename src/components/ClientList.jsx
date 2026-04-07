@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchClients } from '../services/salesforceApi';
+import { fetchClients, getSalesforceStatus } from '../services/salesforceApi';
 import { mockClients } from '../data/mockClients';
-import { supabase } from '../lib/supabase';
 import { fmtEUR, Badge, EmptyState, Spinner } from './shared';
 
 export default function ClientList({ onSelectClient }) {
@@ -9,13 +8,12 @@ export default function ClientList({ onSelectClient }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [error, setError] = useState(null);
-  const [isDemo, setIsDemo] = useState(null); // null = not yet known
+  const [isDemo, setIsDemo] = useState(null);
 
-  // Load config first, then clients
+  // Auto-detect: ask server if SF is configured
   useEffect(() => {
-    supabase.from('custody_api_config').select('sf_instance_url').limit(1).single().then(({ data }) => {
-      const demo = !data || data.sf_instance_url === 'mock';
-      setIsDemo(demo);
+    getSalesforceStatus().then(status => {
+      setIsDemo(!status.configured);
     }).catch(() => setIsDemo(true));
   }, []);
 
@@ -33,13 +31,17 @@ export default function ClientList({ onSelectClient }) {
         setClients(data);
       }
     } catch (err) {
-      setError(err.message);
-      setClients(mockClients);
+      if (err.message === 'MOCK_MODE') {
+        setIsDemo(true);
+        setClients(mockClients);
+      } else {
+        setError(err.message);
+        setClients(mockClients);
+      }
     }
     setLoading(false);
   }, []);
 
-  // Load clients once isDemo is known
   useEffect(() => {
     if (isDemo !== null) loadClients('', isDemo);
   }, [isDemo, loadClients]);

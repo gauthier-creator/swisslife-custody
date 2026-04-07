@@ -2,129 +2,135 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { testDfnsConnection } from '../services/dfnsApi';
-import { inputCls, labelCls, Spinner } from './shared';
+import { getSalesforceStatus } from '../services/salesforceApi';
+import { API_BASE } from '../config/constants';
+import { Spinner } from './shared';
 
 export default function ConfigPage({ onConfigured }) {
-  const { isAdmin, profile } = useAuth();
-  const [sfUrl, setSfUrl] = useState('');
-  const [sfToken, setSfToken] = useState('');
-  const [useMock, setUseMock] = useState(true);
-  const [testing, setTesting] = useState(false);
+  const { isAdmin } = useAuth();
+  const [testingDfns, setTestingDfns] = useState(false);
   const [dfnsStatus, setDfnsStatus] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [config, setConfig] = useState(null);
+  const [sfStatus, setSfStatus] = useState(null);
+  const [loadingSf, setLoadingSf] = useState(true);
 
-  // Load existing config
   useEffect(() => {
-    supabase.from('custody_api_config').select('*').limit(1).single().then(({ data }) => {
-      if (data) {
-        setConfig(data);
-        setSfUrl(data.sf_instance_url === 'mock' ? '' : (data.sf_instance_url || ''));
-        setSfToken(data.sf_access_token === 'mock' ? '' : (data.sf_access_token || ''));
-        setUseMock(data.sf_instance_url === 'mock');
-      }
-    });
+    getSalesforceStatus().then(s => { setSfStatus(s); setLoadingSf(false); });
   }, []);
 
   if (!isAdmin) return null;
 
   const handleTestDfns = async () => {
-    setTesting(true);
+    setTestingDfns(true);
     try {
       const ok = await testDfnsConnection();
       setDfnsStatus(ok);
-    } catch {
-      setDfnsStatus(false);
-    }
-    setTesting(false);
+    } catch { setDfnsStatus(false); }
+    setTestingDfns(false);
   };
 
-  const handleSave = async () => {
-    setSaving(true);
-    const updates = {
-      sf_instance_url: useMock ? 'mock' : sfUrl,
-      sf_access_token: useMock ? 'mock' : sfToken,
-      dfns_configured: true,
-      updated_by: profile.id,
-      updated_at: new Date().toISOString(),
-    };
-
-    if (config?.id) {
-      await supabase.from('custody_api_config').update(updates).eq('id', config.id);
-    } else {
-      await supabase.from('custody_api_config').insert(updates);
-    }
-
-    setSaving(false);
-    onConfigured?.();
+  const handleTestSf = async () => {
+    setLoadingSf(true);
+    const s = await getSalesforceStatus();
+    setSfStatus(s);
+    setLoadingSf(false);
   };
 
   return (
     <div>
       <div className="mb-6">
         <h2 className="text-[20px] font-semibold text-[#0F0F10]">Configuration</h2>
-        <p className="text-[13px] text-[#787881] mt-1">Parametres d'integration API — Admin uniquement</p>
+        <p className="text-[13px] text-[#787881] mt-1">Statut des integrations — Admin uniquement</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Salesforce */}
         <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[14px] font-semibold text-[#0F0F10]">Salesforce CRM</h3>
-            <label className="flex items-center gap-2 text-[12px] text-[#787881] cursor-pointer">
-              <input type="checkbox" checked={useMock} onChange={(e) => setUseMock(e.target.checked)} className="rounded" />
-              Mode demo
-            </label>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-[#00A1E0] rounded-xl flex items-center justify-center">
+              <span className="text-white text-[14px] font-bold">SF</span>
+            </div>
+            <div>
+              <h3 className="text-[14px] font-semibold text-[#0F0F10]">Salesforce CRM</h3>
+              <p className="text-[12px] text-[#787881]">Connexion OAuth server-side</p>
+            </div>
           </div>
-          {!useMock && (
+
+          {loadingSf ? (
+            <div className="py-4 text-center"><Spinner size="w-5 h-5" /></div>
+          ) : sfStatus?.configured ? (
             <div className="space-y-3">
-              <div>
-                <label className={labelCls}>Instance URL</label>
-                <input type="url" value={sfUrl} onChange={e => setSfUrl(e.target.value)} placeholder="https://yourorg.salesforce.com" className={inputCls} />
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#059669]" />
+                <span className="text-[13px] text-[#059669] font-medium">Connecte</span>
               </div>
-              <div>
-                <label className={labelCls}>Access Token</label>
-                <input type="password" value={sfToken} onChange={e => setSfToken(e.target.value)} placeholder="Bearer token" className={inputCls} />
+              {sfStatus.instanceUrl && (
+                <p className="text-[12px] text-[#787881] font-mono bg-[rgba(0,0,23,0.03)] rounded-lg px-3 py-2">
+                  {sfStatus.instanceUrl}
+                </p>
+              )}
+              <button onClick={handleTestSf}
+                className="px-4 py-2 text-[12px] font-medium rounded-xl border border-[rgba(0,0,29,0.08)] hover:bg-[#FAFAF9] transition-colors">
+                Rafraichir le statut
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#F59E0B]" />
+                <span className="text-[13px] text-[#F59E0B] font-medium">Mode demo (donnees fictives)</span>
+              </div>
+              <div className="bg-[rgba(0,0,23,0.025)] rounded-xl p-4 text-[12px] text-[#787881] space-y-2">
+                <p className="font-semibold text-[#0F0F10]">Pour connecter Salesforce, ajoutez ces variables d'environnement au serveur :</p>
+                <div className="font-mono text-[11px] bg-white rounded-lg p-3 space-y-1 border border-[rgba(0,0,29,0.06)]">
+                  <p>SF_LOGIN_URL=https://login.salesforce.com</p>
+                  <p>SF_CLIENT_ID=votre_connected_app_id</p>
+                  <p>SF_CLIENT_SECRET=votre_secret</p>
+                  <p>SF_USERNAME=votre_user@org.com</p>
+                  <p>SF_PASSWORD=votre_password</p>
+                  <p>SF_SECURITY_TOKEN=votre_token</p>
+                </div>
+                <p>Creez une <strong>Connected App</strong> dans Salesforce Setup → App Manager → New Connected App, activez OAuth et cochez "Full access".</p>
               </div>
             </div>
-          )}
-          {useMock && (
-            <p className="text-[12px] text-[#059669] font-medium mt-2">Donnees de demonstration actives</p>
           )}
         </div>
 
         {/* Dfns */}
         <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-6">
-          <h3 className="text-[14px] font-semibold text-[#0F0F10] mb-4">Dfns Custody</h3>
-          <p className="text-[12px] text-[#787881] mb-4">
-            L'API Dfns est configuree cote serveur via les variables d'environnement (.env). Le token PAT et la cle privee sont securises sur le backend.
-          </p>
-          <button
-            onClick={handleTestDfns}
-            disabled={testing}
-            className="px-4 py-2 text-[13px] font-medium rounded-xl border border-[rgba(0,0,29,0.08)] hover:bg-[#FAFAF9] transition-colors disabled:opacity-50 flex items-center gap-2"
-          >
-            {testing ? <><Spinner size="w-4 h-4" /> Test en cours...</> : 'Tester la connexion Dfns'}
-          </button>
-          {dfnsStatus !== null && (
-            <p className={`text-[12px] mt-3 font-medium ${dfnsStatus ? 'text-[#059669]' : 'text-[#DC2626]'}`}>
-              {dfnsStatus ? 'Dfns connecte — API fonctionnelle' : 'Connexion echouee — verifiez le .env du serveur'}
-            </p>
-          )}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-[#0F0F10] rounded-xl flex items-center justify-center">
+              <span className="text-white text-[14px] font-bold">Df</span>
+            </div>
+            <div>
+              <h3 className="text-[14px] font-semibold text-[#0F0F10]">Dfns Custody</h3>
+              <p className="text-[12px] text-[#787881]">API PAT + User Action Signing</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {dfnsStatus !== null && (
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${dfnsStatus ? 'bg-[#059669]' : 'bg-[#DC2626]'}`} />
+                <span className={`text-[13px] font-medium ${dfnsStatus ? 'text-[#059669]' : 'text-[#DC2626]'}`}>
+                  {dfnsStatus ? 'API connectee' : 'Connexion echouee'}
+                </span>
+              </div>
+            )}
+            <button
+              onClick={handleTestDfns}
+              disabled={testingDfns}
+              className="px-4 py-2 text-[12px] font-medium rounded-xl border border-[rgba(0,0,29,0.08)] hover:bg-[#FAFAF9] transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {testingDfns ? <><Spinner size="w-4 h-4" /> Test...</> : 'Tester la connexion'}
+            </button>
+            <div className="bg-[rgba(0,0,23,0.025)] rounded-xl p-4 text-[12px] text-[#787881]">
+              <p>Configure via variables d'environnement : <code className="text-[#6366F1]">DFNS_API_TOKEN</code>, <code className="text-[#6366F1]">DFNS_APP_ID</code>, <code className="text-[#6366F1]">DFNS_CRED_ID</code>, <code className="text-[#6366F1]">DFNS_PRIVATE_KEY</code></p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="mt-6 flex justify-end">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="px-6 py-2.5 bg-[#0F0F10] text-white rounded-xl text-[14px] font-medium hover:bg-[#292524] transition-colors disabled:opacity-50 flex items-center gap-2"
-        >
-          {saving ? <><Spinner size="w-4 h-4" /> Sauvegarde...</> : 'Sauvegarder la configuration'}
-        </button>
-      </div>
-
-      {/* Users management section */}
+      {/* Users management */}
       <UserManagement />
     </div>
   );
