@@ -1,7 +1,25 @@
 import { useAuth } from '../context/AuthContext';
 
+const roleBadge = {
+  admin: { label: 'Admin', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+  banquier: { label: 'Banquier', cls: 'bg-blue-50 text-blue-700 border-blue-200' },
+};
+
 export default function Layout({ children, section, onNavigate }) {
-  const { clearConfig } = useAuth();
+  const { signOut, profile, isAdmin } = useAuth();
+
+  const tabs = [
+    { id: 'clients', label: 'Clients' },
+    { id: 'wallets', label: 'Wallets' },
+    { id: 'policies', label: 'Policies' },
+  ];
+
+  // Admin-only tab
+  if (isAdmin) {
+    tabs.push({ id: 'config', label: 'Configuration' });
+  }
+
+  const badge = roleBadge[profile?.role] || roleBadge.banquier;
 
   return (
     <div className="min-h-screen bg-[#FAFAF9]">
@@ -21,11 +39,7 @@ export default function Layout({ children, section, onNavigate }) {
 
           {/* Nav tabs */}
           <div className="flex items-center gap-1 bg-[rgba(0,0,23,0.03)] rounded-lg p-0.5">
-            {[
-              { id: 'clients', label: 'Clients' },
-              { id: 'wallets', label: 'Wallets' },
-              { id: 'policies', label: 'Policies' },
-            ].map(tab => (
+            {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => onNavigate(tab.id)}
@@ -40,17 +54,28 @@ export default function Layout({ children, section, onNavigate }) {
             ))}
           </div>
 
-          {/* Right */}
+          {/* Right — user info */}
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#059669]" />
-              <span className="text-[12px] text-[#059669] font-medium">Connected</span>
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full bg-[#0F0F10] flex items-center justify-center">
+                <span className="text-white text-[10px] font-bold">
+                  {(profile?.full_name || profile?.email || '?').slice(0, 2).toUpperCase()}
+                </span>
+              </div>
+              <div className="hidden sm:block">
+                <p className="text-[12px] font-medium text-[#0F0F10] leading-tight">
+                  {profile?.full_name || profile?.email}
+                </p>
+                <span className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded border ${badge.cls}`}>
+                  {badge.label}
+                </span>
+              </div>
             </div>
             <button
-              onClick={clearConfig}
+              onClick={signOut}
               className="text-[12px] text-[#A8A29E] hover:text-[#DC2626] transition-colors"
             >
-              Disconnect
+              Deconnexion
             </button>
           </div>
         </div>

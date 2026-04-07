@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { listWallets, createWallet, getWalletAssets, transferAsset, getWalletHistory } from '../services/dfnsApi';
 import { SUPPORTED_NETWORKS } from '../config/constants';
 import { fmtEUR, Badge, Modal, Spinner, EmptyState, inputCls, selectCls, labelCls } from './shared';
@@ -7,8 +6,6 @@ import { fmtEUR, Badge, Modal, Spinner, EmptyState, inputCls, selectCls, labelCl
 const truncAddr = (a, n = 8) => a ? `${a.slice(0, n)}...${a.slice(-n)}` : '—';
 
 export default function ClientDetail({ client, onBack }) {
-  const { dfnsConfig } = useAuth();
-  const isDemo = dfnsConfig.token === 'mock' || dfnsConfig.token === 'demo';
   const [tab, setTab] = useState('wallets');
   const [wallets, setWallets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,12 +24,8 @@ export default function ClientDetail({ client, onBack }) {
   const loadWallets = async () => {
     setLoading(true);
     try {
-      if (isDemo) {
-        setWallets(DEMO_WALLETS.filter(w => w.externalId === client.id));
-      } else {
-        const all = await listWallets(client.id);
-        setWallets(all);
-      }
+      const all = await listWallets(client.id);
+      setWallets(all);
     } catch { setWallets([]); }
     setLoading(false);
   };
@@ -40,13 +33,8 @@ export default function ClientDetail({ client, onBack }) {
   const handleCreate = async () => {
     setCreating(true);
     try {
-      if (isDemo) {
-        const w = { id: `wa-demo-${Date.now()}`, network: newWallet.network, name: newWallet.name, address: '0x' + Math.random().toString(16).slice(2, 42), status: 'Active', externalId: client.id, dateCreated: new Date().toISOString() };
-        setWallets(prev => [...prev, w]);
-      } else {
-        await createWallet({ network: newWallet.network, name: newWallet.name, externalId: client.id, tags: [`client:${client.name}`] });
-        await loadWallets();
-      }
+      await createWallet({ network: newWallet.network, name: newWallet.name, externalId: client.id, tags: [`client:${client.name}`] });
+      await loadWallets();
       setShowCreate(false);
       setNewWallet({ name: '', network: 'EthereumSepolia' });
     } catch (err) { alert(err.message); }
@@ -58,14 +46,9 @@ export default function ClientDetail({ client, onBack }) {
     setAssets(null);
     setHistory([]);
     try {
-      if (isDemo) {
-        setAssets({ assets: [{ symbol: 'ETH', balance: '1.245', kind: 'Native', quotes: { USD: 3102.5 } }], netWorth: { USD: 3860.6 } });
-        setHistory(DEMO_HISTORY);
-      } else {
-        const [a, h] = await Promise.all([getWalletAssets(w.id), getWalletHistory(w.id)]);
-        setAssets(a);
-        setHistory(h.items || []);
-      }
+      const [a, h] = await Promise.all([getWalletAssets(w.id), getWalletHistory(w.id)]);
+      setAssets(a);
+      setHistory(h.items || []);
     } catch { /* ignore */ }
   };
 
@@ -73,11 +56,7 @@ export default function ClientDetail({ client, onBack }) {
     if (!selectedWallet) return;
     setSending(true);
     try {
-      if (isDemo) {
-        setHistory(prev => [{ id: `tx-${Date.now()}`, kind: transfer.kind, direction: 'Out', to: transfer.to, value: transfer.amount, timestamp: new Date().toISOString(), status: 'Confirmed' }, ...prev]);
-      } else {
-        await transferAsset(selectedWallet.id, transfer);
-      }
+      await transferAsset(selectedWallet.id, transfer);
       setShowTransfer(false);
       setTransfer({ to: '', amount: '', kind: 'Native' });
     } catch (err) { alert(err.message); }
@@ -355,18 +334,3 @@ export default function ClientDetail({ client, onBack }) {
   );
 }
 
-// Demo data
-const DEMO_WALLETS = [
-  { id: 'wa-demo-001', network: 'EthereumSepolia', name: 'Wallet ETH Principal', address: '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD38', status: 'Active', externalId: '001SF001', dateCreated: '2024-11-15T10:30:00Z' },
-  { id: 'wa-demo-002', network: 'Bitcoin', name: 'Cold Storage BTC', address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh', status: 'Active', externalId: '001SF001', dateCreated: '2024-11-20T14:00:00Z' },
-  { id: 'wa-demo-003', network: 'Polygon', name: 'Wallet Polygon', address: '0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199', status: 'Active', externalId: '001SF002', dateCreated: '2024-12-01T09:00:00Z' },
-  { id: 'wa-demo-004', network: 'EthereumSepolia', name: 'Treasury ETH', address: '0xdD2FD4581271e230360230F9337D5c0430Bf44C0', status: 'Active', externalId: '001SF002', dateCreated: '2024-10-05T11:15:00Z' },
-  { id: 'wa-demo-005', network: 'Solana', name: 'Wallet SOL', address: '7EcDhSYGxXyscszYEp35KHN8vvw3svAuLKTzXwCFLtV', status: 'Active', externalId: '001SF004', dateCreated: '2025-01-10T16:00:00Z' },
-  { id: 'wa-demo-006', network: 'Cardano', name: 'ADA Custody', address: 'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3jcu5d8ps7zex2k2xt3uqxgjqnnj83ws8lhrn648jjxtwq2ytjqp', status: 'Active', externalId: '001SF005', dateCreated: '2025-02-01T08:30:00Z' },
-];
-
-const DEMO_HISTORY = [
-  { id: 'tx-001', kind: 'Native', direction: 'In', from: '0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B', value: '2.5 ETH', timestamp: '2025-03-01T14:30:00Z', status: 'Confirmed' },
-  { id: 'tx-002', kind: 'Native', direction: 'Out', to: '0x1234567890abcdef1234567890abcdef12345678', value: '0.5 ETH', timestamp: '2025-03-05T09:15:00Z', status: 'Confirmed' },
-  { id: 'tx-003', kind: 'Erc20', direction: 'In', from: '0xdead000000000000000000000000000000000000', value: '10,000 USDC', timestamp: '2025-03-10T11:00:00Z', status: 'Confirmed' },
-];

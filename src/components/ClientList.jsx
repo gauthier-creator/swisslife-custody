@@ -1,27 +1,29 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { fetchClients } from '../services/salesforceApi';
 import { mockClients } from '../data/mockClients';
-import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 import { fmtEUR, Badge, EmptyState, Spinner } from './shared';
 
 export default function ClientList({ onSelectClient }) {
-  const { sfConfig } = useAuth();
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [error, setError] = useState(null);
+  const [isDemo, setIsDemo] = useState(null); // null = not yet known
 
-  const isDemo = sfConfig.accessToken === 'mock';
-
+  // Load config first, then clients
   useEffect(() => {
-    loadClients();
+    supabase.from('custody_api_config').select('sf_instance_url').limit(1).single().then(({ data }) => {
+      const demo = !data || data.sf_instance_url === 'mock';
+      setIsDemo(demo);
+    }).catch(() => setIsDemo(true));
   }, []);
 
-  const loadClients = async (q = '') => {
+  const loadClients = useCallback(async (q = '', demo = true) => {
     setLoading(true);
     setError(null);
     try {
-      if (isDemo) {
+      if (demo) {
         const filtered = q
           ? mockClients.filter(c => c.name.toLowerCase().includes(q.toLowerCase()))
           : mockClients;
@@ -32,21 +34,24 @@ export default function ClientList({ onSelectClient }) {
       }
     } catch (err) {
       setError(err.message);
-      setClients(mockClients); // Fallback to mock
+      setClients(mockClients);
     }
     setLoading(false);
-  };
+  }, []);
+
+  // Load clients once isDemo is known
+  useEffect(() => {
+    if (isDemo !== null) loadClients('', isDemo);
+  }, [isDemo, loadClients]);
 
   const handleSearch = (e) => {
     setSearch(e.target.value);
-    // Debounce
     clearTimeout(window._searchTimeout);
-    window._searchTimeout = setTimeout(() => loadClients(e.target.value), 300);
+    window._searchTimeout = setTimeout(() => loadClients(e.target.value, isDemo), 300);
   };
 
   return (
     <div className="page-slide-in">
-      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-[22px] font-semibold text-[#0F0F10] tracking-tight">Clients</h2>
@@ -54,7 +59,6 @@ export default function ClientList({ onSelectClient }) {
             {clients.length} client{clients.length > 1 ? 's' : ''} {isDemo ? '(demo)' : 'Salesforce'}
           </p>
         </div>
-        {/* Search */}
         <div className="relative">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A8A29E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />

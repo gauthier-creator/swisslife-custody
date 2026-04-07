@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { listWallets } from '../services/dfnsApi';
 import { SUPPORTED_NETWORKS } from '../config/constants';
 import { Badge, Spinner, EmptyState } from './shared';
@@ -7,8 +6,6 @@ import { Badge, Spinner, EmptyState } from './shared';
 const truncAddr = (a, n = 8) => a ? `${a.slice(0, n)}...${a.slice(-n)}` : '—';
 
 export default function WalletList() {
-  const { dfnsConfig } = useAuth();
-  const isDemo = dfnsConfig.token === 'mock' || dfnsConfig.token === 'demo';
   const [wallets, setWallets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -18,13 +15,9 @@ export default function WalletList() {
   const load = async () => {
     setLoading(true);
     try {
-      if (isDemo) {
-        setWallets(DEMO_ALL_WALLETS);
-      } else {
-        const data = await listWallets();
-        setWallets(data);
-      }
-    } catch { setWallets(DEMO_ALL_WALLETS); }
+      const data = await listWallets();
+      setWallets(data);
+    } catch { setWallets([]); }
     setLoading(false);
   };
 
@@ -119,13 +112,3 @@ export default function WalletList() {
   );
 }
 
-const DEMO_ALL_WALLETS = [
-  { id: 'wa-001', network: 'EthereumSepolia', name: 'Dupont-Moreau ETH', address: '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD38', status: 'Active', externalId: '001SF001', dateCreated: '2024-11-15T10:30:00Z' },
-  { id: 'wa-002', network: 'Bitcoin', name: 'Dupont-Moreau BTC', address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh', status: 'Active', externalId: '001SF001', dateCreated: '2024-11-20T14:00:00Z' },
-  { id: 'wa-003', network: 'Polygon', name: 'Helvetia Polygon', address: '0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199', status: 'Active', externalId: '001SF002', dateCreated: '2024-12-01T09:00:00Z' },
-  { id: 'wa-004', network: 'EthereumSepolia', name: 'Helvetia Treasury', address: '0xdD2FD4581271e230360230F9337D5c0430Bf44C0', status: 'Active', externalId: '001SF002', dateCreated: '2024-10-05T11:15:00Z' },
-  { id: 'wa-005', network: 'Solana', name: 'Dr. Martens SOL', address: '7EcDhSYGxXyscszYEp35KHN8vvw3svAuLKTzXwCFLtV', status: 'Active', externalId: '001SF004', dateCreated: '2025-01-10T16:00:00Z' },
-  { id: 'wa-006', network: 'Cardano', name: 'Nordic ADA Custody', address: 'addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer', status: 'Active', externalId: '001SF005', dateCreated: '2025-02-01T08:30:00Z' },
-  { id: 'wa-007', network: 'ArbitrumOne', name: 'Al-Rashid Arbitrum', address: '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC', status: 'Active', externalId: '001SF007', dateCreated: '2025-01-22T13:45:00Z' },
-  { id: 'wa-008', network: 'Base', name: 'Bergmann Base', address: '0x90F79bf6EB2c4f870365E785982E1f101E93b906', status: 'Active', externalId: '001SF008', dateCreated: '2025-03-01T10:00:00Z' },
-];

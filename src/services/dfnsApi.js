@@ -1,15 +1,12 @@
-import { API_BASE, STORAGE_KEYS } from '../config/constants';
+import { API_BASE } from '../config/constants';
 
-const getHeaders = () => ({
-  'Content-Type': 'application/json',
-  'x-dfns-token': localStorage.getItem(STORAGE_KEYS.DFNS_TOKEN) || '',
-});
+const headers = { 'Content-Type': 'application/json' };
 
 // Wallets
 export async function createWallet({ network, name, externalId, tags }) {
   const res = await fetch(`${API_BASE}/api/dfns/wallets`, {
     method: 'POST',
-    headers: getHeaders(),
+    headers,
     body: JSON.stringify({ network, name, externalId, tags }),
   });
   if (!res.ok) throw new Error((await res.json()).message || 'Failed to create wallet');
@@ -18,7 +15,7 @@ export async function createWallet({ network, name, externalId, tags }) {
 
 export async function listWallets(externalId) {
   const params = new URLSearchParams({ limit: '200' });
-  const res = await fetch(`${API_BASE}/api/dfns/wallets?${params}`, { headers: getHeaders() });
+  const res = await fetch(`${API_BASE}/api/dfns/wallets?${params}`, { headers });
   if (!res.ok) throw new Error('Failed to list wallets');
   const data = await res.json();
   const items = data.items || [];
@@ -26,19 +23,19 @@ export async function listWallets(externalId) {
 }
 
 export async function getWallet(walletId) {
-  const res = await fetch(`${API_BASE}/api/dfns/wallets/${walletId}`, { headers: getHeaders() });
+  const res = await fetch(`${API_BASE}/api/dfns/wallets/${walletId}`, { headers });
   if (!res.ok) throw new Error('Wallet not found');
   return res.json();
 }
 
 export async function getWalletAssets(walletId) {
-  const res = await fetch(`${API_BASE}/api/dfns/wallets/${walletId}/assets?netWorth=true`, { headers: getHeaders() });
+  const res = await fetch(`${API_BASE}/api/dfns/wallets/${walletId}/assets?netWorth=true`, { headers });
   if (!res.ok) throw new Error('Failed to get wallet assets');
   return res.json();
 }
 
 export async function getWalletHistory(walletId) {
-  const res = await fetch(`${API_BASE}/api/dfns/wallets/${walletId}/history?limit=50`, { headers: getHeaders() });
+  const res = await fetch(`${API_BASE}/api/dfns/wallets/${walletId}/history?limit=50`, { headers });
   if (!res.ok) throw new Error('Failed to get wallet history');
   return res.json();
 }
@@ -48,7 +45,7 @@ export async function transferAsset(walletId, { kind, to, amount, contract }) {
   if (contract) body.contract = contract;
   const res = await fetch(`${API_BASE}/api/dfns/wallets/${walletId}/transfers`, {
     method: 'POST',
-    headers: getHeaders(),
+    headers,
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error((await res.json()).message || 'Transfer failed');
@@ -57,7 +54,7 @@ export async function transferAsset(walletId, { kind, to, amount, contract }) {
 
 // Policies
 export async function listPolicies() {
-  const res = await fetch(`${API_BASE}/api/dfns/policies`, { headers: getHeaders() });
+  const res = await fetch(`${API_BASE}/api/dfns/policies`, { headers });
   if (!res.ok) throw new Error('Failed to list policies');
   const data = await res.json();
   return data.items || [];
@@ -66,7 +63,7 @@ export async function listPolicies() {
 export async function createPolicy(policy) {
   const res = await fetch(`${API_BASE}/api/dfns/policies`, {
     method: 'POST',
-    headers: getHeaders(),
+    headers,
     body: JSON.stringify(policy),
   });
   if (!res.ok) throw new Error((await res.json()).message || 'Failed to create policy');
@@ -76,7 +73,7 @@ export async function createPolicy(policy) {
 // Test connection
 export async function testDfnsConnection() {
   try {
-    const res = await fetch(`${API_BASE}/api/dfns/test`, { headers: getHeaders() });
+    const res = await fetch(`${API_BASE}/api/dfns/test`, { headers });
     if (!res.ok) return false;
     const data = await res.json();
     return data.ok === true;

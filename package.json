@@ -12,6 +12,7 @@
   "dependencies": {
     "@dfns/sdk": "^0.8.13",
     "@dfns/sdk-keysigner": "^0.8.13",
+    "@supabase/supabase-js": "^2.101.1",
     "cors": "^2.8.6",
     "dotenv": "^17.4.1",
     "express": "^5.2.1",

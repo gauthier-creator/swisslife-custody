@@ -1,38 +1,81 @@
-import { createContext, useContext, useState, useCallback } from 'react';
-import { STORAGE_KEYS } from '../config/constants';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [configured, setConfigured] = useState(() => {
-    return !!(localStorage.getItem(STORAGE_KEYS.SF_ACCESS_TOKEN) && localStorage.getItem(STORAGE_KEYS.DFNS_TOKEN));
-  });
+  const [session, setSession] = useState(undefined); // undefined = loading
+  const [profile, setProfile] = useState(null);
 
-  const saveConfig = useCallback(({ sfInstanceUrl, sfAccessToken, dfnsToken, dfnsAppId }) => {
-    if (sfInstanceUrl) localStorage.setItem(STORAGE_KEYS.SF_INSTANCE_URL, sfInstanceUrl);
-    if (sfAccessToken) localStorage.setItem(STORAGE_KEYS.SF_ACCESS_TOKEN, sfAccessToken);
-    if (dfnsToken) localStorage.setItem(STORAGE_KEYS.DFNS_TOKEN, dfnsToken);
-    if (dfnsAppId) localStorage.setItem(STORAGE_KEYS.DFNS_APP_ID, dfnsAppId);
-    setConfigured(true);
+  // Fetch profile from custody_profiles
+  const fetchProfile = useCallback(async (userId) => {
+    const { data, error } = await supabase
+      .from('custody_profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    if (!error && data) setProfile(data);
+    return data;
   }, []);
 
-  const clearConfig = useCallback(() => {
-    Object.values(STORAGE_KEYS).forEach(k => localStorage.removeItem(k));
-    setConfigured(false);
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      if (s?.user) fetchProfile(s.user.id);
+    });
+
+    // Listen to auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+      if (s?.user) {
+        fetchProfile(s.user.id);
+      } else {
+        setProfile(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [fetchProfile]);
+
+  const signIn = useCallback(async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    return data;
   }, []);
 
-  const sfConfig = {
-    instanceUrl: localStorage.getItem(STORAGE_KEYS.SF_INSTANCE_URL) || '',
-    accessToken: localStorage.getItem(STORAGE_KEYS.SF_ACCESS_TOKEN) || '',
-  };
+  const signUp = useCallback(async (email, password, fullName, role = 'banquier') => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName, role } },
+    });
+    if (error) throw error;
+    return data;
+  }, []);
 
-  const dfnsConfig = {
-    token: localStorage.getItem(STORAGE_KEYS.DFNS_TOKEN) || '',
-    appId: localStorage.getItem(STORAGE_KEYS.DFNS_APP_ID) || '',
-  };
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
+    setProfile(null);
+    setSession(null);
+  }, []);
+
+  const isAdmin = profile?.role === 'admin';
+  const isBanquier = profile?.role === 'banquier';
+  const loading = session === undefined;
 
   return (
-    <AuthContext.Provider value={{ configured, saveConfig, clearConfig, sfConfig, dfnsConfig }}>
+    <AuthContext.Provider value={{
+      session,
+      profile,
+      loading,
+      isAdmin,
+      isBanquier,
+      signIn,
+      signUp,
+      signOut,
+      fetchProfile,
+    }}>
       {children}
     </AuthContext.Provider>
   );

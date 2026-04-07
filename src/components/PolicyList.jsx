@@ -1,11 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { listPolicies, createPolicy } from '../services/dfnsApi';
 import { Badge, Modal, Spinner, EmptyState, inputCls, selectCls, labelCls } from './shared';
 
 export default function PolicyList() {
-  const { dfnsConfig } = useAuth();
-  const isDemo = dfnsConfig.token === 'mock' || dfnsConfig.token === 'demo';
   const [policies, setPolicies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -17,38 +14,22 @@ export default function PolicyList() {
   const load = async () => {
     setLoading(true);
     try {
-      if (isDemo) {
-        setPolicies(DEMO_POLICIES);
-      } else {
-        const data = await listPolicies();
-        setPolicies(data);
-      }
-    } catch { setPolicies(DEMO_POLICIES); }
+      const data = await listPolicies();
+      setPolicies(data);
+    } catch { setPolicies([]); }
     setLoading(false);
   };
 
   const handleCreate = async () => {
     setCreating(true);
     try {
-      if (isDemo) {
-        setPolicies(prev => [...prev, {
-          id: `pol-${Date.now()}`,
-          name: form.name,
-          description: form.description,
-          status: 'Active',
-          activityKind: form.activityKind,
-          rule: { kind: form.rule },
-          dateCreated: new Date().toISOString(),
-        }]);
-      } else {
-        await createPolicy({
-          name: form.name,
-          description: form.description,
-          activityKind: form.activityKind,
-          rule: { kind: form.rule, configuration: {} },
-        });
-        await load();
-      }
+      await createPolicy({
+        name: form.name,
+        description: form.description,
+        activityKind: form.activityKind,
+        rule: { kind: form.rule, configuration: {} },
+      });
+      await load();
       setShowCreate(false);
       setForm({ name: '', description: '', activityKind: 'Wallets:Sign', rule: 'AlwaysRequireApproval' });
     } catch (err) { alert(err.message); }
@@ -156,9 +137,3 @@ export default function PolicyList() {
   );
 }
 
-const DEMO_POLICIES = [
-  { id: 'pol-001', name: 'Approbation transferts > 50k EUR', description: 'Tout transfert depassant 50 000 EUR necessite une double approbation', status: 'Active', activityKind: 'Wallets:TransferAsset', rule: { kind: 'AlwaysRequireApproval' }, dateCreated: '2024-09-01T10:00:00Z' },
-  { id: 'pol-002', name: 'Signature multi-party', description: 'Les signatures de wallet necessitent 2/3 approbateurs', status: 'Active', activityKind: 'Wallets:Sign', rule: { kind: 'RequestApproval' }, dateCreated: '2024-10-15T14:30:00Z' },
-  { id: 'pol-003', name: 'Whitelist adresses', description: 'Transferts uniquement vers des adresses pre-approuvees', status: 'Active', activityKind: 'Wallets:TransferAsset', rule: { kind: 'AlwaysRequireApproval' }, dateCreated: '2025-01-20T09:00:00Z' },
-  { id: 'pol-004', name: 'Alerte gros volumes', description: 'Notification pour tout mouvement > 100k EUR', status: 'Pending', activityKind: 'Wallets:IncomingTransaction', rule: { kind: 'RequestApproval' }, dateCreated: '2025-03-01T11:00:00Z' },
-];
