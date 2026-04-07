@@ -303,11 +303,20 @@ app.get('/api/dfns/wallets', async (req, res) => {
 
 app.post('/api/dfns/wallets', async (req, res) => {
   try {
-    const data = await dfns.wallets.createWallet({ body: req.body });
+    // Sanitize body — DFNS only allows alphanumerics and _.:/+- in tags/name
+    const body = { ...req.body };
+    const sanitize = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_.:/+\-]/g, '');
+    if (body.tags && Array.isArray(body.tags)) {
+      body.tags = body.tags.map(sanitize).filter(t => t.length > 0);
+    }
+    if (body.name) {
+      body.name = sanitize(body.name);
+    }
+    const data = await dfns.wallets.createWallet({ body });
     res.json(data);
   } catch (err) {
     console.error('createWallet error:', err.message);
-    res.status((err.httpStatus > 99 && err.httpStatus < 1000) ? err.httpStatus : 500).json({ error: err.message });
+    res.status((err.httpStatus > 99 && err.httpStatus < 1000) ? err.httpStatus : 500).json({ error: err.message, details: err.context || null });
   }
 });
 

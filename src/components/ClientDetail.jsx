@@ -23,17 +23,24 @@ export default function ClientDetail({ client, onBack }) {
   const [sending, setSending] = useState(false);
   const [contacts, setContacts] = useState([]);
   const [loadingContacts, setLoadingContacts] = useState(true);
+  const [error, setError] = useState(null);
 
   const parsed = parseDescription(client.description);
+  const kycValid = parsed.kyc?.toLowerCase().includes('valid');
 
   useEffect(() => { loadWallets(); loadContacts(); }, []);
 
   const loadWallets = async () => {
     setLoading(true);
+    setError(null);
     try {
       const all = await listWallets(client.id);
       setWallets(all);
-    } catch { setWallets([]); }
+    } catch (err) {
+      console.error('loadWallets error:', err);
+      setError(err.message);
+      setWallets([]);
+    }
     setLoading(false);
   };
 
@@ -47,13 +54,28 @@ export default function ClientDetail({ client, onBack }) {
   };
 
   const handleCreate = async () => {
+    // Compliance check: KYC must be validated before creating wallets
+    if (!kycValid) {
+      alert('Compliance: Le KYC du client doit etre valide avant de creer un wallet. Veuillez completer la verification KYC dans Salesforce.');
+      return;
+    }
     setCreating(true);
+    setError(null);
     try {
-      await createWallet({ network: newWallet.network, name: newWallet.name, externalId: client.id, tags: [`client:${client.name}`] });
+      await createWallet({
+        network: newWallet.network,
+        name: newWallet.name,
+        externalId: client.id,
+        tags: [`client:${client.name}`],
+      });
       await loadWallets();
       setShowCreate(false);
       setNewWallet({ name: '', network: 'EthereumSepolia' });
-    } catch (err) { alert(err.message); }
+    } catch (err) {
+      console.error('createWallet error:', err);
+      setError(err.message);
+      alert('Erreur creation wallet: ' + err.message);
+    }
     setCreating(false);
   };
 
@@ -65,17 +87,33 @@ export default function ClientDetail({ client, onBack }) {
       const [a, h] = await Promise.all([getWalletAssets(w.id), getWalletHistory(w.id)]);
       setAssets(a);
       setHistory(h.items || []);
-    } catch { /* ignore */ }
+    } catch (err) {
+      console.error('selectWallet error:', err);
+    }
   };
 
   const handleTransfer = async () => {
     if (!selectedWallet) return;
+    // Compliance: double confirmation for transfers
+    const net = SUPPORTED_NETWORKS.find(n => n.id === selectedWallet.network);
+    const confirmMsg = `CONFIRMATION DE TRANSFERT\n\nDepuis: ${selectedWallet.name}\nVers: ${transfer.to}\nMontant: ${transfer.amount} ${net?.symbol || ''}\nType: ${transfer.kind}\n\nConfirmez-vous ce transfert ?`;
+    if (!confirm(confirmMsg)) return;
     setSending(true);
+    setError(null);
     try {
       await transferAsset(selectedWallet.id, transfer);
       setShowTransfer(false);
       setTransfer({ to: '', amount: '', kind: 'Native' });
-    } catch (err) { alert(err.message); }
+      // Refresh history
+      if (selectedWallet) {
+        const h = await getWalletHistory(selectedWallet.id);
+        setHistory(h.items || []);
+      }
+    } catch (err) {
+      console.error('transfer error:', err);
+      setError(err.message);
+      alert('Erreur transfert: ' + err.message);
+    }
     setSending(false);
   };
 
@@ -325,10 +363,40 @@ export default function ClientDetail({ client, onBack }) {
       {/* ========== WALLETS TAB ========== */}
       {tab === 'wallets' && (
         <div>
+          {/* KYC Warning */}
+          {!kycValid && (
+            <div className="bg-[#FFFBEB] border border-[rgba(217,119,6,0.15)] rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
+              <svg className="w-5 h-5 text-[#D97706] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.072 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <div>
+                <p className="text-[13px] font-medium text-[#92400E]">Compliance : KYC non valide</p>
+                <p className="text-[12px] text-[#B45309]">La creation de wallets et les transferts necessitent un KYC valide. Completez la verification dans Salesforce.</p>
+              </div>
+            </div>
+          )}
+
+          {/* Error banner */}
+          {error && (
+            <div className="bg-[#FEF2F2] border border-[rgba(220,38,38,0.15)] rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
+              <svg className="w-5 h-5 text-[#DC2626] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="flex-1">
+                <p className="text-[13px] font-medium text-[#991B1B]">Erreur Dfns</p>
+                <p className="text-[12px] text-[#B91C1C] font-mono">{error}</p>
+              </div>
+              <button onClick={() => setError(null)} className="text-[#DC2626] hover:text-[#991B1B]">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-[16px] font-semibold text-[#0F0F10]">Wallets Dfns</h3>
             <button onClick={() => setShowCreate(true)}
-              className="px-4 py-2 bg-[#0F0F10] text-white text-[13px] font-medium rounded-xl hover:bg-[#1a1a1a] transition-colors">
+              disabled={!kycValid}
+              className="px-4 py-2 bg-[#0F0F10] text-white text-[13px] font-medium rounded-xl hover:bg-[#1a1a1a] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
               + Creer un wallet
             </button>
           </div>
@@ -373,7 +441,9 @@ export default function ClientDetail({ client, onBack }) {
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-[16px] font-semibold text-[#0F0F10]">{selectedWallet.name || 'Wallet'}</h4>
                 <button onClick={() => setShowTransfer(true)}
-                  className="px-4 py-2 bg-[#6366F1] text-white text-[13px] font-medium rounded-xl hover:bg-[#5558E6] transition-colors">
+                  disabled={!kycValid}
+                  className="px-4 py-2 bg-[#6366F1] text-white text-[13px] font-medium rounded-xl hover:bg-[#5558E6] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  title={!kycValid ? 'KYC requis pour les transferts' : ''}>
                   Envoyer
                 </button>
               </div>
