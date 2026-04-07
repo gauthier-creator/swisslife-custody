@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  fetchDocuments, uploadDocument, getDocumentUrl, updateDocumentStatus, deleteDocument,
+  fetchDocuments, uploadDocument, getDocumentPreviewUrl, updateDocumentStatus, deleteDocument,
   DOCUMENT_TYPES, DOCUMENT_CATEGORIES, STATUS_CONFIG, formatFileSize
 } from '../services/documentService';
 import { useAuth } from '../context/AuthContext';
@@ -29,19 +29,14 @@ export default function DocumentsPanel({ client }) {
     setLoading(false);
   };
 
-  const handlePreview = async (doc) => {
-    try {
-      const url = await getDocumentUrl(doc.file_path);
-      setPreviewUrl(url);
-      setPreviewName(doc.document_name);
-    } catch (err) {
-      alert('Impossible de charger le document: ' + err.message);
-    }
+  const handlePreview = (doc) => {
+    setPreviewUrl(getDocumentPreviewUrl(doc.versionId));
+    setPreviewName(doc.document_name);
   };
 
   const handleStatusChange = async (doc, newStatus) => {
     try {
-      await updateDocumentStatus(doc.id, newStatus, user?.email || 'admin');
+      await updateDocumentStatus(doc.id, doc.versionId, newStatus, doc.description);
       await loadDocs();
     } catch (err) {
       alert('Erreur: ' + err.message);
@@ -51,7 +46,7 @@ export default function DocumentsPanel({ client }) {
   const handleDelete = async (doc) => {
     if (!confirm(`Supprimer "${doc.document_name}" ?`)) return;
     try {
-      await deleteDocument(doc.id, doc.file_path);
+      await deleteDocument(doc.id);
       await loadDocs();
     } catch (err) {
       alert('Erreur: ' + err.message);
@@ -92,6 +87,16 @@ export default function DocumentsPanel({ client }) {
         <StatCard label="Expires" value={stats.expired} color="#9333EA" />
       </div>
 
+      {/* Info banner */}
+      <div className="bg-[#EEF2FF] border border-[rgba(99,102,241,0.15)] rounded-xl px-4 py-3 flex items-center gap-3">
+        <svg className="w-5 h-5 text-[#6366F1] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p className="text-[12px] text-[#4338CA]">
+          Les documents sont stockes dans <strong>Salesforce Files</strong>. Vous pouvez aussi les ajouter directement depuis la fiche Account dans Salesforce CRM.
+        </p>
+      </div>
+
       {/* Toolbar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -116,7 +121,7 @@ export default function DocumentsPanel({ client }) {
       ) : filteredDocs.length === 0 ? (
         <EmptyState
           title="Aucun document"
-          description="Ajoutez les pieces justificatives du client pour completer le dossier KYC"
+          description="Ajoutez les pieces justificatives depuis Salesforce ou via le bouton ci-dessus"
           icon={<svg className="w-6 h-6 text-[#A8A29E]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
         />
       ) : (
@@ -127,9 +132,9 @@ export default function DocumentsPanel({ client }) {
                 <th className="px-5 py-3 text-[11px] text-[#A8A29E] font-medium text-left uppercase tracking-wider">Document</th>
                 <th className="px-5 py-3 text-[11px] text-[#A8A29E] font-medium text-left uppercase tracking-wider">Type</th>
                 <th className="px-5 py-3 text-[11px] text-[#A8A29E] font-medium text-left uppercase tracking-wider">Statut</th>
+                <th className="px-5 py-3 text-[11px] text-[#A8A29E] font-medium text-left uppercase tracking-wider">Format</th>
                 <th className="px-5 py-3 text-[11px] text-[#A8A29E] font-medium text-left uppercase tracking-wider">Taille</th>
                 <th className="px-5 py-3 text-[11px] text-[#A8A29E] font-medium text-left uppercase tracking-wider">Date</th>
-                <th className="px-5 py-3 text-[11px] text-[#A8A29E] font-medium text-left uppercase tracking-wider">Expiration</th>
                 <th className="px-5 py-3 text-[11px] text-[#A8A29E] font-medium text-right uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -138,20 +143,24 @@ export default function DocumentsPanel({ client }) {
                 const typeInfo = DOCUMENT_TYPES[doc.document_type] || DOCUMENT_TYPES.other;
                 const statusInfo = STATUS_CONFIG[doc.status] || STATUS_CONFIG.pending;
                 const catInfo = DOCUMENT_CATEGORIES[typeInfo.category] || DOCUMENT_CATEGORIES.other;
+                const isPdf = doc.file_type === 'PDF';
+                const isImage = ['JPG', 'JPEG', 'PNG', 'WEBP'].includes(doc.file_type);
                 return (
                   <tr key={doc.id} className="border-b border-[rgba(0,0,29,0.04)] hover:bg-[rgba(0,0,23,0.015)] transition-colors">
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 bg-[rgba(0,0,23,0.03)] rounded-lg flex items-center justify-center text-[16px]">
-                          {doc.mime_type?.includes('pdf') ? (
+                        <div className="w-9 h-9 bg-[rgba(0,0,23,0.03)] rounded-lg flex items-center justify-center">
+                          {isPdf ? (
                             <svg className="w-5 h-5 text-[#DC2626]" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/><path d="M8 12h1.5c.83 0 1.5.67 1.5 1.5S10.33 15 9.5 15H9v1.5H8V12zm1 2h.5c.28 0 .5-.22.5-.5s-.22-.5-.5-.5H9v1zm3-2h1.5c.83 0 1.5.67 1.5 1.5v1c0 .83-.67 1.5-1.5 1.5H12V12zm1 3h.5c.28 0 .5-.22.5-.5v-1c0-.28-.22-.5-.5-.5H13v2zm3-3h2v1h-1v.5h1v1h-1V16h-1v-4z"/></svg>
+                          ) : isImage ? (
+                            <svg className="w-5 h-5 text-[#0EA5E9]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                           ) : (
-                            <span>{typeInfo.icon}</span>
+                            <svg className="w-5 h-5 text-[#787881]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                           )}
                         </div>
                         <div>
-                          <p className="text-[13px] font-medium text-[#0F0F10] max-w-[200px] truncate">{doc.document_name}</p>
-                          {doc.notes && <p className="text-[11px] text-[#A8A29E] max-w-[200px] truncate">{doc.notes}</p>}
+                          <p className="text-[13px] font-medium text-[#0F0F10] max-w-[250px] truncate">{doc.document_name}</p>
+                          {doc.description && <p className="text-[11px] text-[#A8A29E] max-w-[250px] truncate">{doc.description.replace(/\[(VERIFIED|VALIDE|REJECTED|REJETE|EXPIRED|EXPIRE|PENDING)\]/gi, '').trim()}</p>}
                         </div>
                       </div>
                     </td>
@@ -168,27 +177,23 @@ export default function DocumentsPanel({ client }) {
                         {statusInfo.label}
                       </span>
                     </td>
+                    <td className="px-5 py-3.5">
+                      <Badge>{doc.file_type}</Badge>
+                    </td>
                     <td className="px-5 py-3.5 text-[12px] text-[#787881] tabular-nums">
                       {formatFileSize(doc.file_size)}
                     </td>
                     <td className="px-5 py-3.5 text-[12px] text-[#787881]">
                       {new Date(doc.created_at).toLocaleDateString('fr-FR')}
                     </td>
-                    <td className="px-5 py-3.5 text-[12px] text-[#787881]">
-                      {doc.expiry_date ? (
-                        <span className={new Date(doc.expiry_date) < new Date() ? 'text-[#DC2626] font-medium' : ''}>
-                          {new Date(doc.expiry_date).toLocaleDateString('fr-FR')}
-                        </span>
-                      ) : '—'}
-                    </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center justify-end gap-1">
                         <ActionBtn icon="eye" title="Voir" onClick={() => handlePreview(doc)} />
-                        {isAdmin && doc.status === 'pending' && (
-                          <>
-                            <ActionBtn icon="check" title="Valider" onClick={() => handleStatusChange(doc, 'verified')} variant="success" />
-                            <ActionBtn icon="x" title="Rejeter" onClick={() => handleStatusChange(doc, 'rejected')} variant="error" />
-                          </>
+                        {isAdmin && doc.status !== 'verified' && (
+                          <ActionBtn icon="check" title="Valider" onClick={() => handleStatusChange(doc, 'verified')} variant="success" />
+                        )}
+                        {isAdmin && doc.status !== 'rejected' && (
+                          <ActionBtn icon="x" title="Rejeter" onClick={() => handleStatusChange(doc, 'rejected')} variant="error" />
                         )}
                         {isAdmin && (
                           <ActionBtn icon="trash" title="Supprimer" onClick={() => handleDelete(doc)} variant="error" />
@@ -231,8 +236,7 @@ export default function DocumentsPanel({ client }) {
 function UploadModal({ isOpen, onClose, clientId, clientName, onUploaded }) {
   const [docType, setDocType] = useState('passport');
   const [file, setFile] = useState(null);
-  const [notes, setNotes] = useState('');
-  const [expiryDate, setExpiryDate] = useState('');
+  const [description, setDescription] = useState('');
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const fileRef = useRef(null);
@@ -240,8 +244,7 @@ function UploadModal({ isOpen, onClose, clientId, clientName, onUploaded }) {
   const reset = () => {
     setDocType('passport');
     setFile(null);
-    setNotes('');
-    setExpiryDate('');
+    setDescription('');
     setUploading(false);
     setDragActive(false);
   };
@@ -263,8 +266,7 @@ function UploadModal({ isOpen, onClose, clientId, clientName, onUploaded }) {
         salesforceAccountId: clientId,
         documentType: docType,
         file,
-        notes: notes || null,
-        expiryDate: expiryDate || null,
+        description: description || null,
       });
       await onUploaded();
       handleClose();
@@ -275,10 +277,10 @@ function UploadModal({ isOpen, onClose, clientId, clientName, onUploaded }) {
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Ajouter un document" maxWidth="max-w-lg">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Ajouter un document dans Salesforce" maxWidth="max-w-lg">
       <div className="space-y-4">
         <div className="bg-[rgba(0,0,23,0.02)] rounded-xl px-4 py-3 text-[12px] text-[#787881]">
-          Client: <strong className="text-[#0F0F10]">{clientName}</strong>
+          Client: <strong className="text-[#0F0F10]">{clientName}</strong> — Le fichier sera stocke dans Salesforce Files
         </div>
 
         {/* Document type */}
@@ -290,7 +292,7 @@ function UploadModal({ isOpen, onClose, clientId, clientName, onUploaded }) {
                 {Object.entries(DOCUMENT_TYPES)
                   .filter(([, v]) => v.category === catKey)
                   .map(([key, v]) => (
-                    <option key={key} value={key}>{v.icon} {v.label}</option>
+                    <option key={key} value={key}>{v.label}</option>
                   ))}
               </optgroup>
             ))}
@@ -341,21 +343,15 @@ function UploadModal({ isOpen, onClose, clientId, clientName, onUploaded }) {
             onChange={e => { if (e.target.files[0]) setFile(e.target.files[0]); }} />
         </div>
 
-        {/* Expiry date */}
-        <div>
-          <label className={labelCls}>Date d'expiration (optionnel)</label>
-          <input type="date" className={inputCls} value={expiryDate} onChange={e => setExpiryDate(e.target.value)} />
-        </div>
-
-        {/* Notes */}
+        {/* Description */}
         <div>
           <label className={labelCls}>Notes (optionnel)</label>
-          <input className={inputCls} placeholder="Ex: Copie certifiee conforme" value={notes} onChange={e => setNotes(e.target.value)} />
+          <input className={inputCls} placeholder="Ex: Copie certifiee conforme, expire le..." value={description} onChange={e => setDescription(e.target.value)} />
         </div>
 
         <button onClick={handleUpload} disabled={uploading || !file}
           className="w-full py-2.5 bg-[#0F0F10] text-white text-[14px] font-medium rounded-xl hover:bg-[#1a1a1a] transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
-          {uploading ? <><Spinner size="w-4 h-4" /> Upload en cours...</> : 'Ajouter le document'}
+          {uploading ? <><Spinner size="w-4 h-4" /> Upload vers Salesforce...</> : 'Ajouter le document'}
         </button>
       </div>
     </Modal>
@@ -369,11 +365,11 @@ function RequiredDocsChecklist({ documents, clientType }) {
   const isInstitutional = clientType === 'Other' || clientType === 'Institutional';
 
   const required = [
-    { type: 'passport', alt: 'id_card', label: 'Piece d\'identite (passeport ou CI)' },
+    { type: 'passport', alt: 'id_card', label: "Piece d'identite (passeport ou CI)" },
     { type: 'proof_of_address', label: 'Justificatif de domicile' },
     { type: 'source_of_funds', label: 'Origine des fonds' },
     { type: 'beneficial_owner_declaration', label: 'Declaration ayant droit economique' },
-    { type: 'onboarding_form', label: 'Formulaire d\'entree en relation' },
+    { type: 'onboarding_form', label: "Formulaire d'entree en relation" },
     { type: 'mandate_agreement', label: 'Convention de mandat' },
     ...(isInstitutional ? [
       { type: 'company_registration', label: 'Extrait RC / K-bis' },
@@ -389,14 +385,16 @@ function RequiredDocsChecklist({ documents, clientType }) {
   };
 
   const completed = required.filter(r => getDocStatus(r) === 'verified').length;
+  const uploaded = required.filter(r => getDocStatus(r) !== 'missing').length;
 
   return (
     <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[14px] font-semibold text-[#0F0F10]">Checklist documentaire</h3>
-        <span className="text-[12px] font-medium text-[#787881]">
-          {completed}/{required.length} valides
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-[12px] text-[#787881]">{uploaded} fournis</span>
+          <span className="text-[12px] font-medium text-[#059669]">{completed}/{required.length} valides</span>
+        </div>
       </div>
 
       {/* Progress bar */}
@@ -429,10 +427,10 @@ function RequiredDocsChecklist({ documents, clientType }) {
                 {req.label}
               </span>
               {status === 'pending' && (
-                <span className="text-[10px] font-medium text-[#F59E0B] bg-[#FFFBEB] px-1.5 py-0.5 rounded">En attente de validation</span>
+                <span className="text-[10px] font-medium text-[#F59E0B] bg-[#FFFBEB] px-1.5 py-0.5 rounded">En attente</span>
               )}
               {status === 'rejected' && (
-                <span className="text-[10px] font-medium text-[#DC2626] bg-[#FEF2F2] px-1.5 py-0.5 rounded">Rejete — a renvoyer</span>
+                <span className="text-[10px] font-medium text-[#DC2626] bg-[#FEF2F2] px-1.5 py-0.5 rounded">Rejete</span>
               )}
             </div>
           );

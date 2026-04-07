@@ -1,20 +1,20 @@
-import { supabase } from '../lib/supabase';
+import { API_BASE } from '../config/constants';
 
-// Document type labels (FR)
+// Document type labels (FR) — used to categorize SF files by their Description tag
 export const DOCUMENT_TYPES = {
-  passport: { label: 'Passeport', category: 'kyc', icon: '🪪' },
-  id_card: { label: "Carte d'identite", category: 'kyc', icon: '🪪' },
-  proof_of_address: { label: 'Justificatif de domicile', category: 'kyc', icon: '🏠' },
-  bank_reference: { label: 'Reference bancaire', category: 'kyc', icon: '🏦' },
-  company_registration: { label: 'Extrait RC / K-bis', category: 'kyb', icon: '🏢' },
-  articles_of_association: { label: 'Statuts de la societe', category: 'kyb', icon: '📜' },
-  tax_certificate: { label: 'Attestation fiscale', category: 'kyc', icon: '📋' },
-  risk_assessment: { label: 'Evaluation du risque', category: 'onboarding', icon: '⚖️' },
-  onboarding_form: { label: "Formulaire d'entree en relation", category: 'onboarding', icon: '📝' },
-  mandate_agreement: { label: 'Convention de mandat', category: 'onboarding', icon: '✍️' },
-  beneficial_owner_declaration: { label: 'Declaration ayant droit economique', category: 'kyc', icon: '👤' },
-  source_of_funds: { label: 'Origine des fonds', category: 'kyc', icon: '💰' },
-  other: { label: 'Autre document', category: 'other', icon: '📎' },
+  passport: { label: 'Passeport', category: 'kyc' },
+  id_card: { label: "Carte d'identite", category: 'kyc' },
+  proof_of_address: { label: 'Justificatif de domicile', category: 'kyc' },
+  bank_reference: { label: 'Reference bancaire', category: 'kyc' },
+  company_registration: { label: 'Extrait RC / K-bis', category: 'kyb' },
+  articles_of_association: { label: 'Statuts de la societe', category: 'kyb' },
+  tax_certificate: { label: 'Attestation fiscale', category: 'kyc' },
+  risk_assessment: { label: 'Evaluation du risque', category: 'onboarding' },
+  onboarding_form: { label: "Formulaire d'entree en relation", category: 'onboarding' },
+  mandate_agreement: { label: 'Convention de mandat', category: 'onboarding' },
+  beneficial_owner_declaration: { label: 'Declaration ayant droit economique', category: 'kyc' },
+  source_of_funds: { label: 'Origine des fonds', category: 'kyc' },
+  other: { label: 'Autre document', category: 'other' },
 };
 
 export const DOCUMENT_CATEGORIES = {
@@ -24,6 +24,59 @@ export const DOCUMENT_CATEGORIES = {
   other: { label: 'Autres', color: '#787881' },
 };
 
+// Try to detect document type from title/description
+function detectDocumentType(title, description) {
+  const text = `${title} ${description}`.toLowerCase();
+  if (text.includes('passeport') || text.includes('passport')) return 'passport';
+  if (text.includes('carte') && text.includes('ident')) return 'id_card';
+  if (text.includes('domicile') || text.includes('proof of address') || text.includes('justificatif')) return 'proof_of_address';
+  if (text.includes('reference bancaire') || text.includes('bank ref')) return 'bank_reference';
+  if (text.includes('k-bis') || text.includes('kbis') || text.includes('extrait rc') || text.includes('company reg') || text.includes('registration')) return 'company_registration';
+  if (text.includes('statut') || text.includes('articles')) return 'articles_of_association';
+  if (text.includes('fiscal') || text.includes('tax')) return 'tax_certificate';
+  if (text.includes('risque') || text.includes('risk')) return 'risk_assessment';
+  if (text.includes('entree en relation') || text.includes('onboarding')) return 'onboarding_form';
+  if (text.includes('mandat') || text.includes('mandate')) return 'mandate_agreement';
+  if (text.includes('ayant droit') || text.includes('beneficial')) return 'beneficial_owner_declaration';
+  if (text.includes('origine') || text.includes('source of funds')) return 'source_of_funds';
+  if (text.includes('piece') && text.includes('ident')) return 'id_card';
+  return 'other';
+}
+
+// Fetch all documents for a Salesforce account (from SF Files)
+export async function fetchDocuments(salesforceAccountId) {
+  const res = await fetch(`${API_BASE}/api/sf-files/${salesforceAccountId}`);
+  if (!res.ok) throw new Error('Failed to fetch documents');
+  const files = await res.json();
+
+  // Map SF file structure to our document model
+  return files.map(f => {
+    const docType = detectDocumentType(f.title, f.description || '');
+    return {
+      id: f.id,                        // ContentDocument ID
+      document_name: f.title,
+      document_type: docType,
+      file_type: f.fileType,           // PDF, JPG, PNG...
+      file_size: f.size,
+      created_at: f.createdDate,
+      description: f.description,
+      versionId: f.versionId,          // for download
+      // SF files don't have status — we'll use description tags
+      status: parseStatusFromDescription(f.description),
+    };
+  });
+}
+
+// Parse status from description (convention: [VERIFIED], [PENDING], [REJECTED], [EXPIRED])
+function parseStatusFromDescription(desc) {
+  if (!desc) return 'pending';
+  const d = desc.toUpperCase();
+  if (d.includes('[VERIFIED]') || d.includes('[VALIDE]')) return 'verified';
+  if (d.includes('[REJECTED]') || d.includes('[REJETE]')) return 'rejected';
+  if (d.includes('[EXPIRED]') || d.includes('[EXPIRE]')) return 'expired';
+  return 'pending';
+}
+
 export const STATUS_CONFIG = {
   pending: { label: 'En attente', color: '#F59E0B', bg: '#FFFBEB' },
   verified: { label: 'Verifie', color: '#059669', bg: '#ECFDF5' },
@@ -31,96 +84,56 @@ export const STATUS_CONFIG = {
   expired: { label: 'Expire', color: '#9333EA', bg: '#FAF5FF' },
 };
 
-// Fetch all documents for a Salesforce account
-export async function fetchDocuments(salesforceAccountId) {
-  const { data, error } = await supabase
-    .from('client_documents')
-    .select('*')
-    .eq('salesforce_account_id', salesforceAccountId)
-    .order('created_at', { ascending: false });
+// Upload a document to Salesforce
+export async function uploadDocument({ salesforceAccountId, documentType, file, description }) {
+  const typeLabel = DOCUMENT_TYPES[documentType]?.label || documentType;
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('title', `${typeLabel} - ${file.name}`);
+  formData.append('description', `${typeLabel}. ${description || ''}`);
 
-  if (error) throw error;
-  return data || [];
-}
+  const res = await fetch(`${API_BASE}/api/sf-files/upload/${salesforceAccountId}`, {
+    method: 'POST',
+    body: formData,
+  });
 
-// Upload a document
-export async function uploadDocument({ salesforceAccountId, documentType, file, notes, expiryDate }) {
-  // 1. Upload file to storage
-  const fileExt = file.name.split('.').pop();
-  const filePath = `${salesforceAccountId}/${Date.now()}_${file.name}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from('client-documents')
-    .upload(filePath, file, { contentType: file.type });
-
-  if (uploadError) throw uploadError;
-
-  // 2. Create document record
-  const { data, error } = await supabase
-    .from('client_documents')
-    .insert({
-      salesforce_account_id: salesforceAccountId,
-      document_type: documentType,
-      document_name: file.name,
-      file_path: filePath,
-      file_size: file.size,
-      mime_type: file.type,
-      status: 'pending',
-      notes: notes || null,
-      expiry_date: expiryDate || null,
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
-}
-
-// Get signed URL for viewing/downloading a document
-export async function getDocumentUrl(filePath) {
-  const { data, error } = await supabase.storage
-    .from('client-documents')
-    .createSignedUrl(filePath, 3600); // 1h
-
-  if (error) throw error;
-  return data.signedUrl;
-}
-
-// Update document status (verify, reject, etc.)
-export async function updateDocumentStatus(docId, status, verifiedBy) {
-  const updates = {
-    status,
-    updated_at: new Date().toISOString(),
-  };
-  if (status === 'verified') {
-    updates.verified_by = verifiedBy;
-    updates.verified_at = new Date().toISOString();
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Upload failed');
   }
-
-  const { data, error } = await supabase
-    .from('client_documents')
-    .update(updates)
-    .eq('id', docId)
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
+  return res.json();
 }
 
-// Delete a document
-export async function deleteDocument(docId, filePath) {
-  // Delete file from storage
-  if (filePath) {
-    await supabase.storage.from('client-documents').remove([filePath]);
-  }
-  // Delete record
-  const { error } = await supabase
-    .from('client_documents')
-    .delete()
-    .eq('id', docId);
+// Get preview URL for a file (proxied through our server)
+export function getDocumentPreviewUrl(versionId) {
+  return `${API_BASE}/api/sf-files/download/${versionId}`;
+}
 
-  if (error) throw error;
+// Update document status (update description in Salesforce)
+export async function updateDocumentStatus(contentDocumentId, versionId, newStatus, currentDescription) {
+  // We update the ContentVersion description to include the status tag
+  const cleanDesc = (currentDescription || '').replace(/\[(VERIFIED|VALIDE|REJECTED|REJETE|EXPIRED|EXPIRE|PENDING)\]/gi, '').trim();
+  const statusTag = newStatus === 'verified' ? '[VERIFIED]' : newStatus === 'rejected' ? '[REJECTED]' : newStatus === 'expired' ? '[EXPIRED]' : '';
+  const newDesc = `${cleanDesc} ${statusTag}`.trim();
+
+  const res = await fetch(`${API_BASE}/api/salesforce/services/data/v59.0/sobjects/ContentVersion/${versionId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ Description: newDesc }),
+  });
+
+  if (!res.ok && res.status !== 204) {
+    throw new Error('Failed to update status');
+  }
+}
+
+// Delete a document from Salesforce
+export async function deleteDocument(contentDocumentId) {
+  const res = await fetch(`${API_BASE}/api/sf-files/${contentDocumentId}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Delete failed');
+  }
 }
 
 // Format file size

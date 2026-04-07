@@ -114,6 +114,160 @@ app.use('/api/salesforce', async (req, res) => {
 });
 
 // ============================================================
+// SALESFORCE FILES — Upload & Download proxy
+// ============================================================
+import multer from 'multer';
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 52_428_800 } });
+
+// List files for an Account
+app.get('/api/sf-files/:accountId', async (req, res) => {
+  if (!SF_CONFIGURED) return res.status(501).json({ error: 'Salesforce not configured' });
+  try {
+    const { accessToken, instanceUrl } = await getSalesforceToken();
+    const soql = `SELECT ContentDocument.Id, ContentDocument.Title, ContentDocument.FileType, ContentDocument.ContentSize, ContentDocument.CreatedDate, ContentDocument.Description, ContentDocument.LatestPublishedVersionId FROM ContentDocumentLink WHERE LinkedEntityId = '${req.params.accountId}' ORDER BY ContentDocument.CreatedDate DESC`;
+    const r = await fetch(`${instanceUrl}/services/data/v59.0/query/?q=${encodeURIComponent(soql)}`, {
+      headers: { 'Authorization': `Bearer ${accessToken}` },
+    });
+    const data = await r.json();
+    const files = (data.records || []).map(r => ({
+      id: r.ContentDocument.Id,
+      title: r.ContentDocument.Title,
+      fileType: r.ContentDocument.FileType,
+      size: r.ContentDocument.ContentSize,
+      createdDate: r.ContentDocument.CreatedDate,
+      description: r.ContentDocument.Description,
+      versionId: r.ContentDocument.LatestPublishedVersionId,
+    }));
+    res.json(files);
+  } catch (err) {
+    console.error('SF files list error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Download / preview a file (proxy binary through server)
+app.get('/api/sf-files/download/:versionId', async (req, res) => {
+  if (!SF_CONFIGURED) return res.status(501).json({ error: 'Salesforce not configured' });
+  try {
+    const { accessToken, instanceUrl } = await getSalesforceToken();
+    const r = await fetch(`${instanceUrl}/services/data/v59.0/sobjects/ContentVersion/${req.params.versionId}/VersionData`, {
+      headers: { 'Authorization': `Bearer ${accessToken}` },
+    });
+    if (!r.ok) return res.status(r.status).json({ error: 'Download failed' });
+    res.setHeader('Content-Type', r.headers.get('content-type') || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `inline`);
+    const buffer = Buffer.from(await r.arrayBuffer());
+    res.send(buffer);
+  } catch (err) {
+    console.error('SF file download error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Upload a file to Salesforce and link it to an Account
+app.post('/api/sf-files/upload/:accountId', upload.single('file'), async (req, res) => {
+  if (!SF_CONFIGURED) return res.status(501).json({ error: 'Salesforce not configured' });
+  if (!req.file) return res.status(400).json({ error: 'No file provided' });
+  try {
+    const { accessToken, instanceUrl } = await getSalesforceToken();
+    const { title, description } = req.body;
+
+    // 1. Create ContentVersion (multipart)
+    const boundary = '----FormBoundary' + Date.now();
+    const metadata = JSON.stringify({
+      Title: title || req.file.originalname,
+      PathOnClient: req.file.originalname,
+      Description: description || '',
+    });
+
+    const parts = [];
+    parts.push(`--${boundary}\r\nContent-Disposition: form-data; name="entity_content"\r\nContent-Type: application/json\r\n\r\n${metadata}\r\n`);
+    parts.push(`--${boundary}\r\nContent-Disposition: form-data; name="VersionData"; filename="${req.file.originalname}"\r\nContent-Type: ${req.file.mimetype}\r\n\r\n`);
+    const ending = `\r\n--${boundary}--\r\n`;
+
+    const body = Buffer.concat([
+      Buffer.from(parts[0]),
+      Buffer.from(parts[1]),
+      req.file.buffer,
+      Buffer.from(ending),
+    ]);
+
+    const cvRes = await fetch(`${instanceUrl}/services/data/v59.0/sobjects/ContentVersion`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body,
+    });
+
+    if (!cvRes.ok) {
+      const err = await cvRes.json().catch(() => ({}));
+      return res.status(cvRes.status).json({ error: err[0]?.message || 'Upload failed' });
+    }
+
+    const cvData = await cvRes.json();
+    const contentVersionId = cvData.id;
+
+    // 2. Get the ContentDocumentId
+    const cvDetail = await fetch(`${instanceUrl}/services/data/v59.0/sobjects/ContentVersion/${contentVersionId}`, {
+      headers: { 'Authorization': `Bearer ${accessToken}` },
+    });
+    const cvInfo = await cvDetail.json();
+    const contentDocumentId = cvInfo.ContentDocumentId;
+
+    // 3. Create ContentDocumentLink to Account
+    const linkRes = await fetch(`${instanceUrl}/services/data/v59.0/sobjects/ContentDocumentLink`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ContentDocumentId: contentDocumentId,
+        LinkedEntityId: req.params.accountId,
+        ShareType: 'V',
+        Visibility: 'AllUsers',
+      }),
+    });
+
+    if (!linkRes.ok) {
+      const err = await linkRes.json().catch(() => ({}));
+      // If "already linked" error, that's fine (auto-link to owner)
+      if (!err[0]?.message?.includes('already exists')) {
+        return res.status(linkRes.status).json({ error: err[0]?.message || 'Link failed' });
+      }
+    }
+
+    res.json({
+      contentVersionId,
+      contentDocumentId,
+      title: title || req.file.originalname,
+      size: req.file.size,
+    });
+  } catch (err) {
+    console.error('SF file upload error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a file from Salesforce
+app.delete('/api/sf-files/:contentDocumentId', async (req, res) => {
+  if (!SF_CONFIGURED) return res.status(501).json({ error: 'Salesforce not configured' });
+  try {
+    const { accessToken, instanceUrl } = await getSalesforceToken();
+    const r = await fetch(`${instanceUrl}/services/data/v59.0/sobjects/ContentDocument/${req.params.contentDocumentId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${accessToken}` },
+    });
+    if (!r.ok && r.status !== 204) {
+      return res.status(r.status).json({ error: 'Delete failed' });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('SF file delete error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
 // DFNS — SDK with User Action Signing
 // ============================================================
 let privateKey;
