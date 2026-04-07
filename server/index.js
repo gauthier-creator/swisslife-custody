@@ -10,16 +10,26 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
-app.use(cors({ origin: ['http://localhost:5174', 'http://localhost:5173'] }));
+
+// Allow all origins in production, specific ones in dev
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',')
+  : ['http://localhost:5174', 'http://localhost:5173'];
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 
-// Load private key for Dfns User Action Signing
-const privateKey = fs.readFileSync(path.join(__dirname, '..', 'dfns-private-key.pem'), 'utf8');
+// Load private key: env variable first, fallback to PEM file
+let privateKey;
+if (process.env.DFNS_PRIVATE_KEY) {
+  privateKey = process.env.DFNS_PRIVATE_KEY.replace(/\\n/g, '\n');
+} else {
+  privateKey = fs.readFileSync(path.join(__dirname, '..', 'dfns-private-key.pem'), 'utf8');
+}
 
 const signer = new AsymmetricKeySigner({
   credId: process.env.DFNS_CRED_ID,
   privateKey,
-  appOrigin: 'http://localhost:5174',
+  appOrigin: process.env.APP_ORIGIN || 'http://localhost:5174',
 });
 
 const dfns = new DfnsApiClient({
@@ -147,5 +157,14 @@ app.get('/api/dfns/test', async (req, res) => {
   }
 });
 
+// Serve static frontend in production
+const distPath = path.join(__dirname, '..', 'dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
+
 const PORT = process.env.PORT || 3002;
-app.listen(PORT, () => console.log(`Custody proxy server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Custody server running on port ${PORT}`));
