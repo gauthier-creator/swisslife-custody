@@ -172,4 +172,4 @@ if (fs.existsSync(distPath)) {
 }
 
 const PORT = process.env.PORT || 3002;
-app.listen(PORT, () => console.log(`Custody server running on port ${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`Custody server running on port ${PORT}`));
