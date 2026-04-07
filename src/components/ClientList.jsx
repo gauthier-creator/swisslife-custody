@@ -113,8 +113,8 @@ export default function ClientList({ onSelectClient }) {
                     {client.phone && <p className="text-[11px] text-[#A8A29E] mt-0.5">{client.phone}</p>}
                   </td>
                   <td className="px-5 py-3.5">
-                    <Badge variant={client.type === 'Institutional' ? 'info' : client.type === 'UHNWI' ? 'success' : 'default'}>
-                      {client.type || '—'}
+                    <Badge variant={client.type === 'Other' ? 'info' : client.type === 'Customer - Direct' ? 'success' : client.type === 'Institutional' ? 'info' : client.type === 'UHNWI' ? 'success' : 'default'}>
+                      {client.type === 'Customer - Direct' ? 'UHNWI' : client.type === 'Other' ? 'Institutionnel' : client.type || '—'}
                     </Badge>
                   </td>
                   <td className="px-5 py-3.5 text-[12px] text-[#787881]">

@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { listWallets, createWallet, getWalletAssets, transferAsset, getWalletHistory } from '../services/dfnsApi';
+import { fetchContacts, parseDescription } from '../services/salesforceApi';
+import DocumentsPanel from './DocumentsPanel';
 import { SUPPORTED_NETWORKS } from '../config/constants';
 import { fmtEUR, Badge, Modal, Spinner, EmptyState, inputCls, selectCls, labelCls } from './shared';
 
 const truncAddr = (a, n = 8) => a ? `${a.slice(0, n)}...${a.slice(-n)}` : '—';
+const fmtDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
 
 export default function ClientDetail({ client, onBack }) {
-  const [tab, setTab] = useState('wallets');
+  const [tab, setTab] = useState('profile');
   const [wallets, setWallets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -18,8 +21,12 @@ export default function ClientDetail({ client, onBack }) {
   const [showTransfer, setShowTransfer] = useState(false);
   const [transfer, setTransfer] = useState({ to: '', amount: '', kind: 'Native' });
   const [sending, setSending] = useState(false);
+  const [contacts, setContacts] = useState([]);
+  const [loadingContacts, setLoadingContacts] = useState(true);
 
-  useEffect(() => { loadWallets(); }, []);
+  const parsed = parseDescription(client.description);
+
+  useEffect(() => { loadWallets(); loadContacts(); }, []);
 
   const loadWallets = async () => {
     setLoading(true);
@@ -28,6 +35,15 @@ export default function ClientDetail({ client, onBack }) {
       setWallets(all);
     } catch { setWallets([]); }
     setLoading(false);
+  };
+
+  const loadContacts = async () => {
+    setLoadingContacts(true);
+    try {
+      const data = await fetchContacts(client.id);
+      setContacts(data);
+    } catch { setContacts([]); }
+    setLoadingContacts(false);
   };
 
   const handleCreate = async () => {
@@ -65,52 +81,248 @@ export default function ClientDetail({ client, onBack }) {
 
   const net = (id) => SUPPORTED_NETWORKS.find(n => n.id === id) || { icon: '?', color: '#999', name: id };
 
+  // KYC status badge
+  const kycVariant = parsed.kyc
+    ? parsed.kyc.toLowerCase().includes('valid') ? 'success'
+    : parsed.kyc.toLowerCase().includes('cours') ? 'warning'
+    : 'error'
+    : 'default';
+
+  // Risk profile color
+  const riskColor = parsed.risk
+    ? parsed.risk.toLowerCase().includes('agressif') ? 'text-[#DC2626]'
+    : parsed.risk.toLowerCase().includes('conservateur') ? 'text-[#059669]'
+    : 'text-[#D97706]'
+    : 'text-[#787881]';
+
   return (
     <div className="page-slide-in">
-      {/* Back + Client header */}
+      {/* Back */}
       <button onClick={onBack} className="flex items-center gap-2 text-[13px] text-[#787881] hover:text-[#0F0F10] transition-colors font-medium group mb-6">
         <svg className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
         Retour aux clients
       </button>
 
+      {/* Client Header Card */}
       <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-6 mb-6">
         <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-[#0F0F10] rounded-xl flex items-center justify-center text-white text-[14px] font-bold">
-                {client.name.charAt(0)}
-              </div>
-              <div>
-                <h2 className="text-[20px] font-bold text-[#0F0F10] tracking-tight">{client.name}</h2>
-                <p className="text-[13px] text-[#787881]">{[client.city, client.country].filter(Boolean).join(', ')}</p>
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-gradient-to-br from-[#0F0F10] to-[#374151] rounded-2xl flex items-center justify-center text-white text-[20px] font-bold shadow-sm">
+              {client.name.charAt(0)}
+            </div>
+            <div>
+              <h2 className="text-[22px] font-bold text-[#0F0F10] tracking-tight">{client.name}</h2>
+              <div className="flex items-center gap-3 mt-1">
+                <span className="text-[13px] text-[#787881]">
+                  {[client.street, client.postalCode, client.city, client.country].filter(Boolean).join(', ') || [client.city, client.country].filter(Boolean).join(', ') || '—'}
+                </span>
+                {client.type && (
+                  <Badge variant={client.type === 'Other' ? 'info' : client.type === 'Customer - Direct' ? 'success' : 'default'}>
+                    {client.type === 'Customer - Direct' ? 'UHNWI' : client.type === 'Other' ? 'Institutionnel' : client.type}
+                  </Badge>
+                )}
               </div>
             </div>
-            {client.description && <p className="text-[13px] text-[#787881] mt-2 max-w-xl">{client.description}</p>}
           </div>
           <div className="text-right">
-            <p className="text-[12px] text-[#A8A29E] font-medium">AUM</p>
-            <p className="text-[22px] font-bold text-[#0F0F10] tabular-nums">{client.aum ? fmtEUR(client.aum) : '—'}</p>
+            <p className="text-[11px] text-[#A8A29E] font-medium uppercase tracking-wider">AUM</p>
+            <p className="text-[26px] font-bold text-[#0F0F10] tabular-nums tracking-tight">{client.aum ? fmtEUR(client.aum) : '—'}</p>
+            {client.accountNumber && (
+              <p className="text-[12px] text-[#787881] mt-1 font-mono">N° {client.accountNumber}</p>
+            )}
+            <p className="text-[12px] text-[#A8A29E] mt-0.5">{wallets.length} wallet{wallets.length !== 1 ? 's' : ''} crypto</p>
           </div>
         </div>
-        <div className="flex items-center gap-4 mt-4 pt-4 border-t border-[rgba(0,0,29,0.06)]">
-          <div className="text-[12px]"><span className="text-[#A8A29E]">Type</span> <Badge variant={client.type === 'Institutional' ? 'info' : client.type === 'UHNWI' ? 'success' : 'default'}>{client.type}</Badge></div>
-          <div className="text-[12px]"><span className="text-[#A8A29E]">Industrie</span> <span className="text-[#0F0F10] font-medium ml-1">{client.industry || '—'}</span></div>
-          {client.phone && <div className="text-[12px]"><span className="text-[#A8A29E]">Tel</span> <span className="text-[#0F0F10] font-medium ml-1">{client.phone}</span></div>}
-          <div className="text-[12px]"><span className="text-[#A8A29E]">ID Salesforce</span> <span className="font-mono text-[#787881] ml-1 text-[11px]">{client.id}</span></div>
+
+        {/* Quick stats bar */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-5 pt-5 border-t border-[rgba(0,0,29,0.06)]">
+          <InfoPill label="Industrie" value={client.industry || '—'} />
+          <InfoPill label="Telephone" value={client.phone || '—'} />
+          <InfoPill label="KYC" value={parsed.kyc || 'Non renseigne'} badge badgeVariant={kycVariant} />
+          <InfoPill label="Profil de risque" value={parsed.risk || 'Non defini'} className={riskColor} />
+          <InfoPill label="Client depuis" value={fmtDate(client.createdDate)} />
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex items-center gap-1 bg-[rgba(0,0,23,0.03)] rounded-lg p-0.5 mb-6 w-fit">
-        {['wallets', 'transfers', 'history'].map(t => (
-          <button key={t} onClick={() => setTab(t)}
-            className={`px-4 py-1.5 text-[13px] font-medium rounded-md transition-all capitalize ${tab === t ? 'bg-white text-[#0F0F10] shadow-[0_1px_3px_rgba(0,0,0,0.06)]' : 'text-[#787881] hover:text-[#0F0F10]'}`}>
-            {t === 'wallets' ? `Wallets (${wallets.length})` : t === 'transfers' ? 'Transferts' : 'Historique'}
+        {[
+          { id: 'profile', label: 'Fiche client' },
+          { id: 'documents', label: 'Documents' },
+          { id: 'wallets', label: `Wallets (${wallets.length})` },
+          { id: 'transfers', label: 'Transferts' },
+          { id: 'history', label: 'Historique' },
+        ].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            className={`px-4 py-1.5 text-[13px] font-medium rounded-md transition-all ${tab === t.id ? 'bg-white text-[#0F0F10] shadow-[0_1px_3px_rgba(0,0,0,0.06)]' : 'text-[#787881] hover:text-[#0F0F10]'}`}>
+            {t.label}
           </button>
         ))}
       </div>
 
-      {/* Wallets Tab */}
+      {/* ========== PROFILE TAB ========== */}
+      {tab === 'profile' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left column: Informations generales + Adresse */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Description / A propos */}
+            {parsed.text && (
+              <SectionCard title="A propos">
+                <p className="text-[13px] text-[#787881] leading-relaxed">{parsed.text}</p>
+              </SectionCard>
+            )}
+
+            {/* Informations detaillees */}
+            <SectionCard title="Informations detaillees">
+              <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                <DetailField label="Nom complet" value={client.name} />
+                <DetailField label="Numero de compte" value={client.accountNumber || '—'} mono />
+                <DetailField label="Type de compte" value={client.type === 'Customer - Direct' ? 'UHNWI (Client direct)' : client.type === 'Other' ? 'Institutionnel' : client.type || '—'} />
+                <DetailField label="Industrie" value={client.industry || '—'} />
+                <DetailField label="Chiffre d'affaires / AUM" value={client.aum ? fmtEUR(client.aum) : '—'} />
+                <DetailField label="Telephone" value={client.phone || '—'} />
+                <DetailField label="Site web" value={client.website} link />
+                <DetailField label="Nombre d'employes" value={client.employees || '—'} />
+                <DetailField label="ID Salesforce" value={client.id} mono />
+              </div>
+            </SectionCard>
+
+            {/* Adresse */}
+            <SectionCard title="Adresse de facturation">
+              <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                <DetailField label="Rue" value={client.street || '—'} />
+                <DetailField label="Ville" value={client.city || '—'} />
+                <DetailField label="Code postal" value={client.postalCode || '—'} />
+                <DetailField label="Pays" value={client.country || '—'} />
+              </div>
+            </SectionCard>
+
+            {/* Contacts */}
+            <SectionCard title={`Contacts (${contacts.length})`}>
+              {loadingContacts ? (
+                <div className="py-6 text-center"><Spinner size="w-5 h-5" /></div>
+              ) : contacts.length === 0 ? (
+                <p className="text-[13px] text-[#A8A29E] py-4 text-center">Aucun contact associe</p>
+              ) : (
+                <div className="space-y-3">
+                  {contacts.map(c => (
+                    <div key={c.Id} className="flex items-center justify-between py-3 px-4 bg-[rgba(0,0,23,0.02)] rounded-xl hover:bg-[rgba(0,0,23,0.04)] transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 bg-[#EEF2FF] rounded-xl flex items-center justify-center text-[#6366F1] text-[13px] font-bold">
+                          {(c.FirstName?.[0] || '')}{(c.LastName?.[0] || '')}
+                        </div>
+                        <div>
+                          <p className="text-[13px] font-semibold text-[#0F0F10]">{[c.FirstName, c.LastName].filter(Boolean).join(' ')}</p>
+                          {c.Title && <p className="text-[11px] text-[#A8A29E]">{c.Title}</p>}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        {c.Email && <p className="text-[12px] text-[#787881]">{c.Email}</p>}
+                        {c.Phone && <p className="text-[11px] text-[#A8A29E]">{c.Phone}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </SectionCard>
+          </div>
+
+          {/* Right column: KYC / Compliance / Allocation */}
+          <div className="space-y-6">
+            {/* KYC Status */}
+            <SectionCard title="Conformite KYC">
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-3 h-3 rounded-full ${kycVariant === 'success' ? 'bg-[#059669]' : kycVariant === 'warning' ? 'bg-[#F59E0B]' : kycVariant === 'error' ? 'bg-[#DC2626]' : 'bg-[#A8A29E]'}`} />
+                  <div>
+                    <p className="text-[14px] font-semibold text-[#0F0F10]">
+                      {kycVariant === 'success' ? 'KYC Valide' : kycVariant === 'warning' ? 'KYC En cours' : kycVariant === 'error' ? 'KYC Rejete' : 'Non renseigne'}
+                    </p>
+                    {parsed.kyc && <p className="text-[12px] text-[#787881]">{parsed.kyc}</p>}
+                  </div>
+                </div>
+
+                {parsed.documents.length > 0 && (
+                  <div>
+                    <p className="text-[11px] font-medium text-[#A8A29E] uppercase tracking-wider mb-2">Documents fournis</p>
+                    <div className="space-y-1.5">
+                      {parsed.documents.map((doc, i) => (
+                        <div key={i} className="flex items-center gap-2 py-1.5 px-3 bg-[rgba(0,0,23,0.02)] rounded-lg">
+                          <svg className="w-3.5 h-3.5 text-[#059669] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="text-[12px] text-[#0F0F10]">{doc}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </SectionCard>
+
+            {/* Risk Profile */}
+            <SectionCard title="Profil de risque">
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                  parsed.risk?.toLowerCase().includes('agressif') ? 'bg-[#FEF2F2]' :
+                  parsed.risk?.toLowerCase().includes('conservateur') ? 'bg-[#ECFDF5]' : 'bg-[#FFFBEB]'
+                }`}>
+                  <svg className={`w-5 h-5 ${riskColor}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                  </svg>
+                </div>
+                <div>
+                  <p className={`text-[14px] font-semibold ${riskColor}`}>{parsed.risk || 'Non defini'}</p>
+                  {parsed.allocation && <p className="text-[12px] text-[#787881]">Cible: {parsed.allocation}</p>}
+                </div>
+              </div>
+              {parsed.allocation && (
+                <div className="bg-[rgba(0,0,23,0.02)] rounded-xl p-3">
+                  <p className="text-[12px] text-[#787881]">
+                    <span className="font-medium text-[#0F0F10]">Allocation crypto:</span> {parsed.allocation}
+                  </p>
+                </div>
+              )}
+            </SectionCard>
+
+            {/* Quick actions */}
+            <SectionCard title="Actions rapides">
+              <div className="space-y-2">
+                <button
+                  onClick={() => { setTab('wallets'); setShowCreate(true); }}
+                  className="w-full flex items-center gap-3 py-2.5 px-4 text-[13px] font-medium text-[#0F0F10] bg-[rgba(0,0,23,0.02)] rounded-xl hover:bg-[rgba(0,0,23,0.05)] transition-colors text-left"
+                >
+                  <svg className="w-4 h-4 text-[#6366F1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                  Creer un wallet
+                </button>
+                {client.website && (
+                  <a href={client.website.startsWith('http') ? client.website : `https://${client.website}`} target="_blank" rel="noopener noreferrer"
+                    className="w-full flex items-center gap-3 py-2.5 px-4 text-[13px] font-medium text-[#0F0F10] bg-[rgba(0,0,23,0.02)] rounded-xl hover:bg-[rgba(0,0,23,0.05)] transition-colors">
+                    <svg className="w-4 h-4 text-[#A8A29E]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                    Ouvrir le site web
+                  </a>
+                )}
+              </div>
+            </SectionCard>
+
+            {/* Metadata */}
+            <SectionCard title="Metadata Salesforce">
+              <div className="space-y-2.5">
+                <DetailField label="ID Salesforce" value={client.id} mono small />
+                <DetailField label="Proprietaire" value={client.ownerId || '—'} mono small />
+                <DetailField label="Date de creation" value={fmtDate(client.createdDate)} small />
+              </div>
+            </SectionCard>
+          </div>
+        </div>
+      )}
+
+      {/* ========== DOCUMENTS TAB ========== */}
+      {tab === 'documents' && (
+        <DocumentsPanel client={client} />
+      )}
+
+      {/* ========== WALLETS TAB ========== */}
       {tab === 'wallets' && (
         <div>
           <div className="flex items-center justify-between mb-4">
@@ -205,7 +417,7 @@ export default function ClientDetail({ client, onBack }) {
         </div>
       )}
 
-      {/* Transfers Tab */}
+      {/* ========== TRANSFERS TAB ========== */}
       {tab === 'transfers' && selectedWallet && (
         <div>
           <div className="flex items-center justify-between mb-4">
@@ -252,7 +464,7 @@ export default function ClientDetail({ client, onBack }) {
         <EmptyState title="Selectionnez un wallet" description="Choisissez un wallet dans l'onglet Wallets pour voir ses transferts" />
       )}
 
-      {/* History Tab */}
+      {/* ========== HISTORY TAB ========== */}
       {tab === 'history' && (
         <div>
           <h3 className="text-[16px] font-semibold text-[#0F0F10] mb-4">Historique global</h3>
@@ -334,3 +546,43 @@ export default function ClientDetail({ client, onBack }) {
   );
 }
 
+// ==========================================
+// Sub-components
+// ==========================================
+
+function SectionCard({ title, children }) {
+  return (
+    <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-6">
+      <h3 className="text-[14px] font-semibold text-[#0F0F10] mb-4">{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+function InfoPill({ label, value, badge, badgeVariant, className }) {
+  return (
+    <div className="bg-[rgba(0,0,23,0.02)] rounded-xl px-3.5 py-2.5">
+      <p className="text-[11px] text-[#A8A29E] font-medium mb-0.5">{label}</p>
+      {badge ? (
+        <Badge variant={badgeVariant}>{value}</Badge>
+      ) : (
+        <p className={`text-[13px] font-medium ${className || 'text-[#0F0F10]'} truncate`}>{value}</p>
+      )}
+    </div>
+  );
+}
+
+function DetailField({ label, value, mono, link, small }) {
+  const textSize = small ? 'text-[12px]' : 'text-[13px]';
+  return (
+    <div>
+      <p className={`text-[11px] text-[#A8A29E] font-medium mb-0.5 ${small ? '' : 'uppercase tracking-wider'}`}>{label}</p>
+      {link && value ? (
+        <a href={value.startsWith('http') ? value : `https://${value}`} target="_blank" rel="noopener noreferrer"
+          className={`${textSize} text-[#6366F1] hover:underline font-medium`}>{value}</a>
+      ) : (
+        <p className={`${textSize} ${mono ? 'font-mono text-[#787881]' : 'text-[#0F0F10]'} font-medium`}>{value || '—'}</p>
+      )}
+    </div>
+  );
+}
