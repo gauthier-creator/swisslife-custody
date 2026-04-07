@@ -11,6 +11,7 @@ export default function Layout({ children, section, onNavigate }) {
   const tabs = [
     { id: 'clients', label: 'Clients' },
     { id: 'wallets', label: 'Wallets' },
+    { id: 'compliance', label: 'Compliance' },
     { id: 'policies', label: 'Policies' },
   ];
 

@@ -2,7 +2,11 @@ import { useState, useEffect } from 'react';
 import { listWallets, createWallet, getWalletAssets, transferAsset, getWalletHistory } from '../services/dfnsApi';
 import { fetchContacts, parseDescription } from '../services/salesforceApi';
 import DocumentsPanel from './DocumentsPanel';
+import WhitelistPanel from './WhitelistPanel';
+import RiskConfigPanel from './RiskConfigPanel';
 import { SUPPORTED_NETWORKS } from '../config/constants';
+import { createApproval, checkTransferRisk } from '../services/complianceApi';
+import { useAuth } from '../context/AuthContext';
 import { fmtEUR, Badge, Modal, Spinner, EmptyState, inputCls, selectCls, labelCls } from './shared';
 
 const truncAddr = (a, n = 8) => a ? `${a.slice(0, n)}...${a.slice(-n)}` : '—';
@@ -24,6 +28,7 @@ export default function ClientDetail({ client, onBack }) {
   const [contacts, setContacts] = useState([]);
   const [loadingContacts, setLoadingContacts] = useState(true);
   const [error, setError] = useState(null);
+  const { user, isAdmin } = useAuth();
 
   const parsed = parseDescription(client.description);
   const kycValid = parsed.kyc?.toLowerCase().includes('valid');
@@ -94,25 +99,57 @@ export default function ClientDetail({ client, onBack }) {
 
   const handleTransfer = async () => {
     if (!selectedWallet) return;
-    // Compliance: double confirmation for transfers
-    const net = SUPPORTED_NETWORKS.find(n => n.id === selectedWallet.network);
-    const confirmMsg = `CONFIRMATION DE TRANSFERT\n\nDepuis: ${selectedWallet.name}\nVers: ${transfer.to}\nMontant: ${transfer.amount} ${net?.symbol || ''}\nType: ${transfer.kind}\n\nConfirmez-vous ce transfert ?`;
-    if (!confirm(confirmMsg)) return;
     setSending(true);
     setError(null);
     try {
-      await transferAsset(selectedWallet.id, transfer);
+      // 1. Pre-flight risk check
+      const riskCheck = await checkTransferRisk({
+        salesforceAccountId: client.id,
+        amount: transfer.amount,
+        network: selectedWallet.network,
+        destinationAddress: transfer.to,
+      }).catch(() => ({ allowed: true, warnings: [], blocks: [] }));
+
+      if (riskCheck.blocks && riskCheck.blocks.length > 0) {
+        alert('TRANSFERT BLOQUE PAR LA COMPLIANCE\n\n' + riskCheck.blocks.join('\n'));
+        setSending(false);
+        return;
+      }
+
+      let warningMsg = '';
+      if (riskCheck.warnings && riskCheck.warnings.length > 0) {
+        warningMsg = '\n\nAvertissements compliance:\n- ' + riskCheck.warnings.join('\n- ');
+      }
+
+      // 2. Double confirmation
+      const netInfo = SUPPORTED_NETWORKS.find(n => n.id === selectedWallet.network);
+      const confirmMsg = `DEMANDE DE TRANSFERT\n\nDepuis: ${selectedWallet.name}\nVers: ${transfer.to}\nMontant: ${transfer.amount} ${netInfo?.symbol || ''}\nType: ${transfer.kind}${warningMsg}\n\nLe transfert sera soumis a approbation (principe des 4 yeux).\nConfirmez-vous cette demande ?`;
+      if (!confirm(confirmMsg)) {
+        setSending(false);
+        return;
+      }
+
+      // 3. Create approval request (4-eye principle)
+      await createApproval({
+        walletId: selectedWallet.id,
+        walletName: selectedWallet.name,
+        walletNetwork: selectedWallet.network,
+        salesforceAccountId: client.id,
+        clientName: client.name,
+        destinationAddress: transfer.to,
+        amount: transfer.amount,
+        assetType: transfer.kind,
+        contractAddress: transfer.contract || null,
+        requestedByEmail: user?.email || 'unknown',
+      });
+
+      alert('Demande de transfert soumise avec succes.\n\nUn administrateur doit approuver la demande dans l\'onglet Compliance avant execution.');
       setShowTransfer(false);
       setTransfer({ to: '', amount: '', kind: 'Native' });
-      // Refresh history
-      if (selectedWallet) {
-        const h = await getWalletHistory(selectedWallet.id);
-        setHistory(h.items || []);
-      }
     } catch (err) {
       console.error('transfer error:', err);
       setError(err.message);
-      alert('Erreur transfert: ' + err.message);
+      alert('Erreur: ' + err.message);
     }
     setSending(false);
   };
@@ -343,6 +380,9 @@ export default function ClientDetail({ client, onBack }) {
               </div>
             </SectionCard>
 
+            {/* Risk Config */}
+            <RiskConfigPanel client={client} />
+
             {/* Metadata */}
             <SectionCard title="Metadata Salesforce">
               <div className="space-y-2.5">
@@ -484,6 +524,13 @@ export default function ClientDetail({ client, onBack }) {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Whitelist section in wallets tab */}
+      {tab === 'wallets' && (
+        <div className="mt-6">
+          <WhitelistPanel client={client} />
         </div>
       )}
 

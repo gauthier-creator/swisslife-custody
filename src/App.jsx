@@ -8,6 +8,7 @@ import ClientList from './components/ClientList';
 import ClientDetail from './components/ClientDetail';
 import WalletList from './components/WalletList';
 import PolicyList from './components/PolicyList';
+import ComplianceDashboard from './components/ComplianceDashboard';
 
 function AppInner() {
   const { session, profile, loading, isAdmin } = useAuth();
@@ -64,6 +65,7 @@ function AppInner() {
           <ClientDetail client={selectedClient} onBack={() => setSelectedClient(null)} />
         )}
         {section === 'wallets' && <WalletList />}
+        {section === 'compliance' && <ComplianceDashboard />}
         {section === 'policies' && <PolicyList />}
         {section === 'config' && isAdmin && (
           <ConfigPage onConfigured={() => toast('Configuration sauvegardee', 'success')} />
