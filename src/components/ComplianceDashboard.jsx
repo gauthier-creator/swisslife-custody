@@ -107,14 +107,15 @@ export default function ComplianceDashboard() {
   // ── Loaders ──────────────────────────────────────────────────────
   const loadStats = useCallback(async () => {
     try {
-      const [auditSt, alertSt, approvalsData] = await Promise.all([
+      const [auditSt, alertSt, approvalsRaw] = await Promise.all([
         fetchAuditStats().catch(() => ({})),
         fetchAlertStats().catch(() => ({})),
-        fetchApprovals().catch(() => []),
+        fetchApprovals().catch(() => ({ data: [] })),
       ]);
+      const approvalsArr = approvalsRaw?.data || (Array.isArray(approvalsRaw) ? approvalsRaw : []);
       setStats({
-        pendingApprovals: Array.isArray(approvalsData) ? approvalsData.filter(a => a.status === 'pending').length : 0,
-        openAlerts: alertSt?.open || 0,
+        pendingApprovals: Array.isArray(approvalsArr) ? approvalsArr.filter(a => a.status === 'pending').length : 0,
+        openAlerts: alertSt?.totalOpen || alertSt?.open || 0,
         activeClients: auditSt?.activeClients || 0,
         totalWallets: auditSt?.totalWallets || 0,
       });
@@ -124,7 +125,8 @@ export default function ComplianceDashboard() {
   const loadApprovals = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchApprovals(approvalFilter);
+      const raw = await fetchApprovals(approvalFilter);
+      const data = raw?.data || raw;
       setApprovals(Array.isArray(data) ? data : []);
     } catch (err) { toast(err.message, 'error'); }
     setLoading(false);
@@ -133,7 +135,8 @@ export default function ComplianceDashboard() {
   const loadAlerts = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchAlerts({ status: alertStatusFilter, severity: alertSevFilter });
+      const raw = await fetchAlerts({ status: alertStatusFilter, severity: alertSevFilter });
+      const data = raw?.data || raw;
       setAlerts(Array.isArray(data) ? data : []);
     } catch (err) { toast(err.message, 'error'); }
     setLoading(false);
@@ -142,9 +145,10 @@ export default function ComplianceDashboard() {
   const loadAudit = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchAuditLog({ category: auditCategory, limit: AUDIT_LIMIT, offset: auditOffset });
-      setAuditEntries(data?.entries || data?.rows || (Array.isArray(data) ? data : []));
-      setAuditTotal(data?.total || 0);
+      const raw = await fetchAuditLog({ category: auditCategory, limit: AUDIT_LIMIT, offset: auditOffset });
+      const entries = raw?.data || raw?.entries || raw?.rows || (Array.isArray(raw) ? raw : []);
+      setAuditEntries(Array.isArray(entries) ? entries : []);
+      setAuditTotal(raw?.count || raw?.total || 0);
     } catch (err) { toast(err.message, 'error'); }
     setLoading(false);
   }, [auditCategory, auditOffset, toast]);
@@ -152,7 +156,8 @@ export default function ComplianceDashboard() {
   const loadWhitelist = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchWhitelist('all');
+      const raw = await fetchWhitelist('all');
+      const data = raw?.data || raw;
       setWhitelistEntries(Array.isArray(data) ? data : []);
     } catch (err) { toast(err.message, 'error'); }
     setLoading(false);

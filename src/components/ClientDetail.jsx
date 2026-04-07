@@ -4,8 +4,10 @@ import { fetchContacts, parseDescription } from '../services/salesforceApi';
 import DocumentsPanel from './DocumentsPanel';
 import WhitelistPanel from './WhitelistPanel';
 import RiskConfigPanel from './RiskConfigPanel';
+import KYCFlow from './KYCFlow';
 import { SUPPORTED_NETWORKS } from '../config/constants';
 import { createApproval, checkTransferRisk } from '../services/complianceApi';
+import { getKycStatus } from '../services/kycService';
 import { useAuth } from '../context/AuthContext';
 import { fmtEUR, Badge, Modal, Spinner, EmptyState, inputCls, selectCls, labelCls } from './shared';
 
@@ -28,12 +30,21 @@ export default function ClientDetail({ client, onBack }) {
   const [contacts, setContacts] = useState([]);
   const [loadingContacts, setLoadingContacts] = useState(true);
   const [error, setError] = useState(null);
+  const [kycLive, setKycLive] = useState(null); // live KYC status from Supabase
   const { user, isAdmin } = useAuth();
 
   const parsed = parseDescription(client.description);
-  const kycValid = parsed.kyc?.toLowerCase().includes('valid');
+  // KYC is valid if either Salesforce description says so OR live KYC checks are validated
+  const kycValid = kycLive?.overallStatus === 'validated' || parsed.kyc?.toLowerCase().includes('valid');
 
-  useEffect(() => { loadWallets(); loadContacts(); }, []);
+  useEffect(() => { loadWallets(); loadContacts(); loadKycStatus(); }, []);
+
+  const loadKycStatus = async () => {
+    try {
+      const data = await getKycStatus(client.id);
+      setKycLive(data);
+    } catch { /* ignore */ }
+  };
 
   const loadWallets = async () => {
     setLoading(true);
@@ -223,6 +234,7 @@ export default function ClientDetail({ client, onBack }) {
       <div className="flex items-center gap-1 bg-[rgba(0,0,23,0.03)] rounded-lg p-0.5 mb-6 w-fit">
         {[
           { id: 'profile', label: 'Fiche client' },
+          { id: 'kyc', label: 'KYC / KYB' },
           { id: 'documents', label: 'Documents' },
           { id: 'wallets', label: `Wallets (${wallets.length})` },
           { id: 'transfers', label: 'Transferts' },
@@ -308,18 +320,37 @@ export default function ClientDetail({ client, onBack }) {
             <SectionCard title="Conformite KYC">
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className={`w-3 h-3 rounded-full ${kycVariant === 'success' ? 'bg-[#059669]' : kycVariant === 'warning' ? 'bg-[#F59E0B]' : kycVariant === 'error' ? 'bg-[#DC2626]' : 'bg-[#A8A29E]'}`} />
+                  <div className={`w-3 h-3 rounded-full ${kycValid ? 'bg-[#059669]' : kycVariant === 'warning' || kycLive?.overallStatus === 'in_progress' ? 'bg-[#F59E0B]' : kycLive?.overallStatus === 'attention_required' ? 'bg-[#DC2626]' : 'bg-[#A8A29E]'}`} />
                   <div>
                     <p className="text-[14px] font-semibold text-[#0F0F10]">
-                      {kycVariant === 'success' ? 'KYC Valide' : kycVariant === 'warning' ? 'KYC En cours' : kycVariant === 'error' ? 'KYC Rejete' : 'Non renseigne'}
+                      {kycValid ? 'KYC Valide' :
+                       kycLive?.overallStatus === 'in_progress' ? 'KYC En cours' :
+                       kycLive?.overallStatus === 'ready_for_validation' ? 'Pret pour validation' :
+                       kycLive?.overallStatus === 'attention_required' ? 'Attention requise' :
+                       kycVariant === 'warning' ? 'KYC En cours' :
+                       kycVariant === 'error' ? 'KYC Rejete' : 'Non verifie'}
                     </p>
-                    {parsed.kyc && <p className="text-[12px] text-[#787881]">{parsed.kyc}</p>}
+                    {kycLive?.stats && (
+                      <p className="text-[12px] text-[#787881]">
+                        {kycLive.stats.documentsVerified} doc(s) verifie(s) — AML {kycLive.stats.amlClean ? 'clean' : 'en attente'}
+                      </p>
+                    )}
+                    {!kycLive?.stats && parsed.kyc && <p className="text-[12px] text-[#787881]">{parsed.kyc}</p>}
                   </div>
                 </div>
 
+                {!kycValid && (
+                  <button
+                    onClick={() => setTab('kyc')}
+                    className="w-full py-2 px-4 text-[13px] font-medium text-[#6366F1] bg-[#EEF2FF] rounded-xl hover:bg-[#E0E7FF] transition-colors text-center"
+                  >
+                    Lancer la verification KYC
+                  </button>
+                )}
+
                 {parsed.documents.length > 0 && (
                   <div>
-                    <p className="text-[11px] font-medium text-[#A8A29E] uppercase tracking-wider mb-2">Documents fournis</p>
+                    <p className="text-[11px] font-medium text-[#A8A29E] uppercase tracking-wider mb-2">Documents Salesforce</p>
                     <div className="space-y-1.5">
                       {parsed.documents.map((doc, i) => (
                         <div key={i} className="flex items-center gap-2 py-1.5 px-3 bg-[rgba(0,0,23,0.02)] rounded-lg">
@@ -395,6 +426,11 @@ export default function ClientDetail({ client, onBack }) {
         </div>
       )}
 
+      {/* ========== KYC TAB ========== */}
+      {tab === 'kyc' && (
+        <KYCFlow client={client} onComplete={loadKycStatus} />
+      )}
+
       {/* ========== DOCUMENTS TAB ========== */}
       {tab === 'documents' && (
         <DocumentsPanel client={client} />
@@ -411,7 +447,10 @@ export default function ClientDetail({ client, onBack }) {
               </svg>
               <div>
                 <p className="text-[13px] font-medium text-[#92400E]">Compliance : KYC non valide</p>
-                <p className="text-[12px] text-[#B45309]">La creation de wallets et les transferts necessitent un KYC valide. Completez la verification dans Salesforce.</p>
+                <p className="text-[12px] text-[#B45309]">
+                  La creation de wallets et les transferts necessitent un KYC valide.{' '}
+                  <button onClick={() => setTab('kyc')} className="underline font-medium hover:text-[#92400E]">Lancer la verification KYC</button>
+                </p>
               </div>
             </div>
           )}

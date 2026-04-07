@@ -27,8 +27,8 @@ export default function WhitelistPanel({ client }) {
   const load = async () => {
     setLoading(true);
     try {
-      const data = await fetchWhitelist(client.id);
-      setAddresses(data);
+      const res = await fetchWhitelist(client.id);
+      setAddresses(res.data || res || []);
     } catch (err) {
       console.error('fetchWhitelist error:', err);
       setAddresses([]);
@@ -41,7 +41,8 @@ export default function WhitelistPanel({ client }) {
     setSaving(true);
     try {
       await addToWhitelist({
-        clientId: client.id,
+        salesforceAccountId: client.id,
+        clientName: client.name,
         address: form.address.trim(),
         network: form.network,
         label: form.label.trim(),

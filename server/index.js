@@ -1262,6 +1262,421 @@ app.patch('/api/compliance/alerts/:id/resolve', async (req, res) => {
   }
 });
 
+// ============================================================
+// KYC / KYB — ComplyCube integration (with demo mode fallback)
+// ============================================================
+const KYC_DEMO_MODE = process.env.COMPLYCUBE_API_KEY ? false : true;
+const COMPLYCUBE_BASE = 'https://api.complycube.com/v1';
+const COMPLYCUBE_KEY = process.env.COMPLYCUBE_API_KEY || '';
+
+// Helper: ComplyCube API call
+async function complyCubeRequest(method, path, body = null) {
+  const opts = {
+    method,
+    headers: {
+      'Authorization': COMPLYCUBE_KEY,
+      'Content-Type': 'application/json',
+    },
+  };
+  if (body && method !== 'GET') opts.body = JSON.stringify(body);
+  const res = await fetch(`${COMPLYCUBE_BASE}${path}`, opts);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `ComplyCube error: ${res.status}`);
+  }
+  return res.json();
+}
+
+// Demo mode: simulate ComplyCube responses
+function demoDelay(ms = 2000) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// POST /api/kyc/upload-document — Upload doc & create verification check
+app.post('/api/kyc/upload-document', upload.single('file'), async (req, res) => {
+  try {
+    const { salesforceAccountId, clientName, documentType, initiatedByEmail } = req.body;
+
+    if (!salesforceAccountId || !documentType || !req.file) {
+      return res.status(400).json({ error: 'salesforceAccountId, documentType, and file are required' });
+    }
+
+    let checkResult;
+
+    if (KYC_DEMO_MODE) {
+      // Demo mode: simulate document verification
+      await demoDelay(1500);
+      checkResult = {
+        id: `demo_check_${Date.now()}`,
+        status: 'complete',
+        result: {
+          outcome: 'clear',
+          breakdown: {
+            documentAuthenticity: 'clear',
+            dataComparison: 'clear',
+            imageIntegrity: 'clear',
+          },
+        },
+      };
+    } else {
+      // Real ComplyCube flow
+      // 1. Check if client exists, create if not
+      let { data: existingChecks } = await supabaseAdmin
+        .from('kyc_checks')
+        .select('complycube_client_id')
+        .eq('salesforce_account_id', salesforceAccountId)
+        .not('complycube_client_id', 'is', null)
+        .limit(1);
+
+      let complyCubeClientId = existingChecks?.[0]?.complycube_client_id;
+
+      if (!complyCubeClientId) {
+        const ccClient = await complyCubeRequest('POST', '/clients', {
+          type: 'person',
+          email: initiatedByEmail || `${salesforceAccountId}@custody.swisslife.com`,
+          personDetails: {
+            firstName: clientName?.split(' ')[0] || 'Client',
+            lastName: clientName?.split(' ').slice(1).join(' ') || salesforceAccountId,
+          },
+        });
+        complyCubeClientId = ccClient.id;
+      }
+
+      // 2. Upload document
+      const docUpload = await complyCubeRequest('POST', '/documents', {
+        clientId: complyCubeClientId,
+        type: documentType === 'passport' ? 'passport' :
+              documentType === 'id_card' ? 'national_identity_card' :
+              documentType === 'proof_of_address' ? 'utility_bill' :
+              documentType === 'company_registration' ? 'company_registration' :
+              'other',
+      });
+
+      // 3. Upload document image (base64)
+      const base64Data = req.file.buffer.toString('base64');
+      await complyCubeRequest('POST', `/documents/${docUpload.id}/upload/front`, {
+        fileName: req.file.originalname,
+        data: base64Data,
+      });
+
+      // 4. Create check
+      const check = await complyCubeRequest('POST', '/checks', {
+        clientId: complyCubeClientId,
+        documentId: docUpload.id,
+        type: 'document_check',
+      });
+
+      checkResult = {
+        id: check.id,
+        complyCubeClientId,
+        status: check.status === 'complete' ? 'complete' : 'processing',
+        result: check.result || {},
+      };
+    }
+
+    // Save to Supabase
+    const { data: kycCheck, error: dbError } = await supabaseAdmin
+      .from('kyc_checks')
+      .insert({
+        salesforce_account_id: salesforceAccountId,
+        client_name: clientName,
+        complycube_client_id: checkResult.complyCubeClientId || null,
+        complycube_check_id: checkResult.id,
+        check_type: 'document_check',
+        document_type: documentType,
+        status: checkResult.status,
+        result: checkResult.result,
+        file_name: req.file.originalname,
+        initiated_by_email: initiatedByEmail,
+      })
+      .select()
+      .single();
+
+    if (dbError) throw dbError;
+
+    // Audit log
+    await logAudit({
+      userEmail: initiatedByEmail,
+      action: 'kyc.document_uploaded',
+      category: 'kyc',
+      entityType: 'kyc_check',
+      entityId: kycCheck.id,
+      clientName,
+      salesforceAccountId,
+      details: { documentType, fileName: req.file.originalname, status: checkResult.status },
+      severity: 'info',
+      req,
+    });
+
+    res.json(kycCheck);
+  } catch (err) {
+    console.error('KYC upload error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/kyc/aml-screen — Run AML screening
+app.post('/api/kyc/aml-screen', async (req, res) => {
+  try {
+    const { salesforceAccountId, clientName, initiatedByEmail } = req.body;
+
+    if (!salesforceAccountId) {
+      return res.status(400).json({ error: 'salesforceAccountId is required' });
+    }
+
+    let screenResult;
+
+    if (KYC_DEMO_MODE) {
+      // Demo: simulate AML screening (clear for everyone except "Jane Reject")
+      await demoDelay(2500);
+      const isReject = clientName?.toLowerCase().includes('reject');
+      screenResult = {
+        id: `demo_aml_${Date.now()}`,
+        status: isReject ? 'failed' : 'complete',
+        result: isReject ? {
+          outcome: 'attention',
+          matches: [{ type: 'PEP', source: 'EU PEP List', matchScore: 0.92 }],
+        } : {
+          outcome: 'clear',
+          matchCount: 0,
+          searchedLists: ['OFAC SDN', 'EU Consolidated', 'UN Sanctions', 'UK HMT', 'PEP Global'],
+        },
+      };
+    } else {
+      // Real ComplyCube AML screening
+      let { data: existingChecks } = await supabaseAdmin
+        .from('kyc_checks')
+        .select('complycube_client_id')
+        .eq('salesforce_account_id', salesforceAccountId)
+        .not('complycube_client_id', 'is', null)
+        .limit(1);
+
+      const complyCubeClientId = existingChecks?.[0]?.complycube_client_id;
+      if (!complyCubeClientId) {
+        return res.status(400).json({ error: 'No ComplyCube client found. Upload documents first.' });
+      }
+
+      const check = await complyCubeRequest('POST', '/checks', {
+        clientId: complyCubeClientId,
+        type: 'screening_check',
+      });
+
+      screenResult = {
+        id: check.id,
+        status: check.status === 'complete' ? (check.result?.outcome === 'clear' ? 'complete' : 'failed') : 'processing',
+        result: check.result || {},
+      };
+    }
+
+    // Save to Supabase
+    const { data: kycCheck, error: dbError } = await supabaseAdmin
+      .from('kyc_checks')
+      .insert({
+        salesforce_account_id: salesforceAccountId,
+        client_name: clientName,
+        complycube_check_id: screenResult.id,
+        check_type: 'screening_check',
+        status: screenResult.status,
+        result: screenResult.result,
+        initiated_by_email: initiatedByEmail,
+      })
+      .select()
+      .single();
+
+    if (dbError) throw dbError;
+
+    // Audit log
+    await logAudit({
+      userEmail: initiatedByEmail,
+      action: 'kyc.aml_screening',
+      category: 'kyc',
+      entityType: 'kyc_check',
+      entityId: kycCheck.id,
+      clientName,
+      salesforceAccountId,
+      details: { status: screenResult.status, outcome: screenResult.result?.outcome },
+      severity: screenResult.status === 'failed' ? 'warning' : 'info',
+      req,
+    });
+
+    // If AML failed, auto-create compliance alert
+    if (screenResult.status === 'failed') {
+      await supabaseAdmin.from('compliance_alerts').insert({
+        alert_type: 'aml_match',
+        severity: 'critical',
+        title: `Alerte AML — ${clientName}`,
+        description: `Le screening AML pour ${clientName} a detecte des correspondances potentielles. Revue manuelle requise.`,
+        salesforce_account_id: salesforceAccountId,
+        client_name: clientName,
+        details: screenResult.result,
+        status: 'open',
+      });
+    }
+
+    res.json(kycCheck);
+  } catch (err) {
+    console.error('KYC AML screening error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/kyc/check/:checkId — Get single check result
+app.get('/api/kyc/check/:checkId', async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('kyc_checks')
+      .select('*')
+      .eq('id', req.params.checkId)
+      .single();
+
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'Check not found' });
+
+    // If still processing and not demo mode, poll ComplyCube
+    if (data.status === 'processing' && !KYC_DEMO_MODE && data.complycube_check_id) {
+      try {
+        const ccCheck = await complyCubeRequest('GET', `/checks/${data.complycube_check_id}`);
+        if (ccCheck.status === 'complete') {
+          const newStatus = ccCheck.result?.outcome === 'clear' ? 'complete' : 'failed';
+          await supabaseAdmin
+            .from('kyc_checks')
+            .update({ status: newStatus, result: ccCheck.result, updated_at: new Date().toISOString() })
+            .eq('id', data.id);
+          data.status = newStatus;
+          data.result = ccCheck.result;
+        }
+      } catch (pollErr) {
+        console.error('ComplyCube poll error:', pollErr.message);
+      }
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error('KYC check get error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/kyc/status/:accountId — Get full KYC status for a client
+app.get('/api/kyc/status/:accountId', async (req, res) => {
+  try {
+    const { data: checks, error } = await supabaseAdmin
+      .from('kyc_checks')
+      .select('*')
+      .eq('salesforce_account_id', req.params.accountId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Determine overall status
+    const docChecks = (checks || []).filter(c => c.check_type === 'document_check');
+    const amlChecks = (checks || []).filter(c => c.check_type === 'screening_check');
+
+    const allDocsComplete = docChecks.length >= 2 && docChecks.every(c => c.status === 'complete');
+    const amlComplete = amlChecks.some(c => c.status === 'complete');
+    const anyFailed = (checks || []).some(c => c.status === 'failed');
+
+    // Check for manual validation
+    const validationCheck = (checks || []).find(c => c.check_type === 'manual_validation' && c.status === 'complete');
+
+    let overallStatus = 'incomplete';
+    if (validationCheck) {
+      overallStatus = 'validated';
+    } else if (anyFailed) {
+      overallStatus = 'attention_required';
+    } else if (allDocsComplete && amlComplete) {
+      overallStatus = 'ready_for_validation';
+    } else if (docChecks.length > 0 || amlChecks.length > 0) {
+      overallStatus = 'in_progress';
+    }
+
+    res.json({
+      overallStatus,
+      checks: checks || [],
+      stats: {
+        totalChecks: (checks || []).length,
+        documentsVerified: docChecks.filter(c => c.status === 'complete').length,
+        documentsTotal: docChecks.length,
+        amlClean: amlComplete,
+      },
+      validatedAt: validationCheck?.created_at || null,
+      validatedBy: validationCheck?.initiated_by_email || null,
+    });
+  } catch (err) {
+    console.error('KYC status error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/kyc/validate — Admin validates KYC (manual final step)
+app.post('/api/kyc/validate', async (req, res) => {
+  try {
+    const { salesforceAccountId, validatedByEmail } = req.body;
+
+    if (!salesforceAccountId) {
+      return res.status(400).json({ error: 'salesforceAccountId is required' });
+    }
+
+    // Create a manual_validation check
+    const { data, error } = await supabaseAdmin
+      .from('kyc_checks')
+      .insert({
+        salesforce_account_id: salesforceAccountId,
+        check_type: 'manual_validation',
+        status: 'complete',
+        result: { validatedBy: validatedByEmail, validatedAt: new Date().toISOString() },
+        initiated_by_email: validatedByEmail,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Audit log
+    await logAudit({
+      userEmail: validatedByEmail,
+      action: 'kyc.validated',
+      category: 'kyc',
+      entityType: 'kyc_validation',
+      entityId: data.id,
+      salesforceAccountId,
+      details: { validatedBy: validatedByEmail },
+      severity: 'info',
+      req,
+    });
+
+    res.json(data);
+  } catch (err) {
+    console.error('KYC validate error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/kyc/create-client — Create ComplyCube client (if not demo mode)
+app.post('/api/kyc/create-client', async (req, res) => {
+  try {
+    const { salesforceAccountId, clientName, email, personType } = req.body;
+
+    if (KYC_DEMO_MODE) {
+      return res.json({ id: `demo_client_${Date.now()}`, mode: 'demo' });
+    }
+
+    const ccClient = await complyCubeRequest('POST', '/clients', {
+      type: personType || 'person',
+      email: email || `${salesforceAccountId}@custody.swisslife.com`,
+      personDetails: {
+        firstName: clientName?.split(' ')[0] || 'Client',
+        lastName: clientName?.split(' ').slice(1).join(' ') || salesforceAccountId,
+      },
+    });
+
+    res.json(ccClient);
+  } catch (err) {
+    console.error('KYC create client error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Serve static frontend in production
 const distPath = path.join(__dirname, '..', 'dist');
 if (fs.existsSync(distPath)) {
