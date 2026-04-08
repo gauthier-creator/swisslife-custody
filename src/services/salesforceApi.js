@@ -14,17 +14,27 @@ export async function getSalesforceStatus() {
   }
 }
 
-const ACCOUNT_FIELDS = 'Id, Name, Phone, Industry, Type, AnnualRevenue, CreatedDate, BillingStreet, BillingCity, BillingPostalCode, BillingCountry, Website, Description, NumberOfEmployees, OwnerId, AccountNumber, Custody_KYC_Status__c, Custody_Risk_Level__c, Custody_Sanctions_Clear__c, Custody_Adequacy_Done__c, Custody_Contract_Signed__c, Custody_Eligible__c';
+const BASE_FIELDS = 'Id, Name, Phone, Industry, Type, AnnualRevenue, CreatedDate, BillingStreet, BillingCity, BillingPostalCode, BillingCountry, Website, Description, NumberOfEmployees, OwnerId, AccountNumber';
+const CUSTODY_FIELDS = ', Custody_KYC_Status__c, Custody_Risk_Level__c, Custody_Sanctions_Clear__c, Custody_Adequacy_Done__c, Custody_Contract_Signed__c, Custody_Eligible__c';
 
 export async function fetchClients(search = '') {
-  const soql = search
-    ? `SELECT ${ACCOUNT_FIELDS} FROM Account WHERE Name LIKE '%${search}%' ORDER BY Name LIMIT 50`
-    : `SELECT ${ACCOUNT_FIELDS} FROM Account ORDER BY Name LIMIT 50`;
+  const where = search ? ` WHERE Name LIKE '%${search}%'` : '';
+  const order = ' ORDER BY Name LIMIT 50';
 
-  const res = await fetch(`${API_BASE}/api/salesforce/services/data/v59.0/query/?q=${encodeURIComponent(soql)}`, { headers });
+  // Try with custody custom fields first, fallback without if they don't exist yet
+  const soqlFull = `SELECT ${BASE_FIELDS}${CUSTODY_FIELDS} FROM Account${where}${order}`;
+  const soqlBase = `SELECT ${BASE_FIELDS} FROM Account${where}${order}`;
+
+  let res = await fetch(`${API_BASE}/api/salesforce/services/data/v59.0/query/?q=${encodeURIComponent(soqlFull)}`, { headers });
+
   if (!res.ok) {
-    throw new Error('Salesforce query failed');
+    // Custom fields may not exist — retry without them
+    res = await fetch(`${API_BASE}/api/salesforce/services/data/v59.0/query/?q=${encodeURIComponent(soqlBase)}`, { headers });
+    if (!res.ok) {
+      throw new Error('Salesforce query failed');
+    }
   }
+
   const data = await res.json();
   return (data.records || []).map(mapAccount);
 }
