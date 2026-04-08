@@ -5,6 +5,7 @@ import DocumentsPanel from './DocumentsPanel';
 import WhitelistPanel from './WhitelistPanel';
 import RiskConfigPanel from './RiskConfigPanel';
 import KYCFlow from './KYCFlow';
+import DelegationPanel from './DelegationPanel';
 import { SUPPORTED_NETWORKS } from '../config/constants';
 import { createApproval, checkTransferRisk, checkTravelRule, createTravelRuleRecord } from '../services/complianceApi';
 import { getKycStatus, analyzeTransfer } from '../services/kycService';
@@ -286,6 +287,7 @@ export default function ClientDetail({ client, onBack }) {
           { id: 'kyc', label: 'KYC / KYB' },
           { id: 'documents', label: 'Documents' },
           { id: 'wallets', label: `Wallets (${wallets.length})` },
+          { id: 'delegations', label: 'Delegations' },
           { id: 'transfers', label: 'Transferts' },
           { id: 'history', label: 'Historique' },
         ].map(t => (
@@ -483,6 +485,11 @@ export default function ClientDetail({ client, onBack }) {
       {/* ========== DOCUMENTS TAB ========== */}
       {tab === 'documents' && (
         <DocumentsPanel client={client} />
+      )}
+
+      {/* ========== DELEGATIONS TAB ========== */}
+      {tab === 'delegations' && (
+        <DelegationPanel client={client} />
       )}
 
       {/* ========== WALLETS TAB ========== */}

@@ -48,6 +48,54 @@ async function logAudit({ userId, userEmail, userRole, action, category, entityT
 }
 
 // ============================================================
+// AUTH MIDDLEWARE — Verify Supabase JWT & extract role
+// ============================================================
+async function authMiddleware(req, res, next) {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+  try {
+    const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
+    if (error || !user) {
+      req.user = null;
+      return next();
+    }
+    // Fetch role from custody_profiles
+    const { data: profile } = await supabaseAdmin
+      .from('custody_profiles')
+      .select('role, email, full_name')
+      .eq('id', user.id)
+      .single();
+    req.user = {
+      id: user.id,
+      email: user.email,
+      role: profile?.role || 'banquier',
+      fullName: profile?.full_name || '',
+    };
+    next();
+  } catch {
+    req.user = null;
+    next();
+  }
+}
+
+function requireAuth(req, res, next) {
+  if (!req.user) return res.status(401).json({ error: 'Authentication required' });
+  next();
+}
+
+function requireAdmin(req, res, next) {
+  if (!req.user) return res.status(401).json({ error: 'Authentication required' });
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin role required' });
+  next();
+}
+
+// Apply auth middleware globally
+app.use(authMiddleware);
+
+// ============================================================
 // SALESFORCE — OAuth username-password flow (server-side)
 // ============================================================
 let sfAccessToken = null;
@@ -331,7 +379,7 @@ app.get('/api/dfns/wallets', async (req, res) => {
   }
 });
 
-app.post('/api/dfns/wallets', async (req, res) => {
+app.post('/api/dfns/wallets', requireAuth, async (req, res) => {
   try {
     // Sanitize body — DFNS only allows alphanumerics and _.:/+- in tags/name
     const body = { ...req.body };
@@ -394,7 +442,7 @@ app.get('/api/dfns/wallets/:walletId/history', async (req, res) => {
   }
 });
 
-app.post('/api/dfns/wallets/:walletId/transfers', async (req, res) => {
+app.post('/api/dfns/wallets/:walletId/transfers', requireAuth, async (req, res) => {
   try {
     // Audit log: transfer attempt
     await logAudit({
@@ -545,7 +593,7 @@ app.get('/api/compliance/approvals', async (req, res) => {
 });
 
 // POST /api/compliance/approvals — Create a new transfer approval request
-app.post('/api/compliance/approvals', async (req, res) => {
+app.post('/api/compliance/approvals', requireAuth, async (req, res) => {
   try {
     const {
       walletId, to, amount, assetSymbol, network, note,
@@ -594,9 +642,10 @@ app.post('/api/compliance/approvals', async (req, res) => {
 });
 
 // PATCH /api/compliance/approvals/:id/approve — Approve a transfer
-app.patch('/api/compliance/approvals/:id/approve', async (req, res) => {
+app.patch('/api/compliance/approvals/:id/approve', requireAdmin, async (req, res) => {
   try {
-    const { approvedBy, approvedByEmail } = req.body;
+    const { approvedBy, approvedByEmail, reviewedByEmail } = req.body;
+    const emailToUse = approvedByEmail || reviewedByEmail;
 
     // Fetch the approval
     const { data: approval, error: fetchErr } = await supabaseAdmin
@@ -623,7 +672,7 @@ app.patch('/api/compliance/approvals/:id/approve', async (req, res) => {
       .update({
         status: 'approved',
         approved_by: approvedBy || null,
-        approved_by_email: approvedByEmail || null,
+        approved_by_email: emailToUse || null,
         approved_at: new Date().toISOString(),
       })
       .eq('id', req.params.id)
@@ -634,7 +683,7 @@ app.patch('/api/compliance/approvals/:id/approve', async (req, res) => {
 
     await logAudit({
       userId: approvedBy,
-      userEmail: approvedByEmail,
+      userEmail: emailToUse,
       action: 'approval.approved',
       category: 'approval',
       entityType: 'transfer_approval',
@@ -654,9 +703,11 @@ app.patch('/api/compliance/approvals/:id/approve', async (req, res) => {
 });
 
 // PATCH /api/compliance/approvals/:id/reject — Reject with reason
-app.patch('/api/compliance/approvals/:id/reject', async (req, res) => {
+app.patch('/api/compliance/approvals/:id/reject', requireAdmin, async (req, res) => {
   try {
-    const { rejectedBy, rejectedByEmail, reason } = req.body;
+    const { rejectedBy, rejectedByEmail, reviewedByEmail, reason, rejectionReason } = req.body;
+    const emailToUse = rejectedByEmail || reviewedByEmail;
+    const reasonToUse = reason || rejectionReason;
 
     const { data: approval, error: fetchErr } = await supabaseAdmin
       .from('transfer_approvals')
@@ -677,8 +728,8 @@ app.patch('/api/compliance/approvals/:id/reject', async (req, res) => {
       .update({
         status: 'rejected',
         rejected_by: rejectedBy || null,
-        rejected_by_email: rejectedByEmail || null,
-        rejection_reason: reason || null,
+        rejected_by_email: emailToUse || null,
+        rejection_reason: reasonToUse || null,
         rejected_at: new Date().toISOString(),
       })
       .eq('id', req.params.id)
@@ -689,14 +740,14 @@ app.patch('/api/compliance/approvals/:id/reject', async (req, res) => {
 
     await logAudit({
       userId: rejectedBy,
-      userEmail: rejectedByEmail,
+      userEmail: emailToUse,
       action: 'approval.rejected',
       category: 'approval',
       entityType: 'transfer_approval',
       entityId: data.id,
       clientName: data.client_name,
       salesforceAccountId: data.salesforce_account_id,
-      details: { walletId: data.wallet_id, amount: data.amount, reason },
+      details: { walletId: data.wallet_id, amount: data.amount, reason: reasonToUse },
       severity: 'warning',
       req,
     });
@@ -709,7 +760,7 @@ app.patch('/api/compliance/approvals/:id/reject', async (req, res) => {
 });
 
 // POST /api/compliance/approvals/:id/execute — Execute an approved transfer via DFNS
-app.post('/api/compliance/approvals/:id/execute', async (req, res) => {
+app.post('/api/compliance/approvals/:id/execute', requireAdmin, async (req, res) => {
   try {
     // 1. Fetch and check status
     const { data: approval, error: fetchErr } = await supabaseAdmin
@@ -853,7 +904,7 @@ app.post('/api/compliance/whitelist', async (req, res) => {
 });
 
 // PATCH /api/compliance/whitelist/:id/approve — Approve address (admin only)
-app.patch('/api/compliance/whitelist/:id/approve', async (req, res) => {
+app.patch('/api/compliance/whitelist/:id/approve', requireAdmin, async (req, res) => {
   try {
     const { approvedBy, approvedByEmail } = req.body;
 
@@ -897,7 +948,7 @@ app.patch('/api/compliance/whitelist/:id/approve', async (req, res) => {
 });
 
 // PATCH /api/compliance/whitelist/:id/revoke — Revoke address
-app.patch('/api/compliance/whitelist/:id/revoke', async (req, res) => {
+app.patch('/api/compliance/whitelist/:id/revoke', requireAdmin, async (req, res) => {
   try {
     const { revokedBy, revokedByEmail, reason } = req.body;
 
@@ -1580,7 +1631,7 @@ app.get('/api/kyc/status/:accountId', async (req, res) => {
 });
 
 // POST /api/kyc/validate — Admin validates KYC (manual final step)
-app.post('/api/kyc/validate', async (req, res) => {
+app.post('/api/kyc/validate', requireAdmin, async (req, res) => {
   try {
     const { salesforceAccountId, validatedByEmail } = req.body;
 
@@ -1832,7 +1883,7 @@ app.get('/api/compliance/sar/:id', async (req, res) => {
 });
 
 // PATCH /api/compliance/sar/:id/submit — Submit for review (draft → submitted)
-app.patch('/api/compliance/sar/:id/submit', async (req, res) => {
+app.patch('/api/compliance/sar/:id/submit', requireAdmin, async (req, res) => {
   try {
     const { submittedByEmail } = req.body;
 
@@ -1876,7 +1927,7 @@ app.patch('/api/compliance/sar/:id/submit', async (req, res) => {
 });
 
 // PATCH /api/compliance/sar/:id/review — Mark as reviewed (submitted → under_review)
-app.patch('/api/compliance/sar/:id/review', async (req, res) => {
+app.patch('/api/compliance/sar/:id/review', requireAdmin, async (req, res) => {
   try {
     const { reviewedByEmail } = req.body;
 
@@ -1924,7 +1975,7 @@ app.patch('/api/compliance/sar/:id/review', async (req, res) => {
 });
 
 // PATCH /api/compliance/sar/:id/file — File with MROS (under_review → filed_with_mros)
-app.patch('/api/compliance/sar/:id/file', async (req, res) => {
+app.patch('/api/compliance/sar/:id/file', requireAdmin, async (req, res) => {
   try {
     const { filedByEmail, mrosReference } = req.body;
 
@@ -1974,7 +2025,7 @@ app.patch('/api/compliance/sar/:id/file', async (req, res) => {
 });
 
 // PATCH /api/compliance/sar/:id/close — Close/dismiss SAR (any → closed)
-app.patch('/api/compliance/sar/:id/close', async (req, res) => {
+app.patch('/api/compliance/sar/:id/close', requireAdmin, async (req, res) => {
   try {
     const { closedByEmail, resolution, resolutionNotes } = req.body;
 
@@ -2965,6 +3016,153 @@ if (fs.existsSync(distPath)) {
     }
   });
 }
+
+// ============================================================
+// DELEGATIONS — Family / authorized third-party access
+// ============================================================
+
+// GET /api/delegations/:accountId — List delegations for a client
+app.get('/api/delegations/:accountId', requireAuth, async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('delegations')
+      .select('*')
+      .or(`grantor_account_id.eq.${req.params.accountId},delegate_account_id.eq.${req.params.accountId}`)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json({ data: data || [] });
+  } catch (err) {
+    console.error('delegations list error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/delegations — Create a new delegation
+app.post('/api/delegations', requireAuth, async (req, res) => {
+  try {
+    const {
+      grantorAccountId, grantorName, delegateEmail, delegateName,
+      permissionLevel, transferLimit, currency, expiresAt, notes, grantedByEmail,
+    } = req.body;
+
+    if (!grantorAccountId || !delegateEmail || !permissionLevel) {
+      return res.status(400).json({ error: 'grantorAccountId, delegateEmail, and permissionLevel are required' });
+    }
+
+    if (!['view', 'transfer'].includes(permissionLevel)) {
+      return res.status(400).json({ error: 'permissionLevel must be "view" or "transfer"' });
+    }
+
+    const { data, error } = await supabaseAdmin.from('delegations').insert({
+      grantor_account_id: grantorAccountId,
+      grantor_name: grantorName || null,
+      delegate_email: delegateEmail,
+      delegate_name: delegateName || null,
+      permission_level: permissionLevel,
+      transfer_limit: transferLimit || null,
+      currency: currency || 'CHF',
+      expires_at: expiresAt || null,
+      notes: notes || null,
+      granted_by_email: grantedByEmail || req.user?.email || null,
+      status: 'active',
+    }).select().single();
+
+    if (error) throw error;
+
+    await logAudit({
+      userEmail: grantedByEmail || req.user?.email,
+      action: 'delegation.created',
+      category: 'delegation',
+      entityType: 'delegation',
+      entityId: data.id,
+      clientName: grantorName,
+      salesforceAccountId: grantorAccountId,
+      details: { delegateEmail, permissionLevel, transferLimit },
+      severity: 'info',
+      req,
+    });
+
+    res.json(data);
+  } catch (err) {
+    console.error('delegation create error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/delegations/:id/revoke — Revoke a delegation
+app.patch('/api/delegations/:id/revoke', requireAuth, async (req, res) => {
+  try {
+    const { data: existing, error: fetchErr } = await supabaseAdmin
+      .from('delegations')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+
+    if (fetchErr || !existing) {
+      return res.status(404).json({ error: 'Delegation not found' });
+    }
+
+    if (existing.status === 'revoked') {
+      return res.status(400).json({ error: 'Delegation already revoked' });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('delegations')
+      .update({
+        status: 'revoked',
+        revoked_at: new Date().toISOString(),
+        revoked_by_email: req.body.revokedByEmail || req.user?.email || null,
+      })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await logAudit({
+      userEmail: req.body.revokedByEmail || req.user?.email,
+      action: 'delegation.revoked',
+      category: 'delegation',
+      entityType: 'delegation',
+      entityId: data.id,
+      clientName: existing.grantor_name,
+      salesforceAccountId: existing.grantor_account_id,
+      details: { delegateEmail: existing.delegate_email },
+      severity: 'warning',
+      req,
+    });
+
+    res.json(data);
+  } catch (err) {
+    console.error('delegation revoke error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/delegations/:id — Update a delegation (limit, expiry, etc.)
+app.patch('/api/delegations/:id', requireAuth, async (req, res) => {
+  try {
+    const updates = {};
+    if (req.body.permissionLevel) updates.permission_level = req.body.permissionLevel;
+    if (req.body.transferLimit !== undefined) updates.transfer_limit = req.body.transferLimit;
+    if (req.body.expiresAt !== undefined) updates.expires_at = req.body.expiresAt;
+    if (req.body.notes !== undefined) updates.notes = req.body.notes;
+    updates.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabaseAdmin
+      .from('delegations')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    console.error('delegation update error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 const PORT = process.env.PORT || 3002;
 app.listen(PORT, '0.0.0.0', () => {

@@ -1,5 +1,18 @@
 import { API_BASE } from '../config/constants';
-const headers = { 'Content-Type': 'application/json' };
+import { supabase } from '../lib/supabase';
+
+const baseHeaders = { 'Content-Type': 'application/json' };
+
+async function getHeaders() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.access_token) {
+    return { ...baseHeaders, Authorization: `Bearer ${session.access_token}` };
+  }
+  return baseHeaders;
+}
+
+// For backward compat in non-async contexts
+const headers = baseHeaders;
 
 // ============ AUDIT LOG ============
 export async function fetchAuditLog({ category, salesforceAccountId, severity, limit = 50, offset = 0 } = {}) {
@@ -28,32 +41,36 @@ export async function fetchApprovals(status = '') {
 
 export async function createApproval(data) {
   // data: { walletId, walletName, walletNetwork, salesforceAccountId, clientName, destinationAddress, amount, assetType, contractAddress, requestedByEmail, notes }
+  const authHeaders = await getHeaders();
   const res = await fetch(`${API_BASE}/api/compliance/approvals`, {
-    method: 'POST', headers, body: JSON.stringify(data),
+    method: 'POST', headers: authHeaders, body: JSON.stringify(data),
   });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to create approval'); }
   return res.json();
 }
 
 export async function approveTransfer(id, reviewerEmail) {
+  const authHeaders = await getHeaders();
   const res = await fetch(`${API_BASE}/api/compliance/approvals/${id}/approve`, {
-    method: 'PATCH', headers, body: JSON.stringify({ reviewedByEmail: reviewerEmail }),
+    method: 'PATCH', headers: authHeaders, body: JSON.stringify({ reviewedByEmail: reviewerEmail }),
   });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to approve'); }
   return res.json();
 }
 
 export async function rejectTransfer(id, reviewerEmail, reason) {
+  const authHeaders = await getHeaders();
   const res = await fetch(`${API_BASE}/api/compliance/approvals/${id}/reject`, {
-    method: 'PATCH', headers, body: JSON.stringify({ reviewedByEmail: reviewerEmail, rejectionReason: reason }),
+    method: 'PATCH', headers: authHeaders, body: JSON.stringify({ reviewedByEmail: reviewerEmail, rejectionReason: reason }),
   });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to reject'); }
   return res.json();
 }
 
 export async function executeTransfer(id) {
+  const authHeaders = await getHeaders();
   const res = await fetch(`${API_BASE}/api/compliance/approvals/${id}/execute`, {
-    method: 'POST', headers,
+    method: 'POST', headers: authHeaders,
   });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to execute'); }
   return res.json();
@@ -76,16 +93,18 @@ export async function addToWhitelist(data) {
 }
 
 export async function approveWhitelistAddress(id, approverEmail) {
+  const authHeaders = await getHeaders();
   const res = await fetch(`${API_BASE}/api/compliance/whitelist/${id}/approve`, {
-    method: 'PATCH', headers, body: JSON.stringify({ approvedByEmail: approverEmail }),
+    method: 'PATCH', headers: authHeaders, body: JSON.stringify({ approvedByEmail: approverEmail }),
   });
   if (!res.ok) throw new Error('Failed to approve address');
   return res.json();
 }
 
 export async function revokeWhitelistAddress(id) {
+  const authHeaders = await getHeaders();
   const res = await fetch(`${API_BASE}/api/compliance/whitelist/${id}/revoke`, {
-    method: 'PATCH', headers,
+    method: 'PATCH', headers: authHeaders,
   });
   if (!res.ok) throw new Error('Failed to revoke address');
   return res.json();
@@ -224,8 +243,9 @@ export async function fetchSARs(status) {
 
 export async function createSAR(data) {
   // data: { salesforceAccountId, clientName, reportType, priority, suspicionType, description, evidence, relatedTransactions, relatedAlerts, totalAmountInvolved, currency, createdByEmail }
+  const authHeaders = await getHeaders();
   const res = await fetch(`${API_BASE}/api/compliance/sar`, {
-    method: 'POST', headers, body: JSON.stringify(data),
+    method: 'POST', headers: authHeaders, body: JSON.stringify(data),
   });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to create SAR'); }
   return res.json();
@@ -238,32 +258,36 @@ export async function getSAR(id) {
 }
 
 export async function submitSAR(id, email) {
+  const authHeaders = await getHeaders();
   const res = await fetch(`${API_BASE}/api/compliance/sar/${id}/submit`, {
-    method: 'PATCH', headers, body: JSON.stringify({ submittedByEmail: email }),
+    method: 'PATCH', headers: authHeaders, body: JSON.stringify({ submittedByEmail: email }),
   });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to submit SAR'); }
   return res.json();
 }
 
 export async function reviewSAR(id, email) {
+  const authHeaders = await getHeaders();
   const res = await fetch(`${API_BASE}/api/compliance/sar/${id}/review`, {
-    method: 'PATCH', headers, body: JSON.stringify({ reviewedByEmail: email }),
+    method: 'PATCH', headers: authHeaders, body: JSON.stringify({ reviewedByEmail: email }),
   });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to review SAR'); }
   return res.json();
 }
 
 export async function fileSAR(id, email, mrosReference) {
+  const authHeaders = await getHeaders();
   const res = await fetch(`${API_BASE}/api/compliance/sar/${id}/file`, {
-    method: 'PATCH', headers, body: JSON.stringify({ filedByEmail: email, mrosReference }),
+    method: 'PATCH', headers: authHeaders, body: JSON.stringify({ filedByEmail: email, mrosReference }),
   });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to file SAR'); }
   return res.json();
 }
 
 export async function closeSAR(id, email, resolution, notes) {
+  const authHeaders = await getHeaders();
   const res = await fetch(`${API_BASE}/api/compliance/sar/${id}/close`, {
-    method: 'PATCH', headers, body: JSON.stringify({ closedByEmail: email, resolution, resolutionNotes: notes }),
+    method: 'PATCH', headers: authHeaders, body: JSON.stringify({ closedByEmail: email, resolution, resolutionNotes: notes }),
   });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to close SAR'); }
   return res.json();
@@ -301,5 +325,40 @@ export async function getTravelRuleRecord(transferApprovalId) {
 export async function fetchPendingTravelRule() {
   const res = await fetch(`${API_BASE}/api/compliance/travel-rule/pending`, { headers });
   if (!res.ok) throw new Error('Failed to fetch pending travel rule records');
+  return res.json();
+}
+
+// ============ DELEGATIONS ============
+export async function fetchDelegations(accountId) {
+  const authHeaders = await getHeaders();
+  const res = await fetch(`${API_BASE}/api/delegations/${accountId}`, { headers: authHeaders });
+  if (!res.ok) throw new Error('Failed to fetch delegations');
+  return res.json();
+}
+
+export async function createDelegation(data) {
+  const authHeaders = await getHeaders();
+  const res = await fetch(`${API_BASE}/api/delegations`, {
+    method: 'POST', headers: authHeaders, body: JSON.stringify(data),
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to create delegation'); }
+  return res.json();
+}
+
+export async function revokeDelegation(id, revokedByEmail) {
+  const authHeaders = await getHeaders();
+  const res = await fetch(`${API_BASE}/api/delegations/${id}/revoke`, {
+    method: 'PATCH', headers: authHeaders, body: JSON.stringify({ revokedByEmail }),
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to revoke delegation'); }
+  return res.json();
+}
+
+export async function updateDelegation(id, data) {
+  const authHeaders = await getHeaders();
+  const res = await fetch(`${API_BASE}/api/delegations/${id}`, {
+    method: 'PATCH', headers: authHeaders, body: JSON.stringify(data),
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to update delegation'); }
   return res.json();
 }

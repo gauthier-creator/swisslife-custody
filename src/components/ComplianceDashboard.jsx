@@ -449,12 +449,12 @@ export default function ComplianceDashboard() {
                 <tr key={a.id} className={rowCls}>
                   <td className={tdMuted}>{fmtDate(a.created_at)}</td>
                   <td className={tdCls}>{a.client_name || '—'}</td>
-                  <td className={tdMuted}>{a.wallet_name || '—'}</td>
+                  <td className={tdMuted}>{a.wallet_id ? truncAddr(a.wallet_id) : '—'}</td>
                   <td className={tdMuted}>
-                    <span className="font-mono text-[11px]">{truncAddr(a.destination_address)}</span>
+                    <span className="font-mono text-[11px]">{truncAddr(a.to_address || a.destination_address)}</span>
                   </td>
                   <td className={`${tdCls} text-right tabular-nums font-medium`}>
-                    {a.amount != null ? Number(a.amount).toLocaleString('fr-FR') : '—'} {a.asset_type || ''}
+                    {a.amount != null ? Number(a.amount).toLocaleString('fr-FR') : '—'} {a.asset_symbol || a.asset_type || ''}
                   </td>
                   <td className={tdMuted}>
                     {a.risk_score != null ? (

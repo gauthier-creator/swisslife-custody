@@ -1,6 +1,15 @@
 import { API_BASE } from '../config/constants';
+import { supabase } from '../lib/supabase';
 
 const headers = { 'Content-Type': 'application/json' };
+
+async function getAuthHeaders() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.access_token) {
+    return { ...headers, Authorization: `Bearer ${session.access_token}` };
+  }
+  return headers;
+}
 
 // Better error extraction from DFNS responses
 async function dfnsError(res, fallback) {
@@ -16,9 +25,10 @@ async function dfnsError(res, fallback) {
 // Wallets
 // ============================================================
 export async function createWallet({ network, name, externalId, tags }) {
+  const authHeaders = await getAuthHeaders();
   const res = await fetch(`${API_BASE}/api/dfns/wallets`, {
     method: 'POST',
-    headers,
+    headers: authHeaders,
     body: JSON.stringify({ network, name, externalId, tags }),
   });
   if (!res.ok) throw await dfnsError(res, 'Echec de creation du wallet');
@@ -53,11 +63,12 @@ export async function getWalletHistory(walletId) {
 }
 
 export async function transferAsset(walletId, { kind, to, amount, contract }) {
+  const authHeaders = await getAuthHeaders();
   const body = { kind, to, amount };
   if (contract) body.contract = contract;
   const res = await fetch(`${API_BASE}/api/dfns/wallets/${walletId}/transfers`, {
     method: 'POST',
-    headers,
+    headers: authHeaders,
     body: JSON.stringify(body),
   });
   if (!res.ok) throw await dfnsError(res, 'Echec du transfert');
