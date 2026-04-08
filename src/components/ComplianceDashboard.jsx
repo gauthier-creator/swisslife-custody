@@ -875,23 +875,24 @@ export default function ComplianceDashboard() {
                 { value: 'tracfin', label: 'Tracfin (France)' },
                 { value: 'mros', label: 'MROS (Suisse)' },
               ].map(opt => (
-                <label
+                <div
                   key={opt.value}
+                  onClick={() => setSarFilingAuthority(opt.value)}
                   className={`flex-1 flex items-center gap-2 p-3 rounded-xl border cursor-pointer transition-all text-[13px] ${
                     sarFilingAuthority === opt.value
                       ? 'border-[#6366F1] bg-[#EEF2FF] font-medium'
                       : 'border-[rgba(0,0,29,0.08)]'
                   }`}
                 >
-                  <input
-                    type="radio"
-                    name="sar_filing"
-                    value={opt.value}
-                    checked={sarFilingAuthority === opt.value}
-                    onChange={() => setSarFilingAuthority(opt.value)}
-                  />
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                    sarFilingAuthority === opt.value ? 'border-[#6366F1]' : 'border-[#A8A29E]'
+                  }`}>
+                    {sarFilingAuthority === opt.value && (
+                      <div className="w-2 h-2 rounded-full bg-[#6366F1]" />
+                    )}
+                  </div>
                   {opt.label}
-                </label>
+                </div>
               ))}
             </div>
           </div>

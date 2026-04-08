@@ -209,27 +209,27 @@ function ComplianceSettings() {
               { value: 'mros', label: 'MROS (Suisse)', desc: 'Money Laundering Reporting Office — LBA art. 9' },
               { value: 'both', label: 'Les deux', desc: 'Declaration croisee France + Suisse' },
             ].map(opt => (
-              <label
+              <div
                 key={opt.value}
+                onClick={() => save({ filing_authority: opt.value })}
                 className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
                   settings?.filing_authority === opt.value
                     ? 'border-[#6366F1] bg-[#EEF2FF]'
                     : 'border-[rgba(0,0,29,0.08)] hover:border-[rgba(0,0,29,0.15)]'
                 }`}
               >
-                <input
-                  type="radio"
-                  name="filing_authority"
-                  value={opt.value}
-                  checked={settings?.filing_authority === opt.value}
-                  onChange={() => save({ filing_authority: opt.value })}
-                  className="mt-0.5"
-                />
+                <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                  settings?.filing_authority === opt.value ? 'border-[#6366F1]' : 'border-[#A8A29E]'
+                }`}>
+                  {settings?.filing_authority === opt.value && (
+                    <div className="w-2 h-2 rounded-full bg-[#6366F1]" />
+                  )}
+                </div>
                 <div>
                   <p className="text-[13px] font-medium text-[#0F0F10]">{opt.label}</p>
                   <p className="text-[11px] text-[#787881]">{opt.desc}</p>
                 </div>
-              </label>
+              </div>
             ))}
           </div>
         </div>
