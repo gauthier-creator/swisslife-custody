@@ -366,6 +366,22 @@ export async function unfreezeWallet(id, unfrozenByEmail, notes) {
   return res.json();
 }
 
+// ============ ACPR REGULATORY REPORTING ============
+export async function fetchACPRReport(period = 'monthly', date) {
+  const params = new URLSearchParams({ period });
+  if (date) params.set('date', date);
+  const authHeaders = await getHeaders();
+  const res = await fetch(`${API_BASE}/api/compliance/reporting/acpr?${params}`, { headers: authHeaders });
+  if (!res.ok) throw new Error('Failed to fetch ACPR report');
+  return res.json();
+}
+
+export function getACPRExportUrl(period = 'monthly', date) {
+  const params = new URLSearchParams({ period });
+  if (date) params.set('date', date);
+  return `${API_BASE}/api/compliance/reporting/acpr/export?${params}`;
+}
+
 // ============ UBO (BENEFICIAIRES EFFECTIFS) ============
 export async function fetchUBOs(accountId) {
   const res = await fetch(`${API_BASE}/api/compliance/ubos/${accountId}`, { headers });

@@ -2745,6 +2745,304 @@ app.delete('/api/compliance/ubos/:id', requireAdmin, async (req, res) => {
   }
 });
 
+// ============================================================
+// ACPR REGULATORY REPORTING
+// ============================================================
+function computePeriod(type, dateStr) {
+  const ref = dateStr ? new Date(dateStr) : new Date();
+  let from, to;
+  if (type === 'quarterly') {
+    const q = Math.floor(ref.getMonth() / 3);
+    from = new Date(ref.getFullYear(), q * 3, 1);
+    to = new Date(ref.getFullYear(), q * 3 + 3, 1);
+  } else if (type === 'yearly') {
+    from = new Date(ref.getFullYear(), 0, 1);
+    to = new Date(ref.getFullYear() + 1, 0, 1);
+  } else {
+    // monthly (default)
+    from = new Date(ref.getFullYear(), ref.getMonth(), 1);
+    to = new Date(ref.getFullYear(), ref.getMonth() + 1, 1);
+  }
+  const fmt = (d) => d.toISOString().slice(0, 10);
+  const toEnd = new Date(to.getTime() - 86400000); // last day of period
+  return { type: type || 'monthly', from: fmt(from), to: fmt(to), toDisplay: fmt(toEnd) };
+}
+
+app.get('/api/compliance/reporting/acpr', requireAdmin, async (req, res) => {
+  try {
+    const period = computePeriod(req.query.period, req.query.date);
+    const { from, to } = period;
+
+    // Transfers
+    const { data: transfers } = await supabaseAdmin
+      .from('transfer_approvals')
+      .select('status, amount')
+      .gte('created_at', from)
+      .lt('created_at', to);
+    const txs = transfers || [];
+    const byStatus = {};
+    let totalVolume = 0;
+    txs.forEach(t => {
+      byStatus[t.status] = (byStatus[t.status] || 0) + 1;
+      totalVolume += parseFloat(t.amount || 0);
+    });
+
+    // SARs
+    const { data: sars } = await supabaseAdmin
+      .from('suspicious_activity_reports')
+      .select('status, filing_authority')
+      .gte('created_at', from)
+      .lt('created_at', to);
+    const sarList = sars || [];
+    const sarFiled = sarList.filter(s => s.status === 'filed_with_mros' || s.status === 'filed_with_tracfin').length;
+    const sarByAuthority = { tracfin: 0, mros: 0 };
+    sarList.forEach(s => {
+      if (s.filing_authority === 'tracfin') sarByAuthority.tracfin++;
+      else if (s.filing_authority === 'mros') sarByAuthority.mros++;
+    });
+
+    // Alerts
+    const { data: alertsData } = await supabaseAdmin
+      .from('compliance_alerts')
+      .select('status')
+      .gte('created_at', from)
+      .lt('created_at', to);
+    const alertsList = alertsData || [];
+
+    // Freezes
+    const { data: freezesData } = await supabaseAdmin
+      .from('wallet_freezes')
+      .select('status')
+      .gte('created_at', from)
+      .lt('created_at', to);
+    const freezesList = freezesData || [];
+    const { data: activeFreezes } = await supabaseAdmin
+      .from('wallet_freezes')
+      .select('id')
+      .eq('status', 'frozen');
+
+    // KYC
+    const { data: kycData } = await supabaseAdmin
+      .from('kyc_checks')
+      .select('status')
+      .gte('created_at', from)
+      .lt('created_at', to);
+    const kycList = kycData || [];
+
+    // UBOs
+    const { data: uboData } = await supabaseAdmin
+      .from('ubos')
+      .select('verification_status')
+      .gte('created_at', from)
+      .lt('created_at', to);
+    const uboList = uboData || [];
+
+    // Whitelist
+    const { data: wlData } = await supabaseAdmin
+      .from('address_whitelist')
+      .select('status')
+      .gte('created_at', from)
+      .lt('created_at', to);
+    const wlList = wlData || [];
+
+    // Risk config
+    const { data: riskData } = await supabaseAdmin
+      .from('client_risk_config')
+      .select('risk_level');
+    const riskList = riskData || [];
+
+    // Audit log
+    const { data: auditData } = await supabaseAdmin
+      .from('audit_log')
+      .select('severity, category')
+      .gte('created_at', from)
+      .lt('created_at', to);
+    const auditList = auditData || [];
+    const auditByCategory = {};
+    auditList.forEach(a => {
+      auditByCategory[a.category] = (auditByCategory[a.category] || 0) + 1;
+    });
+
+    const report = {
+      period: { type: period.type, from: period.from, to: period.toDisplay },
+      transfers: {
+        total: txs.length,
+        approved: (byStatus.approved || 0) + (byStatus.executed || 0),
+        rejected: byStatus.rejected || 0,
+        pending: byStatus.pending || 0,
+        totalVolume: totalVolume.toFixed(2),
+        byStatus,
+      },
+      compliance: {
+        sarFiled,
+        sarByAuthority,
+        alertsTotal: alertsList.length,
+        alertsResolved: alertsList.filter(a => a.status === 'resolved').length,
+        alertsPending: alertsList.filter(a => a.status === 'open' || a.status === 'acknowledged').length,
+        frozenWallets: freezesList.length,
+        activeFreeze: (activeFreezes || []).length,
+      },
+      kyc: {
+        totalChecks: kycList.length,
+        verified: kycList.filter(k => k.status === 'verified' || k.status === 'approved').length,
+        pending: kycList.filter(k => k.status === 'pending').length,
+        rejected: kycList.filter(k => k.status === 'rejected' || k.status === 'failed').length,
+      },
+      ubos: {
+        totalRegistered: uboList.length,
+        verified: uboList.filter(u => u.verification_status === 'verified').length,
+        unverified: uboList.filter(u => u.verification_status !== 'verified').length,
+      },
+      whitelist: {
+        totalAddresses: wlList.length,
+        approved: wlList.filter(w => w.status === 'active' || w.status === 'approved').length,
+        pending: wlList.filter(w => w.status === 'pending_approval' || w.status === 'pending').length,
+        revoked: wlList.filter(w => w.status === 'revoked').length,
+      },
+      risk: {
+        highRiskClients: riskList.filter(r => r.risk_level === 'high').length,
+        mediumRiskClients: riskList.filter(r => r.risk_level === 'medium').length,
+        lowRiskClients: riskList.filter(r => r.risk_level === 'low').length,
+      },
+      audit: {
+        totalActions: auditList.length,
+        highSeverity: auditList.filter(a => a.severity === 'high' || a.severity === 'critical').length,
+        byCategory: auditByCategory,
+      },
+    };
+
+    await logAudit({
+      userId: req.user.id, userEmail: req.user.email, userRole: req.user.role,
+      action: 'acpr_report_generated', category: 'compliance',
+      details: { periodType: period.type, from: period.from, to: period.toDisplay },
+      severity: 'info', req,
+    });
+
+    res.json(report);
+  } catch (err) {
+    console.error('ACPR report error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/compliance/reporting/acpr/export', requireAdmin, async (req, res) => {
+  try {
+    // Re-use the same logic — fetch the report internally
+    const period = computePeriod(req.query.period, req.query.date);
+    const { from, to } = period;
+
+    // Fetch all data (same as above)
+    const [
+      { data: transfers },
+      { data: sars },
+      { data: alertsData },
+      { data: freezesData },
+      { data: activeFreezes },
+      { data: kycData },
+      { data: uboData },
+      { data: wlData },
+      { data: riskData },
+      { data: auditData },
+    ] = await Promise.all([
+      supabaseAdmin.from('transfer_approvals').select('status, amount').gte('created_at', from).lt('created_at', to),
+      supabaseAdmin.from('suspicious_activity_reports').select('status, filing_authority').gte('created_at', from).lt('created_at', to),
+      supabaseAdmin.from('compliance_alerts').select('status').gte('created_at', from).lt('created_at', to),
+      supabaseAdmin.from('wallet_freezes').select('status').gte('created_at', from).lt('created_at', to),
+      supabaseAdmin.from('wallet_freezes').select('id').eq('status', 'frozen'),
+      supabaseAdmin.from('kyc_checks').select('status').gte('created_at', from).lt('created_at', to),
+      supabaseAdmin.from('ubos').select('verification_status').gte('created_at', from).lt('created_at', to),
+      supabaseAdmin.from('address_whitelist').select('status').gte('created_at', from).lt('created_at', to),
+      supabaseAdmin.from('client_risk_config').select('risk_level'),
+      supabaseAdmin.from('audit_log').select('severity, category').gte('created_at', from).lt('created_at', to),
+    ]);
+
+    const txs = transfers || [];
+    const sarList = sars || [];
+    const alertsList = alertsData || [];
+    const freezesList = freezesData || [];
+    const kycList = kycData || [];
+    const uboList = uboData || [];
+    const wlList = wlData || [];
+    const riskList = riskData || [];
+    const auditList = auditData || [];
+
+    let totalVolume = 0;
+    const byStatus = {};
+    txs.forEach(t => { byStatus[t.status] = (byStatus[t.status] || 0) + 1; totalVolume += parseFloat(t.amount || 0); });
+
+    const sarFiled = sarList.filter(s => s.status === 'filed_with_mros' || s.status === 'filed_with_tracfin').length;
+    const tracfin = sarList.filter(s => s.filing_authority === 'tracfin').length;
+    const mros = sarList.filter(s => s.filing_authority === 'mros').length;
+
+    const periodLabel = period.type === 'monthly' ? 'Mensuel' : period.type === 'quarterly' ? 'Trimestriel' : 'Annuel';
+    const filename = `rapport-acpr-${period.from.slice(0, 7)}.csv`;
+
+    const rows = [
+      ['Rapport ACPR - SwissLife Banque Privee France'],
+      [`Periode: ${periodLabel}`, `Du: ${period.from}`, `Au: ${period.toDisplay}`],
+      [`Genere le: ${new Date().toISOString().slice(0, 19)}`],
+      [],
+      ['=== TRANSFERTS ==='],
+      ['Total transferts', txs.length],
+      ['Approuves', (byStatus.approved || 0) + (byStatus.executed || 0)],
+      ['Rejetes', byStatus.rejected || 0],
+      ['En attente', byStatus.pending || 0],
+      ['Volume total', totalVolume.toFixed(2)],
+      [],
+      ['=== CONFORMITE LCB-FT ==='],
+      ['Declarations de soupcon deposees', sarFiled],
+      ['Tracfin', tracfin],
+      ['MROS', mros],
+      ['Alertes totales', alertsList.length],
+      ['Alertes resolues', alertsList.filter(a => a.status === 'resolved').length],
+      ['Alertes en attente', alertsList.filter(a => a.status === 'open' || a.status === 'acknowledged').length],
+      ['Wallets geles (periode)', freezesList.length],
+      ['Gels actifs', (activeFreezes || []).length],
+      [],
+      ['=== KYC & DUE DILIGENCE ==='],
+      ['Verifications KYC totales', kycList.length],
+      ['Verifies', kycList.filter(k => k.status === 'verified' || k.status === 'approved').length],
+      ['En attente', kycList.filter(k => k.status === 'pending').length],
+      ['Rejetes', kycList.filter(k => k.status === 'rejected' || k.status === 'failed').length],
+      ['Beneficiaires effectifs enregistres', uboList.length],
+      ['UBO verifies', uboList.filter(u => u.verification_status === 'verified').length],
+      ['UBO non verifies', uboList.filter(u => u.verification_status !== 'verified').length],
+      [],
+      ['=== GESTION DES RISQUES ==='],
+      ['Clients haut risque', riskList.filter(r => r.risk_level === 'high').length],
+      ['Clients risque moyen', riskList.filter(r => r.risk_level === 'medium').length],
+      ['Clients risque faible', riskList.filter(r => r.risk_level === 'low').length],
+      ['Adresses whitelist totales', wlList.length],
+      ['Approuvees', wlList.filter(w => w.status === 'active' || w.status === 'approved').length],
+      ['En attente', wlList.filter(w => w.status === 'pending_approval' || w.status === 'pending').length],
+      ['Revoquees', wlList.filter(w => w.status === 'revoked').length],
+      [],
+      ['=== JOURNAL AUDIT ==='],
+      ['Actions totales', auditList.length],
+      ['Severite haute/critique', auditList.filter(a => a.severity === 'high' || a.severity === 'critical').length],
+      [],
+      ['Confidentiel - Usage interne uniquement'],
+      ['Art. L.561-32 CMF & Reglement MiCA (UE) 2023/1114'],
+    ];
+
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+
+    await logAudit({
+      userId: req.user.id, userEmail: req.user.email, userRole: req.user.role,
+      action: 'acpr_report_exported_csv', category: 'compliance',
+      details: { periodType: period.type, from: period.from, to: period.toDisplay },
+      severity: 'info', req,
+    });
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send('\uFEFF' + csv); // BOM for Excel
+  } catch (err) {
+    console.error('ACPR export error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 3002;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Custody server running on port ${PORT}`);

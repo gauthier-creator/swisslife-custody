@@ -9,6 +9,7 @@ import {
   fetchSARs, createSAR, submitSAR, reviewSAR, fileSAR, closeSAR, fetchSARStats,
 } from '../services/complianceApi';
 import ComplianceReports from './ComplianceReports';
+import ACPRReportingDashboard from './ACPRReportingDashboard';
 
 // ── Helpers ──────────────────────────────────────────────────────────
 const truncAddr = (a) => a ? `${a.slice(0, 6)}...${a.slice(-4)}` : '—';
@@ -48,6 +49,7 @@ const TABS = [
   { id: 'whitelist', label: 'Whitelist' },
   { id: 'declarations', label: 'Declarations' },
   { id: 'reports', label: 'Rapports' },
+  { id: 'acpr', label: 'Reporting ACPR' },
 ];
 
 const sarStatusBadge = (s) => {
@@ -740,6 +742,11 @@ export default function ComplianceDashboard() {
       {/* ── Reports Tab ──────────────────────────────────────────── */}
       {tab === 'reports' && (
         <ComplianceReports />
+      )}
+
+      {/* ── Reporting ACPR Tab ──────────────────────────────────── */}
+      {tab === 'acpr' && (
+        <ACPRReportingDashboard />
       )}
 
       {/* ── Create SAR Modal ─────────────────────────────────────── */}
