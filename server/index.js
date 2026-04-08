@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
+import PDFDocument from 'pdfkit';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -188,9 +189,292 @@ app.patch('/api/salesforce/account/:accountId', requireAuth, async (req, res) =>
 });
 
 // ============================================================
-// CONTRACT SIGNING — Public endpoints (no auth required)
+// PDF GENERATION & SALESFORCE FILE UPLOAD HELPERS
 // ============================================================
 import crypto from 'crypto';
+
+function generateContractPDF({ clientName, clientAddress, clientPhone, signerName, signerIp, signedAt }) {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margin: 60 });
+    const chunks = [];
+    doc.on('data', c => chunks.push(c));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    const dateStr = new Date(signedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    // Title
+    doc.font('Helvetica-Bold').fontSize(16).text('CONTRAT DE CONSERVATION D\'ACTIFS NUMERIQUES', { align: 'center' });
+    doc.moveDown(1.5);
+
+    // Parties
+    doc.font('Helvetica-Bold').fontSize(11).text('Entre :');
+    doc.moveDown(0.3);
+    doc.font('Helvetica').fontSize(10);
+    doc.text('SwissLife Banque Privee');
+    doc.text('Societe Anonyme');
+    doc.text('Siege social : 7 rue Belgrand, 92300 Levallois-Perret');
+    doc.text('Agreee en qualite de Prestataire de Services sur Actifs Numeriques (CASP)');
+    doc.text('ci-apres denominee "La Banque"');
+    doc.moveDown(0.5);
+
+    doc.font('Helvetica-Bold').fontSize(11).text('Et :');
+    doc.moveDown(0.3);
+    doc.font('Helvetica').fontSize(10);
+    doc.text(clientName);
+    doc.text(clientAddress);
+    doc.text(`Tel. : ${clientPhone}`);
+    doc.text('ci-apres denomme(e) "Le Client"');
+    doc.moveDown(0.8);
+
+    doc.moveTo(60, doc.y).lineTo(535, doc.y).stroke('#cccccc');
+    doc.moveDown(0.5);
+
+    // Articles
+    const articles = [
+      ['Article 1 — Objet', 'Le present contrat a pour objet de definir les conditions dans lesquelles La Banque assure, pour le compte du Client, la conservation d\'actifs numeriques au sens de l\'article L.54-10-1 du Code Monetaire et Financier et du reglement (UE) 2023/1114 (MiCA).'],
+      ['Article 2 — Services de conservation', 'La Banque assure la garde des cles cryptographiques privees necessaires a la detention et au transfert des actifs numeriques du Client, au moyen d\'une infrastructure de type MPC (Multi-Party Computation) conforme aux standards de securite de l\'industrie.'],
+      ['Article 3 — Segregation des actifs', 'Conformement a l\'article 75(7) du reglement MiCA, les actifs numeriques du Client sont conserves sur des adresses blockchain distinctes de celles de La Banque et des autres clients. Les actifs du Client ne font pas partie du bilan de La Banque.'],
+      ['Article 4 — Responsabilite', 'La Banque est responsable de la perte d\'actifs numeriques resultant d\'un incident imputable a La Banque ou a ses prestataires techniques, conformement a l\'article 75(8) du reglement MiCA. La valeur de restitution correspond a la valeur de marche des actifs au moment de la perte.'],
+      ['Article 5 — Restitution', 'Le Client peut demander la restitution de tout ou partie de ses actifs numeriques a tout moment. La Banque s\'engage a executer la restitution dans un delai raisonnable ne pouvant exceder 5 jours ouvrables.'],
+      ['Article 6 — Frais', 'Les frais de conservation sont calcules en points de base par an sur la valeur de marche moyenne des actifs conserves. Les frais de transaction sont factures separement selon le bareme en vigueur.'],
+      ['Article 7 — Lutte contre le blanchiment', 'Le Client s\'engage a respecter l\'ensemble des obligations relatives a la lutte contre le blanchiment et le financement du terrorisme. La Banque se reserve le droit de geler les actifs du Client sur instruction de Tracfin ou de toute autorite competente (art. L.562-4 CMF).'],
+      ['Article 8 — Duree et resiliation', 'Le present contrat est conclu pour une duree indeterminee. Chaque partie peut le resilier moyennant un preavis de 30 jours. En cas de resiliation, les actifs sont restitues au Client conformement a l\'article 5.'],
+      ['Article 9 — Droit applicable', 'Le present contrat est soumis au droit francais. Tout litige sera soumis aux tribunaux competents de Paris.'],
+    ];
+
+    for (const [title, body] of articles) {
+      if (doc.y > 680) doc.addPage();
+      doc.font('Helvetica-Bold').fontSize(11).text(title);
+      doc.moveDown(0.2);
+      doc.font('Helvetica').fontSize(10).text(body, { align: 'justify' });
+      doc.moveDown(0.6);
+    }
+
+    // Signature section
+    if (doc.y > 580) doc.addPage();
+    doc.moveDown(0.5);
+    doc.moveTo(60, doc.y).lineTo(535, doc.y).stroke('#cccccc');
+    doc.moveDown(0.8);
+
+    doc.font('Helvetica').fontSize(10).text(`Fait a Paris, le ${dateStr}`);
+    doc.moveDown(1.5);
+
+    const leftX = 60, rightX = 310;
+    const sigY = doc.y;
+
+    doc.font('Helvetica').fontSize(9).fillColor('#666666').text('Le Client :', leftX, sigY);
+    doc.font('Helvetica').fontSize(9).fillColor('#666666').text('La Banque :', rightX, sigY);
+
+    doc.moveDown(2);
+    const lineY = doc.y;
+    doc.moveTo(leftX, lineY).lineTo(230, lineY).stroke('#333333');
+    doc.moveTo(rightX, lineY).lineTo(480, lineY).stroke('#333333');
+
+    doc.font('Helvetica-Bold').fontSize(10).fillColor('#000000');
+    doc.text(signerName || clientName, leftX, lineY + 6);
+    doc.text('SwissLife Banque Privee', rightX, lineY + 6);
+
+    // Signature metadata
+    doc.moveDown(2);
+    doc.font('Helvetica').fontSize(8).fillColor('#999999');
+    doc.text(`Signature electronique — ${dateStr}`, leftX);
+    doc.text(`Signataire : ${signerName || clientName}`, leftX);
+    doc.text(`Adresse IP : ${signerIp}`, leftX);
+    doc.text(`Horodatage : ${signedAt}`, leftX);
+    doc.text('Valeur contractuelle au titre de l\'article 1367 du Code Civil', leftX);
+
+    doc.end();
+  });
+}
+
+function generateAdequacyPDF({ clientName, clientAddress, clientPhone, assessment, signerName, signerIp, signedAt, assessedBy }) {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margin: 60 });
+    const chunks = [];
+    doc.on('data', c => chunks.push(c));
+    doc.on('end', () => resolve(Buffer.concat(chunks)));
+    doc.on('error', reject);
+
+    const dateStr = new Date(signedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    // Title
+    doc.font('Helvetica-Bold').fontSize(16).text('QUESTIONNAIRE D\'ADEQUATION', { align: 'center' });
+    doc.font('Helvetica').fontSize(11).fillColor('#666666').text('Conservation d\'Actifs Numeriques', { align: 'center' });
+    doc.fillColor('#000000');
+    doc.moveDown(1);
+
+    // Legal reference
+    doc.font('Helvetica').fontSize(9).fillColor('#888888');
+    doc.text('Conformement a l\'article 66 du reglement (UE) 2023/1114 (MiCA) et aux obligations AMF relatives a l\'evaluation de l\'adequation des services de conservation d\'actifs numeriques.', { align: 'justify' });
+    doc.fillColor('#000000');
+    doc.moveDown(1);
+
+    // Client info
+    doc.font('Helvetica-Bold').fontSize(11).text('Informations du client');
+    doc.moveDown(0.3);
+    doc.font('Helvetica').fontSize(10);
+    doc.text(`Nom : ${clientName}`);
+    doc.text(`Adresse : ${clientAddress}`);
+    doc.text(`Telephone : ${clientPhone}`);
+    doc.moveDown(0.8);
+
+    doc.moveTo(60, doc.y).lineTo(535, doc.y).stroke('#cccccc');
+    doc.moveDown(0.5);
+
+    // Questions & answers
+    doc.font('Helvetica-Bold').fontSize(11).text('Evaluation');
+    doc.moveDown(0.5);
+
+    const questions = [
+      { q: '1. Le client comprend-il la nature volatile des actifs numeriques et les risques de perte en capital associes ?', a: assessment.q1 },
+      { q: '2. Le client a-t-il une experience prealable avec les cryptomonnaies ou actifs numeriques ?', a: assessment.q2 },
+      { q: '3. L\'allocation crypto envisagee est-elle coherente avec le profil de risque global du client ?', a: assessment.q3 },
+      { q: '4. Le client a-t-il ete informe des risques specifiques lies a la conservation d\'actifs numeriques (cles privees, irreversibilite des transactions, risque de piratage) ?', a: assessment.q4 },
+    ];
+
+    for (const { q, a } of questions) {
+      doc.font('Helvetica').fontSize(10).text(q, { align: 'justify' });
+      doc.moveDown(0.2);
+      const color = a === 'Oui' ? '#059669' : '#DC2626';
+      doc.font('Helvetica-Bold').fontSize(11).fillColor(color).text(`Reponse : ${a || 'Non renseigne'}`);
+      doc.fillColor('#000000');
+      doc.moveDown(0.6);
+    }
+
+    if (assessment.notes) {
+      doc.moveDown(0.3);
+      doc.font('Helvetica-Bold').fontSize(10).text('Notes complementaires :');
+      doc.moveDown(0.2);
+      doc.font('Helvetica').fontSize(10).text(assessment.notes, { align: 'justify' });
+      doc.moveDown(0.5);
+    }
+
+    // Conclusion
+    doc.moveDown(0.5);
+    doc.moveTo(60, doc.y).lineTo(535, doc.y).stroke('#cccccc');
+    doc.moveDown(0.5);
+
+    const allOui = assessment.q1 === 'Oui' && assessment.q2 === 'Oui' && assessment.q3 === 'Oui' && assessment.q4 === 'Oui';
+    doc.font('Helvetica-Bold').fontSize(12);
+    if (allOui) {
+      doc.fillColor('#059669').text('CONCLUSION : Le client est juge adequat pour les services de conservation d\'actifs numeriques.');
+    } else {
+      doc.fillColor('#DC2626').text('CONCLUSION : Le client ne remplit pas les conditions d\'adequation pour les services de conservation d\'actifs numeriques.');
+    }
+    doc.fillColor('#000000');
+    doc.moveDown(1);
+
+    // Evaluator info
+    doc.font('Helvetica').fontSize(9).fillColor('#888888');
+    doc.text(`Evaluation realisee par : ${assessedBy || 'Non renseigne'}`);
+    doc.fillColor('#000000');
+    doc.moveDown(1);
+
+    // Signatures
+    doc.font('Helvetica').fontSize(10).text(`Fait a Paris, le ${dateStr}`);
+    doc.moveDown(1.5);
+
+    const leftX = 60, rightX = 310;
+    const sigY = doc.y;
+
+    doc.font('Helvetica').fontSize(9).fillColor('#666666').text('Le Client :', leftX, sigY);
+    doc.font('Helvetica').fontSize(9).fillColor('#666666').text('Le Banquier :', rightX, sigY);
+
+    doc.moveDown(2);
+    const lineY = doc.y;
+    doc.moveTo(leftX, lineY).lineTo(230, lineY).stroke('#333333');
+    doc.moveTo(rightX, lineY).lineTo(480, lineY).stroke('#333333');
+
+    doc.font('Helvetica-Bold').fontSize(10).fillColor('#000000');
+    doc.text(signerName || clientName, leftX, lineY + 6);
+    doc.text(assessedBy || 'SwissLife Banque Privee', rightX, lineY + 6);
+
+    // Signature metadata
+    doc.moveDown(2);
+    doc.font('Helvetica').fontSize(8).fillColor('#999999');
+    doc.text(`Signature electronique — ${dateStr}`, leftX);
+    doc.text(`Signataire : ${signerName || clientName}`, leftX);
+    doc.text(`Adresse IP : ${signerIp}`, leftX);
+    doc.text(`Horodatage : ${signedAt}`, leftX);
+
+    doc.end();
+  });
+}
+
+async function uploadPDFToSalesforce(pdfBuffer, fileName, accountId) {
+  if (!SF_CONFIGURED) return null;
+  try {
+    const { accessToken, instanceUrl } = await getSalesforceToken();
+
+    // 1. Create ContentVersion
+    const boundary = '----FormBoundary' + crypto.randomUUID().replace(/-/g, '');
+    const jsonPart = JSON.stringify({
+      Title: fileName.replace('.pdf', ''),
+      PathOnClient: fileName,
+      Description: 'Document custody genere automatiquement — SwissLife Banque Privee',
+    });
+
+    const bodyParts = [
+      `--${boundary}\r\nContent-Disposition: form-data; name="entity_content"\r\nContent-Type: application/json\r\n\r\n${jsonPart}\r\n`,
+      `--${boundary}\r\nContent-Disposition: form-data; name="VersionData"; filename="${fileName}"\r\nContent-Type: application/pdf\r\n\r\n`,
+    ];
+
+    const bodyStart = Buffer.from(bodyParts[0] + bodyParts[1], 'utf-8');
+    const bodyEnd = Buffer.from(`\r\n--${boundary}--\r\n`, 'utf-8');
+    const fullBody = Buffer.concat([bodyStart, pdfBuffer, bodyEnd]);
+
+    const cvRes = await fetch(`${instanceUrl}/services/data/v59.0/sobjects/ContentVersion`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      },
+      body: fullBody,
+    });
+
+    if (!cvRes.ok) {
+      const err = await cvRes.text();
+      console.error('ContentVersion create error:', err);
+      return null;
+    }
+
+    const cvData = await cvRes.json();
+    const contentVersionId = cvData.id;
+
+    // 2. Get ContentDocumentId
+    const cvQuery = await fetch(`${instanceUrl}/services/data/v59.0/sobjects/ContentVersion/${contentVersionId}`, {
+      headers: { 'Authorization': `Bearer ${accessToken}` },
+    });
+    const cvInfo = await cvQuery.json();
+    const contentDocumentId = cvInfo.ContentDocumentId;
+
+    // 3. Link to Account via ContentDocumentLink
+    await fetch(`${instanceUrl}/services/data/v59.0/sobjects/ContentDocumentLink`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ContentDocumentId: contentDocumentId,
+        LinkedEntityId: accountId,
+        ShareType: 'V',
+        Visibility: 'AllUsers',
+      }),
+    });
+
+    console.log(`PDF uploaded to Salesforce: ${fileName} → Account ${accountId}`);
+    return { contentVersionId, contentDocumentId };
+  } catch (err) {
+    console.error('Salesforce PDF upload error:', err.message);
+    return null;
+  }
+}
+
+// ============================================================
+// CONTRACT SIGNING — Public endpoints (no auth required)
+// ============================================================
 
 // Generate signing link
 app.post('/api/signing/generate', requireAuth, async (req, res) => {
@@ -331,7 +615,26 @@ app.post('/api/signing/:token/sign', async (req, res) => {
       }
     }
 
-    // 3. Audit log
+    // 3. Generate PDF and upload to Salesforce
+    const clientAddress = [tokenData.client_street, tokenData.client_postal_code, tokenData.client_city, tokenData.client_country].filter(Boolean).join(', ') || 'Non renseigne';
+    try {
+      const pdfBuffer = await generateContractPDF({
+        clientName: tokenData.client_name,
+        clientAddress,
+        clientPhone: tokenData.client_phone || 'Non renseigne',
+        signerName: signerName || tokenData.client_name,
+        signerIp,
+        signedAt,
+      });
+      const dateSlug = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const fileName = `Contrat_Custody_${tokenData.client_name.replace(/[^a-zA-Z0-9]/g, '_')}_${dateSlug}.pdf`;
+      await uploadPDFToSalesforce(pdfBuffer, fileName, tokenData.salesforce_account_id);
+    } catch (pdfErr) {
+      console.error('Contract PDF generation/upload error:', pdfErr.message);
+      // Non-blocking
+    }
+
+    // 4. Audit log
     await logAudit({
       action: 'custody_contract_signed_by_client',
       category: 'custody',
@@ -339,7 +642,7 @@ app.post('/api/signing/:token/sign', async (req, res) => {
       entityId: tokenData.salesforce_account_id,
       clientName: tokenData.client_name,
       salesforceAccountId: tokenData.salesforce_account_id,
-      details: { signerName, signerIp, signedAt, token: req.params.token },
+      details: { signerName, signerIp, signedAt, token: req.params.token, pdfGenerated: true },
       severity: 'info',
       req,
     });
@@ -347,6 +650,193 @@ app.post('/api/signing/:token/sign', async (req, res) => {
     res.json({ success: true, signedAt });
   } catch (err) {
     console.error('Sign contract error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// ADEQUACY QUESTIONNAIRE — Signing link for client
+// ============================================================
+
+// Generate adequacy signing link (banker creates it after filling questionnaire)
+app.post('/api/signing/adequacy/generate', requireAuth, async (req, res) => {
+  try {
+    const { salesforceAccountId, clientName, clientStreet, clientCity, clientPostalCode, clientCountry, clientPhone, assessment } = req.body;
+    if (!salesforceAccountId || !clientName || !assessment) {
+      return res.status(400).json({ error: 'salesforceAccountId, clientName and assessment are required' });
+    }
+
+    const token = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    const { error } = await supabaseAdmin.from('signing_tokens').insert({
+      token,
+      salesforce_account_id: salesforceAccountId,
+      client_name: clientName,
+      client_street: clientStreet || null,
+      client_city: clientCity || null,
+      client_postal_code: clientPostalCode || null,
+      client_country: clientCountry || null,
+      client_phone: clientPhone || null,
+      status: 'pending',
+      created_by: req.user?.email || 'unknown',
+      expires_at: expiresAt,
+    });
+
+    if (error) throw error;
+
+    // Store assessment data in a separate row or in audit for retrieval
+    await supabaseAdmin.from('audit_log').insert({
+      user_id: req.user?.id || null,
+      user_email: req.user?.email || 'system',
+      user_role: req.user?.role || 'system',
+      action: 'adequacy_link_generated',
+      category: 'custody',
+      entity_type: 'Account',
+      entity_id: salesforceAccountId,
+      client_name: clientName,
+      salesforce_account_id: salesforceAccountId,
+      details: { token, assessment, expiresAt },
+      severity: 'info',
+    });
+
+    res.json({ token, expiresAt, url: `/sign/adequacy/${token}` });
+  } catch (err) {
+    console.error('Generate adequacy link error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get adequacy data (public)
+app.get('/api/signing/adequacy/:token', async (req, res) => {
+  try {
+    const { data: tokenData, error } = await supabaseAdmin
+      .from('signing_tokens')
+      .select('*')
+      .eq('token', req.params.token)
+      .single();
+
+    if (error || !tokenData) {
+      return res.status(404).json({ error: 'Lien invalide ou introuvable' });
+    }
+
+    if (tokenData.status === 'revoked') {
+      return res.status(410).json({ error: 'Ce lien a ete revoque' });
+    }
+
+    if (new Date(tokenData.expires_at) < new Date() && tokenData.status !== 'signed') {
+      return res.status(410).json({ error: 'Ce lien a expire' });
+    }
+
+    // Get assessment data from audit log
+    const { data: auditData } = await supabaseAdmin
+      .from('audit_log')
+      .select('details')
+      .eq('action', 'adequacy_link_generated')
+      .filter('details->>token', 'eq', req.params.token)
+      .single();
+
+    res.json({
+      client_name: tokenData.client_name,
+      client_street: tokenData.client_street,
+      client_city: tokenData.client_city,
+      client_postal_code: tokenData.client_postal_code,
+      client_country: tokenData.client_country,
+      client_phone: tokenData.client_phone,
+      status: tokenData.status,
+      signed_at: tokenData.signed_at,
+      assessment: auditData?.details?.assessment || null,
+    });
+  } catch (err) {
+    console.error('Get adequacy token error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Sign adequacy (public)
+app.post('/api/signing/adequacy/:token/sign', async (req, res) => {
+  try {
+    const { signerName } = req.body;
+
+    const { data: tokenData, error: fetchErr } = await supabaseAdmin
+      .from('signing_tokens')
+      .select('*')
+      .eq('token', req.params.token)
+      .single();
+
+    if (fetchErr || !tokenData) return res.status(404).json({ error: 'Lien invalide' });
+    if (tokenData.status === 'signed') return res.status(400).json({ error: 'Deja signe' });
+    if (tokenData.status === 'revoked') return res.status(410).json({ error: 'Lien revoque' });
+    if (new Date(tokenData.expires_at) < new Date()) return res.status(410).json({ error: 'Lien expire' });
+
+    const signerIp = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+    const signedAt = new Date().toISOString();
+
+    // 1. Mark as signed
+    await supabaseAdmin.from('signing_tokens')
+      .update({ status: 'signed', signed_at: signedAt, signer_ip: signerIp })
+      .eq('token', req.params.token);
+
+    // 2. Update Salesforce
+    if (SF_CONFIGURED) {
+      try {
+        const { accessToken, instanceUrl } = await getSalesforceToken();
+        await fetch(`${instanceUrl}/services/data/v59.0/sobjects/Account/${tokenData.salesforce_account_id}`, {
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ Custody_Adequacy_Done__c: true }),
+        });
+      } catch (sfErr) {
+        console.error('Salesforce adequacy update failed:', sfErr.message);
+      }
+    }
+
+    // 3. Get assessment from audit log
+    const { data: auditData } = await supabaseAdmin
+      .from('audit_log')
+      .select('details')
+      .eq('action', 'adequacy_link_generated')
+      .filter('details->>token', 'eq', req.params.token)
+      .single();
+
+    const assessment = auditData?.details?.assessment || {};
+
+    // 4. Generate PDF and upload to Salesforce
+    const clientAddress = [tokenData.client_street, tokenData.client_postal_code, tokenData.client_city, tokenData.client_country].filter(Boolean).join(', ') || 'Non renseigne';
+    try {
+      const pdfBuffer = await generateAdequacyPDF({
+        clientName: tokenData.client_name,
+        clientAddress,
+        clientPhone: tokenData.client_phone || 'Non renseigne',
+        assessment,
+        signerName: signerName || tokenData.client_name,
+        signerIp,
+        signedAt,
+        assessedBy: tokenData.created_by,
+      });
+      const dateSlug = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const fileName = `Adequation_Custody_${tokenData.client_name.replace(/[^a-zA-Z0-9]/g, '_')}_${dateSlug}.pdf`;
+      await uploadPDFToSalesforce(pdfBuffer, fileName, tokenData.salesforce_account_id);
+    } catch (pdfErr) {
+      console.error('Adequacy PDF generation/upload error:', pdfErr.message);
+    }
+
+    // 5. Audit log
+    await logAudit({
+      action: 'adequacy_signed_by_client',
+      category: 'custody',
+      entityType: 'Account',
+      entityId: tokenData.salesforce_account_id,
+      clientName: tokenData.client_name,
+      salesforceAccountId: tokenData.salesforce_account_id,
+      details: { signerName, signerIp, signedAt, token: req.params.token, assessment, pdfGenerated: true },
+      severity: 'info',
+      req,
+    });
+
+    res.json({ success: true, signedAt });
+  } catch (err) {
+    console.error('Sign adequacy error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

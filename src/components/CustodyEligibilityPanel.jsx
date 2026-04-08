@@ -30,8 +30,10 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
   });
   const [submittingAdequacy, setSubmittingAdequacy] = useState(false);
   const [signingLink, setSigningLink] = useState(null);
+  const [adequacyLink, setAdequacyLink] = useState(null);
   const [generatingLink, setGeneratingLink] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [adequacyLinkCopied, setAdequacyLinkCopied] = useState(false);
 
   const isEligible = client.Custody_Eligible__c === true;
 
@@ -104,45 +106,55 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
     if (!allAdequacyOui) return;
     setSubmittingAdequacy(true);
     try {
-      await updateAccountFields(client.id, { Custody_Adequacy_Done__c: true });
-
-      // Store assessment in audit_log via Supabase
+      // Generate a signing link for the client to review & sign the adequacy
       const { data: { session } } = await supabase.auth.getSession();
       const authHeaders = session?.access_token
         ? { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }
         : { 'Content-Type': 'application/json' };
 
-      await fetch(`${API_BASE}/api/audit-log`, {
+      const res = await fetch(`${API_BASE}/api/signing/adequacy/generate`, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify({
-          action: 'adequacy_assessment_completed',
-          category: 'custody',
-          entityType: 'Account',
-          entityId: client.id,
-          clientName: client.name,
           salesforceAccountId: client.id,
-          details: {
-            assessment: {
-              volatile_understanding: adequacy.q1,
-              crypto_experience: adequacy.q2,
-              allocation_coherence: adequacy.q3,
-              risk_informed: adequacy.q4,
-              notes: adequacy.notes,
-            },
-            assessedBy: user?.email,
-            assessedAt: new Date().toISOString(),
+          clientName: client.name,
+          clientStreet: client.street || null,
+          clientCity: client.city || null,
+          clientPostalCode: client.postalCode || null,
+          clientCountry: client.country || null,
+          clientPhone: client.phone || null,
+          assessment: {
+            q1: adequacy.q1,
+            q2: adequacy.q2,
+            q3: adequacy.q3,
+            q4: adequacy.q4,
+            notes: adequacy.notes,
           },
         }),
-      }).catch(() => {});
+      });
 
-      if (onUpdate) await onUpdate();
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Erreur generation lien');
+      }
+
+      const json = await res.json();
+      const fullUrl = `${window.location.origin}/sign/adequacy/${json.token}`;
+      setAdequacyLink(fullUrl);
       setShowAdequacy(false);
       setAdequacy({ q1: null, q2: null, q3: null, q4: null, notes: '' });
     } catch (err) {
       alert('Erreur: ' + err.message);
     }
     setSubmittingAdequacy(false);
+  };
+
+  const copyAdequacyLink = () => {
+    if (!adequacyLink) return;
+    navigator.clipboard.writeText(adequacyLink).then(() => {
+      setAdequacyLinkCopied(true);
+      setTimeout(() => setAdequacyLinkCopied(false), 2000);
+    });
   };
 
   const checkItems = [
@@ -390,7 +402,7 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
               disabled={!allAdequacyOui || submittingAdequacy}
               className="flex-1 py-2.5 text-[14px] font-medium text-white bg-[#059669] rounded-xl hover:bg-[#047857] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {submittingAdequacy ? 'Validation...' : 'Valider l\'adequation'}
+              {submittingAdequacy ? 'Generation du lien...' : 'Generer le lien de signature client'}
             </button>
           </div>
         </div>
@@ -423,6 +435,54 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
                   }`}
                 >
                   {linkCopied ? (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Copie !
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      Copier
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Adequacy Signing Link Panel */}
+      {adequacyLink && (
+        <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-6">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#EFF6FF] flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-[#3B82F6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-[14px] font-semibold text-[#0F0F10] mb-1">Lien questionnaire d'adequation</h4>
+              <p className="text-[13px] text-[#787881] mb-3">
+                Envoyez ce lien au client pour qu'il consulte et signe le questionnaire d'adequation. Le PDF sera genere automatiquement et stocke dans Salesforce.
+              </p>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 bg-[rgba(0,0,23,0.03)] border border-[rgba(0,0,29,0.08)] rounded-lg px-3 py-2 text-[12px] text-[#0F0F10] font-mono truncate">
+                  {adequacyLink}
+                </div>
+                <button
+                  onClick={copyAdequacyLink}
+                  className={`px-4 py-2 text-[12px] font-medium rounded-lg transition-all flex items-center gap-1.5 flex-shrink-0 ${
+                    adequacyLinkCopied
+                      ? 'bg-[#059669] text-white'
+                      : 'bg-[#0F0F10] text-white hover:bg-[#1a1a1a]'
+                  }`}
+                >
+                  {adequacyLinkCopied ? (
                     <>
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

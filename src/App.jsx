@@ -10,10 +10,16 @@ import WalletList from './components/WalletList';
 import PolicyList from './components/PolicyList';
 import ComplianceDashboard from './components/ComplianceDashboard';
 import ContractSigningPage from './components/ContractSigningPage';
+import AdequacySigningPage from './components/AdequacySigningPage';
 
 // Check if current URL is a public signing page
 function getSigningToken() {
   const match = window.location.pathname.match(/^\/sign\/([a-f0-9-]+)$/i);
+  return match ? match[1] : null;
+}
+
+function getAdequacyToken() {
+  const match = window.location.pathname.match(/^\/sign\/adequacy\/([a-f0-9-]+)$/i);
   return match ? match[1] : null;
 }
 
@@ -23,7 +29,12 @@ function AppInner() {
   const [section, setSection] = useState('clients');
   const [selectedClient, setSelectedClient] = useState(null);
 
-  // Public signing page — no auth needed
+  // Public signing pages — no auth needed
+  const adequacyToken = getAdequacyToken();
+  if (adequacyToken) {
+    return <AdequacySigningPage token={adequacyToken} />;
+  }
+
   const signingToken = getSigningToken();
   if (signingToken) {
     return <ContractSigningPage token={signingToken} />;
