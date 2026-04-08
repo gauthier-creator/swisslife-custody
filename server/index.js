@@ -3043,6 +3043,90 @@ app.get('/api/compliance/reporting/acpr/export', requireAdmin, async (req, res) 
   }
 });
 
+// ============================================================
+// MISSING ROUTE ALIASES — Match frontend expected paths
+// ============================================================
+
+// GET /api/compliance/approvals/pending — Pending approvals only
+app.get('/api/compliance/approvals/pending', async (req, res) => {
+  try {
+    const { limit = '50', offset = '0' } = req.query;
+    const { data, error } = await supabaseAdmin
+      .from('transfer_approvals')
+      .select('*')
+      .eq('status', 'pending')
+      .order('requested_at', { ascending: false })
+      .range(Number(offset), Number(offset) + Number(limit) - 1);
+    if (error) throw error;
+    res.json({ data });
+  } catch (err) {
+    console.error('approvals pending list error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/compliance/whitelist — List ALL whitelisted addresses
+app.get('/api/compliance/whitelist', async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('address_whitelist')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json({ data });
+  } catch (err) {
+    console.error('whitelist list all error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/compliance/delegations/:accountId — Alias for /api/delegations/:accountId
+app.get('/api/compliance/delegations/:accountId', async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('delegations')
+      .select('*')
+      .or(`grantor_account_id.eq.${req.params.accountId},delegate_account_id.eq.${req.params.accountId}`)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json({ data });
+  } catch (err) {
+    console.error('delegations list error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/kyc/checks/:accountId — KYC checks for a client
+app.get('/api/kyc/checks/:accountId', async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('kyc_checks')
+      .select('*')
+      .eq('salesforce_account_id', req.params.accountId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json({ data: data || [] });
+  } catch (err) {
+    console.error('kyc checks list error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/compliance/risk-config — List all client risk configurations
+app.get('/api/compliance/risk-config', async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('client_risk_config')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    res.json({ data: data || [] });
+  } catch (err) {
+    console.error('risk-config list error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 3002;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Custody server running on port ${PORT}`);
