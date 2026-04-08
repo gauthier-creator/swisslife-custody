@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { listWallets, createWallet, getWalletAssets, transferAsset, getWalletHistory } from '../services/dfnsApi';
 import { fetchContacts, fetchClientById, parseDescription } from '../services/salesforceApi';
-import DocumentsPanel from './DocumentsPanel';
+// DocumentsPanel removed — documents are managed directly in Salesforce
 import WhitelistPanel from './WhitelistPanel';
 import RiskConfigPanel from './RiskConfigPanel';
 import KYCFlow from './KYCFlow';
@@ -268,7 +268,6 @@ export default function ClientDetail({ client: initialClient, onBack }) {
           { id: 'profile', label: 'Fiche client' },
           { id: 'eligibility', label: 'Eligibilite' },
           ...(kycModuleEnabled ? [{ id: 'kyc', label: 'KYC / KYB' }] : []),
-          { id: 'documents', label: 'Documents' },
           { id: 'wallets', label: `Wallets (${wallets.length})` },
           { id: 'delegations', label: 'Delegations' },
           ...(client.type !== 'Customer - Direct' ? [{ id: 'ubo', label: 'UBO' }] : []),
@@ -469,11 +468,6 @@ export default function ClientDetail({ client: initialClient, onBack }) {
       {/* ========== KYC TAB ========== */}
       {tab === 'kyc' && (
         <KYCFlow client={client} onComplete={loadKycStatus} />
-      )}
-
-      {/* ========== DOCUMENTS TAB ========== */}
-      {tab === 'documents' && (
-        <DocumentsPanel client={client} />
       )}
 
       {/* ========== DELEGATIONS TAB ========== */}
