@@ -2417,7 +2417,7 @@ app.get('/api/delegations/:accountId', requireAuth, async (req, res) => {
     const { data, error } = await supabaseAdmin
       .from('delegations')
       .select('*')
-      .or(`grantor_account_id.eq.${req.params.accountId},delegate_account_id.eq.${req.params.accountId}`)
+      .eq('grantor_account_id', req.params.accountId)
       .order('created_at', { ascending: false });
     if (error) throw error;
     res.json({ data: data || [] });
@@ -3086,7 +3086,7 @@ app.get('/api/compliance/delegations/:accountId', async (req, res) => {
     const { data, error } = await supabaseAdmin
       .from('delegations')
       .select('*')
-      .or(`grantor_account_id.eq.${req.params.accountId},delegate_account_id.eq.${req.params.accountId}`)
+      .eq('grantor_account_id', req.params.accountId)
       .order('created_at', { ascending: false });
     if (error) throw error;
     res.json({ data });
