@@ -62,8 +62,13 @@ async function authMiddleware(req, res, next) {
       req.user = null;
       return next();
     }
-    // Fetch role from custody_profiles
-    const { data: profile } = await supabaseAdmin
+    // Use a user-scoped client to respect RLS on custody_profiles
+    const userClient = createClient(
+      process.env.VITE_SUPABASE_URL,
+      process.env.VITE_SUPABASE_ANON_KEY,
+      { global: { headers: { Authorization: `Bearer ${token}` } } }
+    );
+    const { data: profile } = await userClient
       .from('custody_profiles')
       .select('role, email, full_name')
       .eq('id', user.id)
