@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchClients, getSalesforceStatus } from '../services/salesforceApi';
-import { mockClients } from '../data/mockClients';
+import { fetchClients } from '../services/salesforceApi';
 import { fmtEUR, Badge, EmptyState, Spinner } from './shared';
 
 export default function ClientList({ onSelectClient }) {
@@ -8,48 +7,28 @@ export default function ClientList({ onSelectClient }) {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [error, setError] = useState(null);
-  const [isDemo, setIsDemo] = useState(null);
 
-  // Auto-detect: ask server if SF is configured
-  useEffect(() => {
-    getSalesforceStatus().then(status => {
-      setIsDemo(!status.configured);
-    }).catch(() => setIsDemo(true));
-  }, []);
-
-  const loadClients = useCallback(async (q = '', demo = true) => {
+  const loadClients = useCallback(async (q = '') => {
     setLoading(true);
     setError(null);
     try {
-      if (demo) {
-        const filtered = q
-          ? mockClients.filter(c => c.name.toLowerCase().includes(q.toLowerCase()))
-          : mockClients;
-        setClients(filtered);
-      } else {
-        const data = await fetchClients(q);
-        setClients(data);
-      }
+      const data = await fetchClients(q);
+      setClients(data);
     } catch (err) {
-      if (err.message === 'MOCK_MODE') {
-        setIsDemo(true);
-        setClients(mockClients);
-      } else {
-        setError(err.message);
-        setClients(mockClients);
-      }
+      setError(err.message);
+      setClients([]);
     }
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    if (isDemo !== null) loadClients('', isDemo);
-  }, [isDemo, loadClients]);
+    loadClients('');
+  }, [loadClients]);
 
   const handleSearch = (e) => {
     setSearch(e.target.value);
     clearTimeout(window._searchTimeout);
-    window._searchTimeout = setTimeout(() => loadClients(e.target.value, isDemo), 300);
+    window._searchTimeout = setTimeout(() => loadClients(e.target.value), 300);
   };
 
   return (
@@ -58,7 +37,7 @@ export default function ClientList({ onSelectClient }) {
         <div>
           <h2 className="text-[22px] font-semibold text-[#0F0F10] tracking-tight">Clients</h2>
           <p className="text-[13px] text-[#787881] mt-0.5">
-            {clients.length} client{clients.length > 1 ? 's' : ''} {isDemo ? '(demo)' : 'Salesforce'}
+            {clients.length} client{clients.length > 1 ? 's' : ''} Salesforce
           </p>
         </div>
         <div className="relative">
@@ -76,8 +55,8 @@ export default function ClientList({ onSelectClient }) {
       </div>
 
       {error && (
-        <div className="bg-[#FFFBEB] border border-[rgba(217,119,6,0.1)] rounded-xl px-4 py-3 mb-4 text-[13px] text-[#D97706]">
-          {error} — Donnees de demonstration affichees
+        <div className="bg-[#FEF2F2] border border-[rgba(220,38,38,0.1)] rounded-xl px-4 py-3 mb-4 text-[13px] text-[#DC2626]">
+          {error}
         </div>
       )}
 

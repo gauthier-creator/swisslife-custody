@@ -4,7 +4,7 @@ const headers = { 'Content-Type': 'application/json' };
 
 /**
  * KYC Service — calls server-side /api/kyc/* endpoints
- * Server proxies to ComplyCube API (or runs in demo mode)
+ * Server proxies to ComplyCube API
  */
 
 // Create a ComplyCube client for a Salesforce account

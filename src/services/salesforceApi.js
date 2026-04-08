@@ -22,8 +22,6 @@ export async function fetchClients(search = '') {
 
   const res = await fetch(`${API_BASE}/api/salesforce/services/data/v59.0/query/?q=${encodeURIComponent(soql)}`, { headers });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    if (err.mock) throw new Error('MOCK_MODE');
     throw new Error('Salesforce query failed');
   }
   const data = await res.json();

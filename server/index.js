@@ -102,7 +102,7 @@ app.get('/api/salesforce/status', (req, res) => {
 // SF proxy — server handles auth
 app.use('/api/salesforce', async (req, res) => {
   if (!SF_CONFIGURED) {
-    return res.status(501).json({ error: 'Salesforce not configured', mock: true });
+    return res.status(501).json({ error: 'Salesforce not configured' });
   }
 
   try {
@@ -1263,9 +1263,8 @@ app.patch('/api/compliance/alerts/:id/resolve', async (req, res) => {
 });
 
 // ============================================================
-// KYC / KYB — ComplyCube integration (with demo mode fallback)
+// KYC / KYB — ComplyCube integration
 // ============================================================
-const KYC_DEMO_MODE = process.env.COMPLYCUBE_API_KEY ? false : true;
 const COMPLYCUBE_BASE = 'https://api.complycube.com/v1';
 const COMPLYCUBE_KEY = process.env.COMPLYCUBE_API_KEY || '';
 
@@ -1287,11 +1286,6 @@ async function complyCubeRequest(method, path, body = null) {
   return res.json();
 }
 
-// Demo mode: simulate ComplyCube responses
-function demoDelay(ms = 2000) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 // POST /api/kyc/upload-document — Upload doc & create verification check
 app.post('/api/kyc/upload-document', upload.single('file'), async (req, res) => {
   try {
@@ -1301,25 +1295,14 @@ app.post('/api/kyc/upload-document', upload.single('file'), async (req, res) => 
       return res.status(400).json({ error: 'salesforceAccountId, documentType, and file are required' });
     }
 
+    if (!COMPLYCUBE_KEY) {
+      return res.status(503).json({ error: 'ComplyCube API key not configured' });
+    }
+
     let checkResult;
 
-    if (KYC_DEMO_MODE) {
-      // Demo mode: simulate document verification
-      await demoDelay(1500);
-      checkResult = {
-        id: `demo_check_${Date.now()}`,
-        status: 'complete',
-        result: {
-          outcome: 'clear',
-          breakdown: {
-            documentAuthenticity: 'clear',
-            dataComparison: 'clear',
-            imageIntegrity: 'clear',
-          },
-        },
-      };
-    } else {
-      // Real ComplyCube flow
+    {
+      // ComplyCube flow
       // 1. Check if client exists, create if not
       let { data: existingChecks } = await supabaseAdmin
         .from('kyc_checks')
@@ -1424,26 +1407,14 @@ app.post('/api/kyc/aml-screen', async (req, res) => {
       return res.status(400).json({ error: 'salesforceAccountId is required' });
     }
 
+    if (!COMPLYCUBE_KEY) {
+      return res.status(503).json({ error: 'ComplyCube API key not configured' });
+    }
+
     let screenResult;
 
-    if (KYC_DEMO_MODE) {
-      // Demo: simulate AML screening (clear for everyone except "Jane Reject")
-      await demoDelay(2500);
-      const isReject = clientName?.toLowerCase().includes('reject');
-      screenResult = {
-        id: `demo_aml_${Date.now()}`,
-        status: isReject ? 'failed' : 'complete',
-        result: isReject ? {
-          outcome: 'attention',
-          matches: [{ type: 'PEP', source: 'EU PEP List', matchScore: 0.92 }],
-        } : {
-          outcome: 'clear',
-          matchCount: 0,
-          searchedLists: ['OFAC SDN', 'EU Consolidated', 'UN Sanctions', 'UK HMT', 'PEP Global'],
-        },
-      };
-    } else {
-      // Real ComplyCube AML screening
+    {
+      // ComplyCube AML screening
       let { data: existingChecks } = await supabaseAdmin
         .from('kyc_checks')
         .select('complycube_client_id')
@@ -1532,8 +1503,8 @@ app.get('/api/kyc/check/:checkId', async (req, res) => {
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Check not found' });
 
-    // If still processing and not demo mode, poll ComplyCube
-    if (data.status === 'processing' && !KYC_DEMO_MODE && data.complycube_check_id) {
+    // If still processing, poll ComplyCube
+    if (data.status === 'processing' && data.complycube_check_id) {
       try {
         const ccCheck = await complyCubeRequest('GET', `/checks/${data.complycube_check_id}`);
         if (ccCheck.status === 'complete') {
@@ -1652,13 +1623,13 @@ app.post('/api/kyc/validate', async (req, res) => {
   }
 });
 
-// POST /api/kyc/create-client — Create ComplyCube client (if not demo mode)
+// POST /api/kyc/create-client — Create ComplyCube client
 app.post('/api/kyc/create-client', async (req, res) => {
   try {
     const { salesforceAccountId, clientName, email, personType } = req.body;
 
-    if (KYC_DEMO_MODE) {
-      return res.json({ id: `demo_client_${Date.now()}`, mode: 'demo' });
+    if (!COMPLYCUBE_KEY) {
+      return res.status(503).json({ error: 'ComplyCube API key not configured' });
     }
 
     const ccClient = await complyCubeRequest('POST', '/clients', {
@@ -2517,24 +2488,13 @@ app.post('/api/kyc/trigger-rescreening', async (req, res) => {
 
     const clientName = existingChecks?.[0]?.client_name || salesforceAccountId;
 
+    if (!COMPLYCUBE_KEY) {
+      return res.status(503).json({ error: 'ComplyCube API key not configured' });
+    }
+
     let screenResult;
 
-    if (KYC_DEMO_MODE) {
-      await demoDelay(2000);
-      const isReject = clientName?.toLowerCase().includes('reject');
-      screenResult = {
-        id: `demo_rescan_${Date.now()}`,
-        status: isReject ? 'failed' : 'complete',
-        result: isReject ? {
-          outcome: 'attention',
-          matches: [{ type: 'PEP', source: 'EU PEP List', matchScore: 0.92 }],
-        } : {
-          outcome: 'clear',
-          matchCount: 0,
-          searchedLists: ['OFAC SDN', 'EU Consolidated', 'UN Sanctions', 'UK HMT', 'PEP Global'],
-        },
-      };
-    } else {
+    {
       const complyCubeClientId = existingChecks?.[0]?.complycube_client_id;
       if (!complyCubeClientId) {
         return res.status(400).json({ error: 'No ComplyCube client found for this account.' });
@@ -3009,7 +2969,7 @@ if (fs.existsSync(distPath)) {
 const PORT = process.env.PORT || 3002;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Custody server running on port ${PORT}`);
-  console.log(`Salesforce: ${SF_CONFIGURED ? 'configured' : 'mock mode'}`);
+  console.log(`Salesforce: ${SF_CONFIGURED ? 'configured' : 'NOT configured'}`);
   console.log(`Dfns: configured`);
   console.log(`Supabase: ${process.env.VITE_SUPABASE_URL ? 'configured' : 'NOT configured'}`);
 });

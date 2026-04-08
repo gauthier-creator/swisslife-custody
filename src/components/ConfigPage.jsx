@@ -77,7 +77,7 @@ export default function ConfigPage({ onConfigured }) {
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-[#F59E0B]" />
-                <span className="text-[13px] text-[#F59E0B] font-medium">Mode demo (donnees fictives)</span>
+                <span className="text-[13px] text-[#F59E0B] font-medium">Non connecte</span>
               </div>
               <div className="bg-[rgba(0,0,23,0.025)] rounded-xl p-4 text-[12px] text-[#787881] space-y-2">
                 <p className="font-semibold text-[#0F0F10]">Pour connecter Salesforce, ajoutez ces variables d'environnement au serveur :</p>
