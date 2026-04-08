@@ -6,7 +6,10 @@ import {
   fetchAlerts, fetchAlertStats, acknowledgeAlert, resolveAlert,
   fetchAuditLog, fetchAuditStats,
   fetchWhitelist, approveWhitelistAddress, revokeWhitelistAddress,
+  fetchSARs, createSAR, submitSAR, reviewSAR, fileSAR, closeSAR, fetchSARStats,
 } from '../services/complianceApi';
+import KYCReviewDashboard from './KYCReviewDashboard';
+import ComplianceReports from './ComplianceReports';
 
 // ── Helpers ──────────────────────────────────────────────────────────
 const truncAddr = (a) => a ? `${a.slice(0, 6)}...${a.slice(-4)}` : '—';
@@ -44,7 +47,27 @@ const TABS = [
   { id: 'alerts', label: 'Alertes' },
   { id: 'audit', label: "Journal d'audit" },
   { id: 'whitelist', label: 'Whitelist' },
+  { id: 'declarations', label: 'Declarations' },
+  { id: 'kyc-review', label: 'Revue KYC' },
+  { id: 'reports', label: 'Rapports' },
 ];
+
+const sarStatusBadge = (s) => {
+  const map = {
+    draft: { label: 'Brouillon', variant: 'default' },
+    submitted: { label: 'Soumis', variant: 'warning' },
+    under_review: { label: 'En revue', variant: 'info' },
+    filed_with_mros: { label: 'Depose MROS', variant: 'error' },
+    closed: { label: 'Cloture', variant: 'success' },
+  };
+  const m = map[s] || { label: s || '—', variant: 'default' };
+  return <Badge variant={m.variant}>{m.label}</Badge>;
+};
+
+const priorityBadge = (p) => {
+  const map = { low: 'default', medium: 'warning', high: 'error', critical: 'error' };
+  return <Badge variant={map[p] || 'default'}>{p || '—'}</Badge>;
+};
 
 // ── Stat Card ────────────────────────────────────────────────────────
 function StatCard({ label, value, color, icon }) {
@@ -98,6 +121,22 @@ export default function ComplianceDashboard() {
   // Whitelist
   const [whitelistEntries, setWhitelistEntries] = useState([]);
 
+  // SARs
+  const [sars, setSars] = useState([]);
+  const [sarFilter, setSarFilter] = useState('');
+  const [sarStats, setSarStats] = useState({});
+  const [sarCreateModal, setSarCreateModal] = useState(false);
+  const [sarCloseModal, setSarCloseModal] = useState(null);
+  const [sarCloseResolution, setSarCloseResolution] = useState('dismissed');
+  const [sarCloseNotes, setSarCloseNotes] = useState('');
+  const [sarFileModal, setSarFileModal] = useState(null);
+  const [sarMrosRef, setSarMrosRef] = useState('');
+  const [sarForm, setSarForm] = useState({
+    clientName: '', salesforceAccountId: '', reportType: 'SAR',
+    suspicionType: 'unusual_pattern', description: '', priority: 'medium',
+    totalAmountInvolved: '', currency: 'CHF',
+  });
+
   // Modals
   const [rejectModal, setRejectModal] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
@@ -130,7 +169,7 @@ export default function ComplianceDashboard() {
       setApprovals(Array.isArray(data) ? data : []);
     } catch (err) { toast(err.message, 'error'); }
     setLoading(false);
-  }, [approvalFilter, toast]);
+  }, [approvalFilter]);
 
   const loadAlerts = useCallback(async () => {
     setLoading(true);
@@ -140,7 +179,7 @@ export default function ComplianceDashboard() {
       setAlerts(Array.isArray(data) ? data : []);
     } catch (err) { toast(err.message, 'error'); }
     setLoading(false);
-  }, [alertSevFilter, alertStatusFilter, toast]);
+  }, [alertSevFilter, alertStatusFilter]);
 
   const loadAudit = useCallback(async () => {
     setLoading(true);
@@ -151,7 +190,7 @@ export default function ComplianceDashboard() {
       setAuditTotal(raw?.count || raw?.total || 0);
     } catch (err) { toast(err.message, 'error'); }
     setLoading(false);
-  }, [auditCategory, auditOffset, toast]);
+  }, [auditCategory, auditOffset]);
 
   const loadWhitelist = useCallback(async () => {
     setLoading(true);
@@ -159,9 +198,23 @@ export default function ComplianceDashboard() {
       const raw = await fetchWhitelist('all');
       const data = raw?.data || raw;
       setWhitelistEntries(Array.isArray(data) ? data : []);
+    } catch (err) { console.error('Whitelist load error:', err); }
+    setLoading(false);
+  }, []);
+
+  const loadSARs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [rawList, rawStats] = await Promise.all([
+        fetchSARs(sarFilter),
+        fetchSARStats().catch(() => ({ byStatus: {} })),
+      ]);
+      const data = rawList?.data || rawList;
+      setSars(Array.isArray(data) ? data : []);
+      setSarStats(rawStats?.byStatus || {});
     } catch (err) { toast(err.message, 'error'); }
     setLoading(false);
-  }, [toast]);
+  }, [sarFilter]);
 
   // Load on tab change
   useEffect(() => {
@@ -170,7 +223,8 @@ export default function ComplianceDashboard() {
     else if (tab === 'alerts') loadAlerts();
     else if (tab === 'audit') loadAudit();
     else if (tab === 'whitelist') loadWhitelist();
-  }, [tab, loadStats, loadApprovals, loadAlerts, loadAudit, loadWhitelist]);
+    else if (tab === 'declarations') loadSARs();
+  }, [tab, loadStats, loadApprovals, loadAlerts, loadAudit, loadWhitelist, loadSARs]);
 
   // ── Actions ──────────────────────────────────────────────────────
   const handleApprove = async (id) => {
@@ -237,6 +291,60 @@ export default function ComplianceDashboard() {
       await revokeWhitelistAddress(id);
       toast('Adresse revoquee');
       loadWhitelist();
+    } catch (err) { toast(err.message, 'error'); }
+  };
+
+  // SAR actions
+  const handleCreateSAR = async () => {
+    try {
+      await createSAR({
+        ...sarForm,
+        totalAmountInvolved: sarForm.totalAmountInvolved ? Number(sarForm.totalAmountInvolved) : null,
+        createdByEmail: profile?.email,
+      });
+      toast('Declaration creee');
+      setSarCreateModal(false);
+      setSarForm({ clientName: '', salesforceAccountId: '', reportType: 'SAR', suspicionType: 'unusual_pattern', description: '', priority: 'medium', totalAmountInvolved: '', currency: 'CHF' });
+      loadSARs();
+    } catch (err) { toast(err.message, 'error'); }
+  };
+
+  const handleSubmitSAR = async (id) => {
+    try {
+      await submitSAR(id, profile?.email);
+      toast('Declaration soumise');
+      loadSARs();
+    } catch (err) { toast(err.message, 'error'); }
+  };
+
+  const handleReviewSAR = async (id) => {
+    try {
+      await reviewSAR(id, profile?.email);
+      toast('Declaration en revue');
+      loadSARs();
+    } catch (err) { toast(err.message, 'error'); }
+  };
+
+  const handleFileSAR = async () => {
+    if (!sarFileModal) return;
+    try {
+      await fileSAR(sarFileModal, profile?.email, sarMrosRef);
+      toast('Declaration deposee aupres du MROS');
+      setSarFileModal(null);
+      setSarMrosRef('');
+      loadSARs();
+    } catch (err) { toast(err.message, 'error'); }
+  };
+
+  const handleCloseSAR = async () => {
+    if (!sarCloseModal) return;
+    try {
+      await closeSAR(sarCloseModal, profile?.email, sarCloseResolution, sarCloseNotes);
+      toast('Declaration cloturee');
+      setSarCloseModal(null);
+      setSarCloseResolution('dismissed');
+      setSarCloseNotes('');
+      loadSARs();
     } catch (err) { toast(err.message, 'error'); }
   };
 
@@ -553,6 +661,276 @@ export default function ComplianceDashboard() {
           )}
         </>
       )}
+
+      {/* ── Declarations (SAR/STR) Tab ─────────────────────────── */}
+      {!loading && tab === 'declarations' && (
+        <>
+          {/* Stats bar */}
+          <div className="grid grid-cols-4 gap-4 mb-5">
+            <StatCard label="Brouillons" value={sarStats.draft || 0} color="blue" icon="D" />
+            <StatCard label="Soumises" value={sarStats.submitted || 0} color="orange" icon="S" />
+            <StatCard label="En revue" value={(sarStats.under_review || 0)} color="red" icon="R" />
+            <StatCard label="Deposees MROS" value={sarStats.filed_with_mros || 0} color="green" icon="M" />
+          </div>
+
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <label className={labelCls}>Statut</label>
+              <select
+                value={sarFilter}
+                onChange={e => setSarFilter(e.target.value)}
+                className={`${selectCls} w-48`}
+              >
+                <option value="">Tous</option>
+                <option value="draft">Brouillon</option>
+                <option value="submitted">Soumis</option>
+                <option value="under_review">En revue</option>
+                <option value="filed_with_mros">Depose MROS</option>
+                <option value="closed">Cloture</option>
+              </select>
+            </div>
+            {isAdmin && (
+              <button
+                onClick={() => setSarCreateModal(true)}
+                className="px-4 py-2 text-[13px] font-medium text-white bg-[#6366F1] hover:bg-[#4F46E5] rounded-xl transition-colors"
+              >
+                Nouvelle declaration
+              </button>
+            )}
+          </div>
+
+          {sars.length === 0 ? (
+            <EmptyState title="Aucune declaration" description="Aucun rapport d'activite suspecte" />
+          ) : (
+            <Table headers={['Reference', 'Client', 'Type', 'Suspicion', 'Priorite', 'Statut', 'Date', 'Actions']}>
+              {sars.map(s => (
+                <tr key={s.id} className={rowCls}>
+                  <td className={`${tdCls} font-mono text-[12px] font-medium`}>{s.reference_number}</td>
+                  <td className={tdCls}>{s.client_name || '—'}</td>
+                  <td className={tdMuted}>{s.report_type}</td>
+                  <td className={tdMuted}>{s.suspicion_type || '—'}</td>
+                  <td className="px-5 py-3.5">{priorityBadge(s.priority)}</td>
+                  <td className="px-5 py-3.5">{sarStatusBadge(s.status)}</td>
+                  <td className={tdMuted}>{fmtDate(s.created_at)}</td>
+                  <td className="px-5 py-3.5">
+                    <div className="flex items-center gap-1">
+                      {s.status === 'draft' && isAdmin && (
+                        actionBtn('Soumettre', () => handleSubmitSAR(s.id), 'info')
+                      )}
+                      {s.status === 'submitted' && isAdmin && (
+                        actionBtn('Revue', () => handleReviewSAR(s.id), 'info')
+                      )}
+                      {s.status === 'under_review' && isAdmin && (
+                        actionBtn('Deposer MROS', () => { setSarFileModal(s.id); setSarMrosRef(''); }, 'error')
+                      )}
+                      {s.status !== 'closed' && isAdmin && (
+                        actionBtn('Cloturer', () => { setSarCloseModal(s.id); setSarCloseResolution('dismissed'); setSarCloseNotes(''); }, 'default')
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </Table>
+          )}
+        </>
+      )}
+
+      {/* ── KYC Review Tab ─────────────────────────────────────── */}
+      {tab === 'kyc-review' && (
+        <KYCReviewDashboard />
+      )}
+
+      {/* ── Reports Tab ──────────────────────────────────────────── */}
+      {tab === 'reports' && (
+        <ComplianceReports />
+      )}
+
+      {/* ── Create SAR Modal ─────────────────────────────────────── */}
+      <Modal isOpen={sarCreateModal} onClose={() => setSarCreateModal(false)} title="Nouvelle declaration SAR/STR">
+        <div className="space-y-4">
+          <div>
+            <label className={labelCls}>Nom du client</label>
+            <input
+              value={sarForm.clientName}
+              onChange={e => setSarForm(f => ({ ...f, clientName: e.target.value }))}
+              className={inputCls}
+              placeholder="Nom du client..."
+            />
+          </div>
+          <div>
+            <label className={labelCls}>ID Salesforce</label>
+            <input
+              value={sarForm.salesforceAccountId}
+              onChange={e => setSarForm(f => ({ ...f, salesforceAccountId: e.target.value }))}
+              className={inputCls}
+              placeholder="Account ID Salesforce..."
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Type</label>
+              <select
+                value={sarForm.reportType}
+                onChange={e => setSarForm(f => ({ ...f, reportType: e.target.value }))}
+                className={selectCls}
+              >
+                <option value="SAR">SAR</option>
+                <option value="STR">STR</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Priorite</label>
+              <select
+                value={sarForm.priority}
+                onChange={e => setSarForm(f => ({ ...f, priority: e.target.value }))}
+                className={selectCls}
+              >
+                <option value="low">Basse</option>
+                <option value="medium">Moyenne</option>
+                <option value="high">Haute</option>
+                <option value="critical">Critique</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className={labelCls}>Type de suspicion</label>
+            <select
+              value={sarForm.suspicionType}
+              onChange={e => setSarForm(f => ({ ...f, suspicionType: e.target.value }))}
+              className={selectCls}
+            >
+              <option value="structuring">Structuration</option>
+              <option value="unusual_pattern">Schema inhabituel</option>
+              <option value="sanctions_match">Correspondance sanctions</option>
+              <option value="pep_match">Correspondance PEP</option>
+              <option value="source_of_funds">Origine des fonds</option>
+              <option value="other">Autre</option>
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Montant implique</label>
+              <input
+                type="number"
+                value={sarForm.totalAmountInvolved}
+                onChange={e => setSarForm(f => ({ ...f, totalAmountInvolved: e.target.value }))}
+                className={inputCls}
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Devise</label>
+              <select
+                value={sarForm.currency}
+                onChange={e => setSarForm(f => ({ ...f, currency: e.target.value }))}
+                className={selectCls}
+              >
+                <option value="CHF">CHF</option>
+                <option value="EUR">EUR</option>
+                <option value="USD">USD</option>
+                <option value="BTC">BTC</option>
+                <option value="ETH">ETH</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className={labelCls}>Description</label>
+            <textarea
+              value={sarForm.description}
+              onChange={e => setSarForm(f => ({ ...f, description: e.target.value }))}
+              rows={4}
+              className={inputCls}
+              placeholder="Decrivez l'activite suspecte..."
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setSarCreateModal(false)}
+              className="px-4 py-2 text-[13px] font-medium text-[#787881] hover:text-[#0F0F10] rounded-xl transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleCreateSAR}
+              disabled={!sarForm.description.trim() || !sarForm.salesforceAccountId.trim()}
+              className="px-4 py-2 text-[13px] font-medium text-white bg-[#6366F1] hover:bg-[#4F46E5] rounded-xl transition-colors disabled:opacity-40"
+            >
+              Creer la declaration
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── File with MROS Modal ─────────────────────────────────── */}
+      <Modal isOpen={!!sarFileModal} onClose={() => setSarFileModal(null)} title="Deposer aupres du MROS">
+        <div className="space-y-4">
+          <div>
+            <label className={labelCls}>Reference MROS (optionnel)</label>
+            <input
+              value={sarMrosRef}
+              onChange={e => setSarMrosRef(e.target.value)}
+              className={inputCls}
+              placeholder="Reference externe MROS..."
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setSarFileModal(null)}
+              className="px-4 py-2 text-[13px] font-medium text-[#787881] hover:text-[#0F0F10] rounded-xl transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleFileSAR}
+              className="px-4 py-2 text-[13px] font-medium text-white bg-[#DC2626] hover:bg-[#B91C1C] rounded-xl transition-colors"
+            >
+              Confirmer le depot MROS
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Close SAR Modal ──────────────────────────────────────── */}
+      <Modal isOpen={!!sarCloseModal} onClose={() => setSarCloseModal(null)} title="Cloturer la declaration">
+        <div className="space-y-4">
+          <div>
+            <label className={labelCls}>Resolution</label>
+            <select
+              value={sarCloseResolution}
+              onChange={e => setSarCloseResolution(e.target.value)}
+              className={selectCls}
+            >
+              <option value="dismissed">Classee sans suite</option>
+              <option value="filed">Deposee</option>
+              <option value="escalated">Escaladee</option>
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>Notes de cloture</label>
+            <textarea
+              value={sarCloseNotes}
+              onChange={e => setSarCloseNotes(e.target.value)}
+              rows={3}
+              className={inputCls}
+              placeholder="Raison de la cloture..."
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setSarCloseModal(null)}
+              className="px-4 py-2 text-[13px] font-medium text-[#787881] hover:text-[#0F0F10] rounded-xl transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleCloseSAR}
+              className="px-4 py-2 text-[13px] font-medium text-white bg-[#059669] hover:bg-[#047857] rounded-xl transition-colors"
+            >
+              Confirmer la cloture
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* ── Reject Modal ──────────────────────────────────────────── */}
       <Modal isOpen={!!rejectModal} onClose={() => setRejectModal(null)} title="Rejeter le transfert">

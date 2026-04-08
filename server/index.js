@@ -1677,6 +1677,1322 @@ app.post('/api/kyc/create-client', async (req, res) => {
   }
 });
 
+// ============================================================
+// SAR/STR — Suspicious Activity Reports (MROS workflow)
+// ============================================================
+/*
+  CREATE TABLE IF NOT EXISTS suspicious_activity_reports (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    reference_number TEXT UNIQUE,
+    salesforce_account_id TEXT NOT NULL,
+    client_name TEXT,
+    report_type TEXT NOT NULL, -- 'SAR' or 'STR'
+    status TEXT DEFAULT 'draft', -- draft, submitted, under_review, filed_with_mros, closed
+    priority TEXT DEFAULT 'medium', -- low, medium, high, critical
+
+    -- Suspicious activity details
+    suspicion_type TEXT, -- structuring, unusual_pattern, sanctions_match, pep_match, source_of_funds, other
+    description TEXT NOT NULL,
+    evidence JSONB DEFAULT '[]',
+    related_transactions JSONB DEFAULT '[]',
+    related_alerts JSONB DEFAULT '[]',
+
+    -- Amounts
+    total_amount_involved NUMERIC,
+    currency TEXT DEFAULT 'CHF',
+
+    -- Workflow
+    created_by_email TEXT,
+    reviewed_by_email TEXT,
+    reviewed_at TIMESTAMPTZ,
+    filed_by_email TEXT,
+    filed_at TIMESTAMPTZ,
+    mros_reference TEXT,
+
+    -- Resolution
+    resolution TEXT, -- filed, dismissed, escalated
+    resolution_notes TEXT,
+    resolved_at TIMESTAMPTZ,
+
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+  );
+*/
+
+// Helper: generate next SAR reference number
+async function generateSARReference() {
+  const year = new Date().getFullYear();
+  const { data, error } = await supabaseAdmin
+    .from('suspicious_activity_reports')
+    .select('reference_number')
+    .like('reference_number', `SAR-${year}-%`)
+    .order('reference_number', { ascending: false })
+    .limit(1);
+
+  let seq = 1;
+  if (!error && data && data.length > 0) {
+    const last = data[0].reference_number; // e.g. SAR-2026-0012
+    const num = parseInt(last.split('-').pop(), 10);
+    if (!isNaN(num)) seq = num + 1;
+  }
+  return `SAR-${year}-${String(seq).padStart(4, '0')}`;
+}
+
+// GET /api/compliance/sar/stats — Count SARs by status
+app.get('/api/compliance/sar/stats', async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('suspicious_activity_reports')
+      .select('status');
+
+    if (error) throw error;
+
+    const byStatus = {};
+    for (const row of (data || [])) {
+      byStatus[row.status] = (byStatus[row.status] || 0) + 1;
+    }
+
+    res.json({ byStatus, total: data?.length || 0 });
+  } catch (err) {
+    console.error('SAR stats error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/compliance/sar — List all SARs with optional status filter
+app.get('/api/compliance/sar', async (req, res) => {
+  try {
+    const { status, limit = '50', offset = '0' } = req.query;
+    let query = supabaseAdmin
+      .from('suspicious_activity_reports')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(Number(offset), Number(offset) + Number(limit) - 1);
+
+    if (status) query = query.eq('status', status);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    res.json({ data });
+  } catch (err) {
+    console.error('SAR list error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/compliance/sar — Create a new SAR (draft)
+app.post('/api/compliance/sar', async (req, res) => {
+  try {
+    const {
+      salesforceAccountId, clientName, reportType, priority,
+      suspicionType, description, evidence, relatedTransactions,
+      relatedAlerts, totalAmountInvolved, currency, createdByEmail,
+    } = req.body;
+
+    if (!salesforceAccountId || !reportType || !description) {
+      return res.status(400).json({ error: 'salesforceAccountId, reportType, and description are required' });
+    }
+    if (!['SAR', 'STR'].includes(reportType)) {
+      return res.status(400).json({ error: 'reportType must be SAR or STR' });
+    }
+
+    const referenceNumber = await generateSARReference();
+
+    const { data, error } = await supabaseAdmin
+      .from('suspicious_activity_reports')
+      .insert({
+        reference_number: referenceNumber,
+        salesforce_account_id: salesforceAccountId,
+        client_name: clientName || null,
+        report_type: reportType,
+        status: 'draft',
+        priority: priority || 'medium',
+        suspicion_type: suspicionType || null,
+        description,
+        evidence: evidence || [],
+        related_transactions: relatedTransactions || [],
+        related_alerts: relatedAlerts || [],
+        total_amount_involved: totalAmountInvolved || null,
+        currency: currency || 'CHF',
+        created_by_email: createdByEmail || null,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await logAudit({
+      userEmail: createdByEmail,
+      action: 'sar.created',
+      category: 'compliance',
+      entityType: 'sar',
+      entityId: data.id,
+      clientName,
+      salesforceAccountId,
+      details: { referenceNumber, reportType, suspicionType, priority },
+      severity: 'high',
+      req,
+    });
+
+    res.status(201).json(data);
+  } catch (err) {
+    console.error('SAR create error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/compliance/sar/:id — Get single SAR details
+app.get('/api/compliance/sar/:id', async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('suspicious_activity_reports')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'SAR not found' });
+
+    res.json(data);
+  } catch (err) {
+    console.error('SAR get error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/compliance/sar/:id/submit — Submit for review (draft → submitted)
+app.patch('/api/compliance/sar/:id/submit', async (req, res) => {
+  try {
+    const { submittedByEmail } = req.body;
+
+    // Verify current status
+    const { data: existing, error: fetchErr } = await supabaseAdmin
+      .from('suspicious_activity_reports')
+      .select('status')
+      .eq('id', req.params.id)
+      .single();
+
+    if (fetchErr || !existing) return res.status(404).json({ error: 'SAR not found' });
+    if (existing.status !== 'draft') {
+      return res.status(400).json({ error: `Cannot submit SAR in status "${existing.status}". Must be "draft".` });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('suspicious_activity_reports')
+      .update({ status: 'submitted', updated_at: new Date().toISOString() })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await logAudit({
+      userEmail: submittedByEmail,
+      action: 'sar.submitted',
+      category: 'compliance',
+      entityType: 'sar',
+      entityId: data.id,
+      details: { referenceNumber: data.reference_number },
+      severity: 'high',
+      req,
+    });
+
+    res.json(data);
+  } catch (err) {
+    console.error('SAR submit error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/compliance/sar/:id/review — Mark as reviewed (submitted → under_review)
+app.patch('/api/compliance/sar/:id/review', async (req, res) => {
+  try {
+    const { reviewedByEmail } = req.body;
+
+    const { data: existing, error: fetchErr } = await supabaseAdmin
+      .from('suspicious_activity_reports')
+      .select('status')
+      .eq('id', req.params.id)
+      .single();
+
+    if (fetchErr || !existing) return res.status(404).json({ error: 'SAR not found' });
+    if (existing.status !== 'submitted') {
+      return res.status(400).json({ error: `Cannot review SAR in status "${existing.status}". Must be "submitted".` });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('suspicious_activity_reports')
+      .update({
+        status: 'under_review',
+        reviewed_by_email: reviewedByEmail || null,
+        reviewed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await logAudit({
+      userEmail: reviewedByEmail,
+      action: 'sar.reviewed',
+      category: 'compliance',
+      entityType: 'sar',
+      entityId: data.id,
+      details: { referenceNumber: data.reference_number },
+      severity: 'high',
+      req,
+    });
+
+    res.json(data);
+  } catch (err) {
+    console.error('SAR review error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/compliance/sar/:id/file — File with MROS (under_review → filed_with_mros)
+app.patch('/api/compliance/sar/:id/file', async (req, res) => {
+  try {
+    const { filedByEmail, mrosReference } = req.body;
+
+    const { data: existing, error: fetchErr } = await supabaseAdmin
+      .from('suspicious_activity_reports')
+      .select('status')
+      .eq('id', req.params.id)
+      .single();
+
+    if (fetchErr || !existing) return res.status(404).json({ error: 'SAR not found' });
+    if (existing.status !== 'under_review') {
+      return res.status(400).json({ error: `Cannot file SAR in status "${existing.status}". Must be "under_review".` });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('suspicious_activity_reports')
+      .update({
+        status: 'filed_with_mros',
+        filed_by_email: filedByEmail || null,
+        filed_at: new Date().toISOString(),
+        mros_reference: mrosReference || null,
+        resolution: 'filed',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await logAudit({
+      userEmail: filedByEmail,
+      action: 'sar.filed_with_mros',
+      category: 'compliance',
+      entityType: 'sar',
+      entityId: data.id,
+      details: { referenceNumber: data.reference_number, mrosReference },
+      severity: 'critical',
+      req,
+    });
+
+    res.json(data);
+  } catch (err) {
+    console.error('SAR file error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/compliance/sar/:id/close — Close/dismiss SAR (any → closed)
+app.patch('/api/compliance/sar/:id/close', async (req, res) => {
+  try {
+    const { closedByEmail, resolution, resolutionNotes } = req.body;
+
+    const { data: existing, error: fetchErr } = await supabaseAdmin
+      .from('suspicious_activity_reports')
+      .select('status')
+      .eq('id', req.params.id)
+      .single();
+
+    if (fetchErr || !existing) return res.status(404).json({ error: 'SAR not found' });
+    if (existing.status === 'closed') {
+      return res.status(400).json({ error: 'SAR is already closed.' });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('suspicious_activity_reports')
+      .update({
+        status: 'closed',
+        resolution: resolution || 'dismissed',
+        resolution_notes: resolutionNotes || null,
+        resolved_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await logAudit({
+      userEmail: closedByEmail,
+      action: 'sar.closed',
+      category: 'compliance',
+      entityType: 'sar',
+      entityId: data.id,
+      details: { referenceNumber: data.reference_number, resolution: resolution || 'dismissed', resolutionNotes },
+      severity: 'high',
+      req,
+    });
+
+    res.json(data);
+  } catch (err) {
+    console.error('SAR close error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// COMPLIANCE REPORTING — Regulatory Exports
+
+// GET /api/compliance/reports/summary — Generate compliance summary
+app.get('/api/compliance/reports/summary', async (req, res) => {
+  try {
+    const endDate = req.query.endDate || new Date().toISOString();
+    const startDate = req.query.startDate || new Date(Date.now() - 30 * 86400000).toISOString();
+
+    // Transfer approvals in period
+    const { data: transfers, error: tErr } = await supabaseAdmin
+      .from('transfer_approvals')
+      .select('*')
+      .gte('requested_at', startDate)
+      .lte('requested_at', endDate);
+    if (tErr) throw tErr;
+
+    const transfersArr = transfers || [];
+    const totalVolume = transfersArr.reduce((s, t) => s + (parseFloat(t.amount) || 0), 0);
+    const approvalStats = { pending: 0, approved: 0, rejected: 0, executed: 0 };
+    transfersArr.forEach(t => { if (approvalStats[t.status] !== undefined) approvalStats[t.status]++; });
+
+    // KYC stats
+    const { data: kycAll, error: kErr } = await supabaseAdmin.from('kyc_checks').select('*');
+    if (kErr) throw kErr;
+    const kycArr = kycAll || [];
+    const kycStats = {
+      totalClients: new Set(kycArr.map(k => k.salesforce_account_id)).size,
+      validatedKyc: kycArr.filter(k => k.status === 'complete').length,
+      pendingKyc: kycArr.filter(k => k.status === 'processing' || k.status === 'pending').length,
+      expiredKyc: kycArr.filter(k => k.status === 'expired').length,
+    };
+
+    // Alerts in period
+    const { data: alertsAll, error: aErr } = await supabaseAdmin
+      .from('compliance_alerts')
+      .select('*')
+      .gte('created_at', startDate)
+      .lte('created_at', endDate);
+    if (aErr) throw aErr;
+    const alertsArr = alertsAll || [];
+    const bySeverity = {};
+    alertsArr.forEach(a => { bySeverity[a.severity] = (bySeverity[a.severity] || 0) + 1; });
+    const alertStats = {
+      total: alertsArr.length,
+      open: alertsArr.filter(a => a.status === 'open').length,
+      resolved: alertsArr.filter(a => a.status === 'resolved').length,
+      bySeverity,
+    };
+
+    // Whitelist stats
+    const { data: wlAll, error: wErr } = await supabaseAdmin.from('address_whitelist').select('*');
+    if (wErr) throw wErr;
+    const wlArr = wlAll || [];
+    const whitelistStats = {
+      total: wlArr.length,
+      approved: wlArr.filter(w => w.status === 'active').length,
+      pending: wlArr.filter(w => w.status === 'pending_approval').length,
+      revoked: wlArr.filter(w => w.status === 'revoked').length,
+    };
+
+    // Risk distribution
+    const { data: riskAll, error: rErr } = await supabaseAdmin.from('client_risk_config').select('risk_level');
+    if (rErr) throw rErr;
+    const riskArr = riskAll || [];
+    const riskDistribution = { low: 0, standard: 0, high: 0, critical: 0 };
+    riskArr.forEach(r => { if (riskDistribution[r.risk_level] !== undefined) riskDistribution[r.risk_level]++; });
+
+    // Top clients by volume
+    const clientVolumes = {};
+    transfersArr.forEach(t => {
+      const name = t.client_name || 'Unknown';
+      if (!clientVolumes[name]) clientVolumes[name] = { clientName: name, volume: 0, transferCount: 0 };
+      clientVolumes[name].volume += parseFloat(t.amount) || 0;
+      clientVolumes[name].transferCount++;
+    });
+    const topClientsByVolume = Object.values(clientVolumes)
+      .sort((a, b) => b.volume - a.volume)
+      .slice(0, 5);
+
+    res.json({
+      period: { startDate, endDate },
+      totalTransfers: transfersArr.length,
+      totalVolume,
+      averageTransferAmount: transfersArr.length ? totalVolume / transfersArr.length : 0,
+      approvalStats,
+      kycStats,
+      alertStats,
+      whitelistStats,
+      riskDistribution,
+      topClientsByVolume,
+    });
+  } catch (err) {
+    console.error('Compliance summary error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/compliance/reports/audit-export — Export audit log as CSV
+app.get('/api/compliance/reports/audit-export', async (req, res) => {
+  try {
+    const endDate = req.query.endDate || new Date().toISOString();
+    const startDate = req.query.startDate || new Date(Date.now() - 30 * 86400000).toISOString();
+    const { category } = req.query;
+
+    let query = supabaseAdmin
+      .from('audit_log')
+      .select('*')
+      .gte('created_at', startDate)
+      .lte('created_at', endDate)
+      .order('created_at', { ascending: false })
+      .limit(5000);
+
+    if (category) query = query.eq('category', category);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const rows = (data || []).map(e => [
+      e.created_at ? new Date(e.created_at).toISOString() : '',
+      (e.user_email || '').replace(/"/g, '""'),
+      (e.action || '').replace(/"/g, '""'),
+      e.category || '',
+      e.entity_type ? `${e.entity_type}:${e.entity_id || ''}` : '',
+      (e.client_name || '').replace(/"/g, '""'),
+      e.severity || '',
+      (typeof e.details === 'object' ? JSON.stringify(e.details) : (e.details || '')).replace(/"/g, '""'),
+    ]);
+
+    const header = 'Date,User,Action,Category,Entity,Client,Severity,Details';
+    const csv = [header, ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="audit-log-${startDate.slice(0,10)}_${endDate.slice(0,10)}.csv"`);
+    res.send(csv);
+  } catch (err) {
+    console.error('Audit export error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/compliance/reports/transfers-export — Export transfers as CSV
+app.get('/api/compliance/reports/transfers-export', async (req, res) => {
+  try {
+    const endDate = req.query.endDate || new Date().toISOString();
+    const startDate = req.query.startDate || new Date(Date.now() - 30 * 86400000).toISOString();
+    const { status } = req.query;
+
+    let query = supabaseAdmin
+      .from('transfer_approvals')
+      .select('*')
+      .gte('requested_at', startDate)
+      .lte('requested_at', endDate)
+      .order('requested_at', { ascending: false })
+      .limit(5000);
+
+    if (status) query = query.eq('status', status);
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    const rows = (data || []).map(t => [
+      t.requested_at ? new Date(t.requested_at).toISOString() : '',
+      (t.client_name || '').replace(/"/g, '""'),
+      (t.wallet_id || '').replace(/"/g, '""'),
+      (t.to_address || '').replace(/"/g, '""'),
+      t.amount || '',
+      t.asset_symbol || '',
+      t.network || '',
+      t.status || '',
+      (t.approved_by_email || '').replace(/"/g, '""'),
+      t.executed_at ? new Date(t.executed_at).toISOString() : '',
+    ]);
+
+    const header = 'Date,Client,Wallet,Destination,Amount,Asset,Network,Status,Approved By,Executed At';
+    const csv = [header, ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="transfers-${startDate.slice(0,10)}_${endDate.slice(0,10)}.csv"`);
+    res.send(csv);
+  } catch (err) {
+    console.error('Transfers export error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/compliance/reports/kyc-export — Export KYC status as CSV
+app.get('/api/compliance/reports/kyc-export', async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('kyc_checks')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(5000);
+
+    if (error) throw error;
+
+    const rows = (data || []).map(k => [
+      (k.client_name || '').replace(/"/g, '""'),
+      k.salesforce_account_id || '',
+      k.check_type || '',
+      k.document_type || '',
+      k.status || '',
+      k.created_at ? new Date(k.created_at).toISOString() : '',
+      (k.file_name || '').replace(/"/g, '""'),
+    ]);
+
+    const header = 'Client,Account ID,Check Type,Document Type,Status,Date,File';
+    const csv = [header, ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="kyc-status-${new Date().toISOString().slice(0,10)}.csv"`);
+    res.send(csv);
+  } catch (err) {
+    console.error('KYC export error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// TRAVEL RULE — FATF Recommendation 16 Compliance
+// ============================================================
+/*
+  CREATE TABLE IF NOT EXISTS travel_rule_records (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    transfer_approval_id UUID REFERENCES transfer_approvals(id),
+
+    -- Originator info (our client)
+    originator_name TEXT NOT NULL,
+    originator_account_number TEXT, -- Salesforce account number
+    originator_address TEXT,
+    originator_country TEXT,
+    originator_wallet_address TEXT,
+
+    -- Beneficiary info
+    beneficiary_name TEXT,
+    beneficiary_wallet_address TEXT NOT NULL,
+    beneficiary_institution TEXT, -- VASP name if known
+    beneficiary_country TEXT,
+
+    -- Transaction details
+    amount NUMERIC NOT NULL,
+    currency TEXT DEFAULT 'CHF',
+    asset_type TEXT, -- Native, ERC20, etc
+    network TEXT,
+
+    -- Compliance
+    threshold_exceeded BOOLEAN DEFAULT false, -- true if > 1000 CHF
+    travel_rule_required BOOLEAN DEFAULT false,
+    travel_rule_satisfied BOOLEAN DEFAULT false,
+    verification_method TEXT, -- 'manual', 'openvasp', 'sygna', 'notabene'
+
+    -- Metadata
+    created_by_email TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+  );
+*/
+
+// POST /api/compliance/travel-rule/check — Check if travel rule applies
+app.post('/api/compliance/travel-rule/check', async (req, res) => {
+  try {
+    const { amount, currency = 'CHF', network } = req.body;
+    const threshold = 1000;
+    const numericAmount = parseFloat(amount);
+    const required = !isNaN(numericAmount) && numericAmount >= threshold;
+    res.json({ required, threshold, currency: 'CHF', amount: numericAmount, network: network || null });
+  } catch (err) {
+    console.error('travel-rule check error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/compliance/travel-rule/create — Create travel rule record
+app.post('/api/compliance/travel-rule/create', async (req, res) => {
+  try {
+    const {
+      transferApprovalId,
+      originatorName, originatorAccountNumber, originatorAddress, originatorCountry, originatorWalletAddress,
+      beneficiaryName, beneficiaryWalletAddress, beneficiaryInstitution, beneficiaryCountry,
+      amount, currency, assetType, network,
+      createdByEmail,
+    } = req.body;
+
+    if (!originatorName) return res.status(400).json({ error: 'originatorName is required' });
+    if (!beneficiaryWalletAddress) return res.status(400).json({ error: 'beneficiaryWalletAddress is required' });
+    if (!amount) return res.status(400).json({ error: 'amount is required' });
+
+    const numericAmount = parseFloat(amount);
+    const thresholdExceeded = numericAmount >= 1000;
+    const travelRuleRequired = thresholdExceeded;
+    const travelRuleSatisfied = travelRuleRequired ? !!(beneficiaryName && originatorName) : true;
+
+    const { data, error } = await supabaseAdmin.from('travel_rule_records').insert({
+      transfer_approval_id: transferApprovalId || null,
+      originator_name: originatorName,
+      originator_account_number: originatorAccountNumber || null,
+      originator_address: originatorAddress || null,
+      originator_country: originatorCountry || null,
+      originator_wallet_address: originatorWalletAddress || null,
+      beneficiary_name: beneficiaryName || null,
+      beneficiary_wallet_address: beneficiaryWalletAddress,
+      beneficiary_institution: beneficiaryInstitution || null,
+      beneficiary_country: beneficiaryCountry || null,
+      amount: numericAmount,
+      currency: currency || 'CHF',
+      asset_type: assetType || null,
+      network: network || null,
+      threshold_exceeded: thresholdExceeded,
+      travel_rule_required: travelRuleRequired,
+      travel_rule_satisfied: travelRuleSatisfied,
+      verification_method: 'manual',
+      created_by_email: createdByEmail || null,
+    }).select().single();
+
+    if (error) throw error;
+
+    await logAudit({
+      userEmail: createdByEmail,
+      action: 'travel_rule.created',
+      category: 'transfer',
+      entityType: 'travel_rule_record',
+      entityId: data.id,
+      details: { transferApprovalId, amount: numericAmount, thresholdExceeded, travelRuleSatisfied, beneficiaryName },
+      severity: travelRuleRequired && !travelRuleSatisfied ? 'warning' : 'info',
+      req,
+    });
+
+    res.json(data);
+  } catch (err) {
+    console.error('travel-rule create error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/compliance/travel-rule/pending — List transfers missing travel rule info
+app.get('/api/compliance/travel-rule/pending', async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('travel_rule_records')
+      .select('*')
+      .eq('travel_rule_required', true)
+      .eq('travel_rule_satisfied', false)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json({ data: data || [] });
+  } catch (err) {
+    console.error('travel-rule pending error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/compliance/travel-rule/:transferApprovalId — Get travel rule record for a transfer
+app.get('/api/compliance/travel-rule/:transferApprovalId', async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('travel_rule_records')
+      .select('*')
+      .eq('transfer_approval_id', req.params.transferApprovalId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return res.status(404).json({ error: 'No travel rule record found' });
+    res.json(data);
+  } catch (err) {
+    console.error('travel-rule get error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// KYC PERIODIC REVIEW — Expiry, Re-screening & EDD
+// ============================================================
+
+// Review period in months based on risk level (Swiss LBA)
+const REVIEW_MONTHS = { critical: 12, high: 12, standard: 24, low: 36 };
+
+// GET /api/kyc/review-schedule — List all clients with KYC review dates, ordered by urgency
+app.get('/api/kyc/review-schedule', async (req, res) => {
+  try {
+    const { data: validations, error: valErr } = await supabaseAdmin
+      .from('kyc_checks')
+      .select('salesforce_account_id, client_name, created_at, initiated_by_email')
+      .eq('check_type', 'manual_validation')
+      .eq('status', 'complete')
+      .order('created_at', { ascending: false });
+
+    if (valErr) throw valErr;
+    if (!validations || validations.length === 0) {
+      return res.json([]);
+    }
+
+    // De-duplicate: keep the latest validation per account
+    const latestByAccount = {};
+    for (const v of validations) {
+      if (!latestByAccount[v.salesforce_account_id]) {
+        latestByAccount[v.salesforce_account_id] = v;
+      }
+    }
+
+    // Get risk configs for all accounts
+    const accountIds = Object.keys(latestByAccount);
+    const { data: riskConfigs } = await supabaseAdmin
+      .from('client_risk_config')
+      .select('salesforce_account_id, risk_level')
+      .in('salesforce_account_id', accountIds);
+
+    const riskMap = {};
+    for (const rc of (riskConfigs || [])) {
+      riskMap[rc.salesforce_account_id] = rc.risk_level;
+    }
+
+    const now = new Date();
+    const results = [];
+
+    for (const [accountId, val] of Object.entries(latestByAccount)) {
+      const riskLevel = riskMap[accountId] || 'standard';
+      const months = REVIEW_MONTHS[riskLevel] || 24;
+      const lastValidation = new Date(val.created_at);
+      const nextReview = new Date(lastValidation);
+      nextReview.setMonth(nextReview.getMonth() + months);
+      const daysUntilExpiry = Math.ceil((nextReview - now) / (1000 * 60 * 60 * 24));
+
+      let status = 'valid';
+      if (daysUntilExpiry <= 0) status = 'expired';
+      else if (daysUntilExpiry <= 30) status = 'expiring';
+
+      results.push({
+        salesforceAccountId: accountId,
+        clientName: val.client_name || accountId,
+        lastValidation: val.created_at,
+        nextReview: nextReview.toISOString(),
+        daysUntilExpiry,
+        riskLevel,
+        status,
+      });
+    }
+
+    // Sort by urgency: expired first, then expiring, then valid (by days ascending)
+    results.sort((a, b) => a.daysUntilExpiry - b.daysUntilExpiry);
+
+    res.json(results);
+  } catch (err) {
+    console.error('KYC review schedule error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/kyc/trigger-rescreening — Re-run AML screening for a specific client
+app.post('/api/kyc/trigger-rescreening', async (req, res) => {
+  try {
+    const { salesforceAccountId, initiatedByEmail } = req.body;
+
+    if (!salesforceAccountId) {
+      return res.status(400).json({ error: 'salesforceAccountId is required' });
+    }
+
+    // Get client name from existing checks
+    const { data: existingChecks } = await supabaseAdmin
+      .from('kyc_checks')
+      .select('client_name, complycube_client_id')
+      .eq('salesforce_account_id', salesforceAccountId)
+      .not('client_name', 'is', null)
+      .limit(1);
+
+    const clientName = existingChecks?.[0]?.client_name || salesforceAccountId;
+
+    let screenResult;
+
+    if (KYC_DEMO_MODE) {
+      await demoDelay(2000);
+      const isReject = clientName?.toLowerCase().includes('reject');
+      screenResult = {
+        id: `demo_rescan_${Date.now()}`,
+        status: isReject ? 'failed' : 'complete',
+        result: isReject ? {
+          outcome: 'attention',
+          matches: [{ type: 'PEP', source: 'EU PEP List', matchScore: 0.92 }],
+        } : {
+          outcome: 'clear',
+          matchCount: 0,
+          searchedLists: ['OFAC SDN', 'EU Consolidated', 'UN Sanctions', 'UK HMT', 'PEP Global'],
+        },
+      };
+    } else {
+      const complyCubeClientId = existingChecks?.[0]?.complycube_client_id;
+      if (!complyCubeClientId) {
+        return res.status(400).json({ error: 'No ComplyCube client found for this account.' });
+      }
+      const check = await complyCubeRequest('POST', '/checks', {
+        clientId: complyCubeClientId,
+        type: 'screening_check',
+      });
+      screenResult = {
+        id: check.id,
+        status: check.status === 'complete' ? (check.result?.outcome === 'clear' ? 'complete' : 'failed') : 'processing',
+        result: check.result || {},
+      };
+    }
+
+    // Save as rescreening check
+    const { data: kycCheck, error: dbError } = await supabaseAdmin
+      .from('kyc_checks')
+      .insert({
+        salesforce_account_id: salesforceAccountId,
+        client_name: clientName,
+        complycube_check_id: screenResult.id,
+        check_type: 'rescreening',
+        status: screenResult.status,
+        result: screenResult.result,
+        initiated_by_email: initiatedByEmail,
+      })
+      .select()
+      .single();
+
+    if (dbError) throw dbError;
+
+    // Audit log
+    await logAudit({
+      userEmail: initiatedByEmail,
+      action: 'kyc.rescreening',
+      category: 'kyc',
+      entityType: 'kyc_check',
+      entityId: kycCheck.id,
+      clientName,
+      salesforceAccountId,
+      details: { status: screenResult.status, outcome: screenResult.result?.outcome, type: 'periodic_rescreening' },
+      severity: screenResult.status === 'failed' ? 'warning' : 'info',
+      req,
+    });
+
+    // If issues found, auto-create compliance alert
+    if (screenResult.status === 'failed') {
+      await supabaseAdmin.from('compliance_alerts').insert({
+        alert_type: 'aml_rescreening',
+        severity: 'critical',
+        title: `Re-screening AML — ${clientName}`,
+        description: `Le re-screening periodique AML pour ${clientName} a detecte des correspondances potentielles. Revue EDD requise.`,
+        salesforce_account_id: salesforceAccountId,
+        client_name: clientName,
+        details: screenResult.result,
+        status: 'open',
+      });
+    }
+
+    res.json(kycCheck);
+  } catch (err) {
+    console.error('KYC trigger rescreening error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/kyc/batch-review-check — Batch check all clients for expired KYC
+app.post('/api/kyc/batch-review-check', async (req, res) => {
+  try {
+    const { data: validations, error: valErr } = await supabaseAdmin
+      .from('kyc_checks')
+      .select('salesforce_account_id, client_name, created_at')
+      .eq('check_type', 'manual_validation')
+      .eq('status', 'complete')
+      .order('created_at', { ascending: false });
+
+    if (valErr) throw valErr;
+
+    // De-duplicate: latest per account
+    const latestByAccount = {};
+    for (const v of (validations || [])) {
+      if (!latestByAccount[v.salesforce_account_id]) {
+        latestByAccount[v.salesforce_account_id] = v;
+      }
+    }
+
+    const accountIds = Object.keys(latestByAccount);
+    if (accountIds.length === 0) {
+      return res.json({ checked: 0, expiring: 0, expired: 0, alertsCreated: 0 });
+    }
+
+    // Get risk configs
+    const { data: riskConfigs } = await supabaseAdmin
+      .from('client_risk_config')
+      .select('salesforce_account_id, risk_level')
+      .in('salesforce_account_id', accountIds);
+
+    const riskMap = {};
+    for (const rc of (riskConfigs || [])) {
+      riskMap[rc.salesforce_account_id] = rc.risk_level;
+    }
+
+    const now = new Date();
+    let expiring = 0;
+    let expired = 0;
+    let alertsCreated = 0;
+
+    for (const [accountId, val] of Object.entries(latestByAccount)) {
+      const riskLevel = riskMap[accountId] || 'standard';
+      const months = REVIEW_MONTHS[riskLevel] || 24;
+      const lastValidation = new Date(val.created_at);
+      const nextReview = new Date(lastValidation);
+      nextReview.setMonth(nextReview.getMonth() + months);
+      const daysUntilExpiry = Math.ceil((nextReview - now) / (1000 * 60 * 60 * 24));
+
+      if (daysUntilExpiry <= 0) {
+        expired++;
+        const { error: alertErr } = await supabaseAdmin.from('compliance_alerts').insert({
+          alert_type: 'kyc_expired',
+          severity: 'high',
+          title: `KYC expire — ${val.client_name || accountId}`,
+          description: `La revue KYC periodique pour ${val.client_name || accountId} est echue depuis ${Math.abs(daysUntilExpiry)} jours. Re-screening et revue EDD requis (risque: ${riskLevel}).`,
+          salesforce_account_id: accountId,
+          client_name: val.client_name || null,
+          details: { riskLevel, daysOverdue: Math.abs(daysUntilExpiry), lastValidation: val.created_at, nextReview: nextReview.toISOString() },
+          status: 'open',
+        });
+        if (!alertErr) alertsCreated++;
+      } else if (daysUntilExpiry <= 30) {
+        expiring++;
+        const { error: alertErr } = await supabaseAdmin.from('compliance_alerts').insert({
+          alert_type: 'kyc_expiring',
+          severity: 'medium',
+          title: `KYC bientot expire — ${val.client_name || accountId}`,
+          description: `La revue KYC periodique pour ${val.client_name || accountId} expire dans ${daysUntilExpiry} jours. Planifier le re-screening (risque: ${riskLevel}).`,
+          salesforce_account_id: accountId,
+          client_name: val.client_name || null,
+          details: { riskLevel, daysUntilExpiry, lastValidation: val.created_at, nextReview: nextReview.toISOString() },
+          status: 'open',
+        });
+        if (!alertErr) alertsCreated++;
+      }
+    }
+
+    // Audit log
+    await logAudit({
+      userEmail: req.body?.initiatedByEmail || 'system',
+      action: 'kyc.batch_review_check',
+      category: 'kyc',
+      entityType: 'batch_review',
+      details: { checked: accountIds.length, expiring, expired, alertsCreated },
+      severity: expired > 0 ? 'warning' : 'info',
+      req,
+    });
+
+    res.json({ checked: accountIds.length, expiring, expired, alertsCreated });
+  } catch (err) {
+    console.error('KYC batch review check error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// TRANSACTION MONITORING — Pattern Detection & Risk Scoring
+// ============================================================
+
+// POST /api/compliance/monitoring/analyze-transfer — Deep analysis before transfer
+app.post('/api/compliance/monitoring/analyze-transfer', async (req, res) => {
+  try {
+    const { salesforceAccountId, to, amount, network, walletId } = req.body;
+    if (!salesforceAccountId || !to || !amount) {
+      return res.status(400).json({ error: 'salesforceAccountId, to, amount required' });
+    }
+
+    const numAmount = Number(amount);
+    const flags = [];
+    let riskScore = 0;
+    const now = new Date();
+
+    // 1. Velocity check — transfers in last 1h, 24h, 7d
+    const oneHourAgo = new Date(now - 3600_000).toISOString();
+    const oneDayAgo = new Date(now - 86400_000).toISOString();
+    const sevenDaysAgo = new Date(now - 7 * 86400_000).toISOString();
+
+    const { data: recentTransfers } = await supabaseAdmin
+      .from('transfer_approvals')
+      .select('amount, requested_at, status')
+      .eq('salesforce_account_id', salesforceAccountId)
+      .gte('requested_at', sevenDaysAgo)
+      .order('requested_at', { ascending: false });
+
+    const transfers7d = recentTransfers || [];
+    const transfers24h = transfers7d.filter(t => t.requested_at >= oneDayAgo);
+    const transfers1h = transfers7d.filter(t => t.requested_at >= oneHourAgo);
+
+    if (transfers1h.length >= 3) {
+      flags.push({ type: 'velocity_1h', severity: 'high', message: `${transfers1h.length} transferts dans la derniere heure` });
+      riskScore += 25;
+    }
+    if (transfers24h.length >= 10) {
+      flags.push({ type: 'velocity_24h', severity: 'high', message: `${transfers24h.length} transferts dans les 24 dernieres heures` });
+      riskScore += 20;
+    }
+    if (transfers7d.length >= 30) {
+      flags.push({ type: 'velocity_7d', severity: 'medium', message: `${transfers7d.length} transferts dans les 7 derniers jours` });
+      riskScore += 15;
+    }
+
+    // 2. Structuring detection — multiple transfers just below threshold
+    const { data: riskConfig } = await supabaseAdmin
+      .from('client_risk_config')
+      .select('single_transfer_limit, daily_transfer_limit')
+      .eq('salesforce_account_id', salesforceAccountId)
+      .single().catch(() => ({ data: null }));
+
+    if (riskConfig?.single_transfer_limit) {
+      const limit = Number(riskConfig.single_transfer_limit);
+      const nearLimit = transfers24h.filter(t => {
+        const a = Number(t.amount);
+        return a >= limit * 0.8 && a < limit;
+      });
+      if (nearLimit.length >= 2) {
+        flags.push({ type: 'structuring', severity: 'critical', message: `${nearLimit.length} transferts proches de la limite (${limit}) — possible fractionnement` });
+        riskScore += 35;
+      }
+    }
+
+    // 3. Time anomaly — transfers between 22:00-06:00 CET
+    const cetHour = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Zurich' })).getHours();
+    if (cetHour >= 22 || cetHour < 6) {
+      flags.push({ type: 'time_anomaly', severity: 'medium', message: `Transfert initie en dehors des heures de bureau (${cetHour}h CET)` });
+      riskScore += 10;
+    }
+
+    // 4. Round amount detection
+    if (numAmount >= 100 && numAmount === Math.round(numAmount) && numAmount % 100 === 0) {
+      flags.push({ type: 'round_amount', severity: 'low', message: `Montant rond (${numAmount}) — potentiel indicateur de fractionnement` });
+      riskScore += 5;
+    }
+
+    // 5. Peer comparison — is amount > 3x average?
+    const executedTransfers = transfers7d.filter(t => t.status === 'executed' || t.status === 'approved');
+    if (executedTransfers.length >= 3) {
+      const avg = executedTransfers.reduce((s, t) => s + Number(t.amount || 0), 0) / executedTransfers.length;
+      if (numAmount > avg * 3) {
+        flags.push({ type: 'peer_anomaly', severity: 'high', message: `Montant ${numAmount} est ${(numAmount / avg).toFixed(1)}x la moyenne client (${avg.toFixed(2)})` });
+        riskScore += 20;
+      }
+    }
+
+    // 6. New destination — first time sending to this address?
+    const { data: prevToAddr } = await supabaseAdmin
+      .from('transfer_approvals')
+      .select('id')
+      .eq('salesforce_account_id', salesforceAccountId)
+      .eq('to_address', to)
+      .limit(1);
+
+    if (!prevToAddr || prevToAddr.length === 0) {
+      flags.push({ type: 'new_destination', severity: 'medium', message: `Premiere transaction vers cette adresse` });
+      riskScore += 10;
+    }
+
+    // Cap score at 100
+    riskScore = Math.min(riskScore, 100);
+    const riskLevel = riskScore >= 70 ? 'critical' : riskScore >= 50 ? 'high' : riskScore >= 25 ? 'medium' : 'low';
+
+    // Save score
+    await supabaseAdmin.from('monitoring_scores').insert({
+      salesforce_account_id: salesforceAccountId,
+      risk_score: riskScore,
+      risk_level: riskLevel,
+      flags,
+      analysis: { amount: numAmount, to, network, transfersLastHour: transfers1h.length, transfersLastDay: transfers24h.length, transfersLastWeek: transfers7d.length },
+    });
+
+    // Auto-generate alert if critical
+    if (riskLevel === 'critical') {
+      await supabaseAdmin.from('compliance_alerts').insert({
+        alert_type: 'transaction_monitoring',
+        severity: 'critical',
+        title: `Alerte monitoring — Score ${riskScore}/100`,
+        description: flags.map(f => f.message).join('. '),
+        salesforce_account_id: salesforceAccountId,
+        details: { riskScore, flags, amount: numAmount, to, network },
+        status: 'open',
+      });
+    }
+
+    await logAudit({
+      action: 'monitoring.transfer_analyzed',
+      category: 'monitoring',
+      entityType: 'transfer_analysis',
+      salesforceAccountId,
+      details: { riskScore, riskLevel, flagCount: flags.length, amount: numAmount },
+      severity: riskLevel === 'critical' ? 'critical' : riskLevel === 'high' ? 'warning' : 'info',
+      req,
+    });
+
+    res.json({ riskScore, riskLevel, flags, allowed: riskLevel !== 'critical' });
+  } catch (err) {
+    console.error('monitoring analyze error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/compliance/monitoring/client-profile/:accountId — Transaction behavior profile
+app.get('/api/compliance/monitoring/client-profile/:accountId', async (req, res) => {
+  try {
+    const accountId = req.params.accountId;
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 86400_000).toISOString();
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400_000).toISOString();
+
+    const { data: transfers } = await supabaseAdmin
+      .from('transfer_approvals')
+      .select('amount, to_address, network, status, requested_at, executed_at')
+      .eq('salesforce_account_id', accountId)
+      .gte('requested_at', ninetyDaysAgo)
+      .order('requested_at', { ascending: false });
+
+    const all = transfers || [];
+    const executed = all.filter(t => t.status === 'executed');
+    const last30 = all.filter(t => t.requested_at >= thirtyDaysAgo);
+
+    // Averages
+    const avgAmount = executed.length > 0 ? executed.reduce((s, t) => s + Number(t.amount || 0), 0) / executed.length : 0;
+    const weeklyFreq = all.length > 0 ? (all.length / 13).toFixed(1) : 0; // 90 days ≈ 13 weeks
+
+    // Most used networks
+    const networkCounts = {};
+    all.forEach(t => { networkCounts[t.network || 'unknown'] = (networkCounts[t.network || 'unknown'] || 0) + 1; });
+    const topNetworks = Object.entries(networkCounts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+
+    // Most used destinations
+    const destCounts = {};
+    all.forEach(t => { destCounts[t.to_address] = (destCounts[t.to_address] || 0) + 1; });
+    const topDestinations = Object.entries(destCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+    // Volumes
+    const volume90d = executed.reduce((s, t) => s + Number(t.amount || 0), 0);
+    const volume30d = last30.filter(t => t.status === 'executed').reduce((s, t) => s + Number(t.amount || 0), 0);
+
+    // Latest risk scores
+    const { data: scores } = await supabaseAdmin
+      .from('monitoring_scores')
+      .select('risk_score, risk_level, created_at')
+      .eq('salesforce_account_id', accountId)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    res.json({
+      averageTransferAmount: avgAmount,
+      weeklyFrequency: Number(weeklyFreq),
+      topNetworks,
+      topDestinations: topDestinations.map(([addr, count]) => ({ address: addr, count })),
+      volume30d,
+      volume90d,
+      totalTransfers90d: all.length,
+      executedTransfers90d: executed.length,
+      riskScores: scores || [],
+    });
+  } catch (err) {
+    console.error('monitoring client-profile error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/compliance/monitoring/run-batch — Batch monitoring on recent transfers
+app.post('/api/compliance/monitoring/run-batch', async (req, res) => {
+  try {
+    const oneDayAgo = new Date(Date.now() - 86400_000).toISOString();
+
+    const { data: recentApprovals } = await supabaseAdmin
+      .from('transfer_approvals')
+      .select('id, salesforce_account_id, to_address, amount, network, wallet_id, client_name')
+      .gte('requested_at', oneDayAgo)
+      .order('requested_at', { ascending: false });
+
+    const results = [];
+    let alertsCreated = 0;
+
+    for (const approval of (recentApprovals || [])) {
+      // Check if already analyzed
+      const { data: existing } = await supabaseAdmin
+        .from('monitoring_scores')
+        .select('id')
+        .eq('transfer_approval_id', approval.id)
+        .limit(1);
+
+      if (existing && existing.length > 0) continue;
+
+      // Simplified inline analysis
+      const flags = [];
+      let riskScore = 0;
+      const numAmount = Number(approval.amount || 0);
+
+      // Check velocity for this account
+      const { data: dayTransfers } = await supabaseAdmin
+        .from('transfer_approvals')
+        .select('amount')
+        .eq('salesforce_account_id', approval.salesforce_account_id)
+        .gte('requested_at', oneDayAgo);
+
+      if ((dayTransfers || []).length >= 10) {
+        flags.push({ type: 'velocity_24h', severity: 'high', message: `${dayTransfers.length} transferts en 24h` });
+        riskScore += 25;
+      }
+
+      if (numAmount >= 100 && numAmount === Math.round(numAmount) && numAmount % 1000 === 0) {
+        flags.push({ type: 'round_amount', severity: 'low', message: `Montant rond: ${numAmount}` });
+        riskScore += 5;
+      }
+
+      riskScore = Math.min(riskScore, 100);
+      const riskLevel = riskScore >= 70 ? 'critical' : riskScore >= 50 ? 'high' : riskScore >= 25 ? 'medium' : 'low';
+
+      await supabaseAdmin.from('monitoring_scores').insert({
+        salesforce_account_id: approval.salesforce_account_id,
+        transfer_approval_id: approval.id,
+        risk_score: riskScore,
+        risk_level: riskLevel,
+        flags,
+        analysis: { amount: numAmount, to: approval.to_address, network: approval.network },
+      });
+
+      if (riskLevel === 'critical' || riskLevel === 'high') {
+        await supabaseAdmin.from('compliance_alerts').insert({
+          alert_type: 'batch_monitoring',
+          severity: riskLevel,
+          title: `Monitoring batch — ${approval.client_name || approval.salesforce_account_id}`,
+          description: flags.map(f => f.message).join('. ') || 'Score de risque eleve detecte',
+          salesforce_account_id: approval.salesforce_account_id,
+          client_name: approval.client_name,
+          details: { riskScore, flags, transferApprovalId: approval.id },
+          status: 'open',
+        });
+        alertsCreated++;
+      }
+
+      results.push({ transferId: approval.id, riskScore, riskLevel, flagCount: flags.length });
+    }
+
+    await logAudit({
+      action: 'monitoring.batch_run',
+      category: 'monitoring',
+      details: { analyzed: results.length, alertsCreated },
+      severity: 'info',
+      req,
+    });
+
+    res.json({ analyzed: results.length, alertsCreated, results });
+  } catch (err) {
+    console.error('monitoring batch error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Serve static frontend in production
 const distPath = path.join(__dirname, '..', 'dist');
 if (fs.existsSync(distPath)) {

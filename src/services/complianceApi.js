@@ -98,6 +98,66 @@ export async function checkWhitelist(address, network, accountId) {
   return res.json();
 }
 
+// ============ COMPLIANCE REPORTS ============
+export async function fetchComplianceSummary(startDate, endDate) {
+  const params = new URLSearchParams();
+  if (startDate) params.set('startDate', startDate);
+  if (endDate) params.set('endDate', endDate);
+  const res = await fetch(`${API_BASE}/api/compliance/reports/summary?${params}`, { headers });
+  if (!res.ok) throw new Error('Failed to fetch compliance summary');
+  return res.json();
+}
+
+export async function exportAuditLog(startDate, endDate, category) {
+  const params = new URLSearchParams();
+  if (startDate) params.set('startDate', startDate);
+  if (endDate) params.set('endDate', endDate);
+  if (category) params.set('category', category);
+  const res = await fetch(`${API_BASE}/api/compliance/reports/audit-export?${params}`, { headers });
+  if (!res.ok) throw new Error('Failed to export audit log');
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = `audit-log-${(startDate || 'all').slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(blobUrl);
+}
+
+export async function exportTransfers(startDate, endDate, status) {
+  const params = new URLSearchParams();
+  if (startDate) params.set('startDate', startDate);
+  if (endDate) params.set('endDate', endDate);
+  if (status) params.set('status', status);
+  const res = await fetch(`${API_BASE}/api/compliance/reports/transfers-export?${params}`, { headers });
+  if (!res.ok) throw new Error('Failed to export transfers');
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = `transfers-${(startDate || 'all').slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(blobUrl);
+}
+
+export async function exportKycStatus() {
+  const res = await fetch(`${API_BASE}/api/compliance/reports/kyc-export`, { headers });
+  if (!res.ok) throw new Error('Failed to export KYC status');
+  const blob = await res.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = `kyc-status-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(blobUrl);
+}
+
 // ============ RISK CONFIG ============
 export async function fetchRiskConfig(accountId) {
   const res = await fetch(`${API_BASE}/api/compliance/risk/${accountId}`, { headers });
@@ -151,5 +211,95 @@ export async function resolveAlert(id, notes) {
     method: 'PATCH', headers, body: JSON.stringify({ notes }),
   });
   if (!res.ok) throw new Error('Failed to resolve alert');
+  return res.json();
+}
+
+// ============ SAR/STR — Suspicious Activity Reports ============
+export async function fetchSARs(status) {
+  const params = status ? `?status=${status}` : '';
+  const res = await fetch(`${API_BASE}/api/compliance/sar${params}`, { headers });
+  if (!res.ok) throw new Error('Failed to fetch SARs');
+  return res.json();
+}
+
+export async function createSAR(data) {
+  // data: { salesforceAccountId, clientName, reportType, priority, suspicionType, description, evidence, relatedTransactions, relatedAlerts, totalAmountInvolved, currency, createdByEmail }
+  const res = await fetch(`${API_BASE}/api/compliance/sar`, {
+    method: 'POST', headers, body: JSON.stringify(data),
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to create SAR'); }
+  return res.json();
+}
+
+export async function getSAR(id) {
+  const res = await fetch(`${API_BASE}/api/compliance/sar/${id}`, { headers });
+  if (!res.ok) throw new Error('Failed to fetch SAR');
+  return res.json();
+}
+
+export async function submitSAR(id, email) {
+  const res = await fetch(`${API_BASE}/api/compliance/sar/${id}/submit`, {
+    method: 'PATCH', headers, body: JSON.stringify({ submittedByEmail: email }),
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to submit SAR'); }
+  return res.json();
+}
+
+export async function reviewSAR(id, email) {
+  const res = await fetch(`${API_BASE}/api/compliance/sar/${id}/review`, {
+    method: 'PATCH', headers, body: JSON.stringify({ reviewedByEmail: email }),
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to review SAR'); }
+  return res.json();
+}
+
+export async function fileSAR(id, email, mrosReference) {
+  const res = await fetch(`${API_BASE}/api/compliance/sar/${id}/file`, {
+    method: 'PATCH', headers, body: JSON.stringify({ filedByEmail: email, mrosReference }),
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to file SAR'); }
+  return res.json();
+}
+
+export async function closeSAR(id, email, resolution, notes) {
+  const res = await fetch(`${API_BASE}/api/compliance/sar/${id}/close`, {
+    method: 'PATCH', headers, body: JSON.stringify({ closedByEmail: email, resolution, resolutionNotes: notes }),
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to close SAR'); }
+  return res.json();
+}
+
+export async function fetchSARStats() {
+  const res = await fetch(`${API_BASE}/api/compliance/sar/stats`, { headers });
+  if (!res.ok) throw new Error('Failed to fetch SAR stats');
+  return res.json();
+}
+
+// ============ TRAVEL RULE (FATF R.16) ============
+export async function checkTravelRule(amount, currency = 'CHF') {
+  const res = await fetch(`${API_BASE}/api/compliance/travel-rule/check`, {
+    method: 'POST', headers, body: JSON.stringify({ amount, currency }),
+  });
+  if (!res.ok) throw new Error('Failed to check travel rule');
+  return res.json();
+}
+
+export async function createTravelRuleRecord(data) {
+  const res = await fetch(`${API_BASE}/api/compliance/travel-rule/create`, {
+    method: 'POST', headers, body: JSON.stringify(data),
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to create travel rule record'); }
+  return res.json();
+}
+
+export async function getTravelRuleRecord(transferApprovalId) {
+  const res = await fetch(`${API_BASE}/api/compliance/travel-rule/${transferApprovalId}`, { headers });
+  if (!res.ok) { if (res.status === 404) return null; throw new Error('Failed to fetch travel rule record'); }
+  return res.json();
+}
+
+export async function fetchPendingTravelRule() {
+  const res = await fetch(`${API_BASE}/api/compliance/travel-rule/pending`, { headers });
+  if (!res.ok) throw new Error('Failed to fetch pending travel rule records');
   return res.json();
 }

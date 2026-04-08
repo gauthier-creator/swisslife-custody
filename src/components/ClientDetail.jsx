@@ -6,8 +6,8 @@ import WhitelistPanel from './WhitelistPanel';
 import RiskConfigPanel from './RiskConfigPanel';
 import KYCFlow from './KYCFlow';
 import { SUPPORTED_NETWORKS } from '../config/constants';
-import { createApproval, checkTransferRisk } from '../services/complianceApi';
-import { getKycStatus } from '../services/kycService';
+import { createApproval, checkTransferRisk, checkTravelRule, createTravelRuleRecord } from '../services/complianceApi';
+import { getKycStatus, analyzeTransfer } from '../services/kycService';
 import { useAuth } from '../context/AuthContext';
 import { fmtEUR, Badge, Modal, Spinner, EmptyState, inputCls, selectCls, labelCls } from './shared';
 
@@ -25,12 +25,14 @@ export default function ClientDetail({ client, onBack }) {
   const [assets, setAssets] = useState(null);
   const [history, setHistory] = useState([]);
   const [showTransfer, setShowTransfer] = useState(false);
-  const [transfer, setTransfer] = useState({ to: '', amount: '', kind: 'Native' });
+  const [transfer, setTransfer] = useState({ to: '', amount: '', kind: 'Native', beneficiaryName: '', beneficiaryCountry: '', beneficiaryInstitution: '' });
   const [sending, setSending] = useState(false);
   const [contacts, setContacts] = useState([]);
   const [loadingContacts, setLoadingContacts] = useState(true);
   const [error, setError] = useState(null);
   const [kycLive, setKycLive] = useState(null); // live KYC status from Supabase
+  const [travelRule, setTravelRule] = useState({ beneficiaryName: '', beneficiaryInstitution: '', beneficiaryCountry: '' });
+  const [showTravelRule, setShowTravelRule] = useState(false);
   const { user, isAdmin } = useAuth();
 
   const parsed = parseDescription(client.description);
@@ -140,8 +142,35 @@ export default function ClientDetail({ client, onBack }) {
         return;
       }
 
+      // 2b. Transaction monitoring analysis
+      const monitoring = await analyzeTransfer({
+        salesforceAccountId: client.id,
+        to: transfer.to,
+        amount: transfer.amount,
+        network: selectedWallet.network,
+        walletId: selectedWallet.id,
+      }).catch(() => ({ riskScore: 0, riskLevel: 'low', flags: [], allowed: true }));
+
+      if (!monitoring.allowed) {
+        alert('TRANSFERT BLOQUE PAR LE MONITORING\n\nScore de risque: ' + monitoring.riskScore + '/100\n\n' + (monitoring.flags || []).map(f => f.message).join('\n'));
+        setSending(false);
+        return;
+      }
+
+      if (monitoring.riskScore >= 50) {
+        warningMsg += '\n\nMonitoring (score ' + monitoring.riskScore + '/100):\n- ' + (monitoring.flags || []).map(f => f.message).join('\n- ');
+      }
+
+      // 2c. Travel Rule check
+      const travelRuleRequired = Number(transfer.amount) >= 1000;
+      if (travelRuleRequired && !transfer.beneficiaryName?.trim()) {
+        alert('TRAVEL RULE (FATF R.16)\n\nPour les transferts >= 1\'000 CHF, le nom du beneficiaire est obligatoire.\nVeuillez remplir les informations Travel Rule.');
+        setSending(false);
+        return;
+      }
+
       // 3. Create approval request (4-eye principle)
-      await createApproval({
+      const approval = await createApproval({
         walletId: selectedWallet.id,
         walletName: selectedWallet.name,
         walletNetwork: selectedWallet.network,
@@ -154,9 +183,29 @@ export default function ClientDetail({ client, onBack }) {
         requestedByEmail: user?.email || 'unknown',
       });
 
+      // 4. Create Travel Rule record if required
+      if (travelRuleRequired && approval?.id) {
+        await createTravelRuleRecord({
+          transferApprovalId: approval.id,
+          originatorName: client.name,
+          originatorAccountNumber: client.accountNumber,
+          originatorAddress: [client.street, client.postalCode, client.city].filter(Boolean).join(', '),
+          originatorCountry: client.country,
+          originatorWalletAddress: selectedWallet.address,
+          beneficiaryName: transfer.beneficiaryName,
+          beneficiaryWalletAddress: transfer.to,
+          beneficiaryInstitution: transfer.beneficiaryInstitution || null,
+          beneficiaryCountry: transfer.beneficiaryCountry || null,
+          amount: transfer.amount,
+          assetType: transfer.kind,
+          network: selectedWallet.network,
+          createdByEmail: user?.email,
+        }).catch(err => console.error('Travel rule record error:', err));
+      }
+
       alert('Demande de transfert soumise avec succes.\n\nUn administrateur doit approuver la demande dans l\'onglet Compliance avant execution.');
       setShowTransfer(false);
-      setTransfer({ to: '', amount: '', kind: 'Native' });
+      setTransfer({ to: '', amount: '', kind: 'Native', beneficiaryName: '', beneficiaryCountry: '', beneficiaryInstitution: '' });
     } catch (err) {
       console.error('transfer error:', err);
       setError(err.message);
@@ -692,7 +741,34 @@ export default function ClientDetail({ client, onBack }) {
               <option value="Erc20">ERC-20</option>
             </select>
           </div>
-          <button onClick={handleTransfer} disabled={sending || !transfer.to || !transfer.amount}
+          {/* Travel Rule section — shows when amount >= 1000 */}
+          {Number(transfer.amount) >= 1000 && (
+            <div className="bg-[#EFF6FF] border border-[rgba(59,130,246,0.15)] rounded-xl p-4 space-y-3">
+              <div className="flex items-center gap-2 mb-1">
+                <svg className="w-4 h-4 text-[#3B82F6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-[12px] font-semibold text-[#1E40AF]">Travel Rule (FATF R.16)</span>
+              </div>
+              <p className="text-[11px] text-[#3B82F6]">Transferts {'>'}= 1'000 CHF : informations beneficiaire obligatoires.</p>
+              <div>
+                <label className={labelCls}>Nom du beneficiaire *</label>
+                <input className={inputCls} placeholder="Nom complet du beneficiaire" value={transfer.beneficiaryName} onChange={e => setTransfer(p => ({ ...p, beneficiaryName: e.target.value }))} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>Pays</label>
+                  <input className={inputCls} placeholder="CH, FR, DE..." value={transfer.beneficiaryCountry} onChange={e => setTransfer(p => ({ ...p, beneficiaryCountry: e.target.value }))} />
+                </div>
+                <div>
+                  <label className={labelCls}>VASP / Institution</label>
+                  <input className={inputCls} placeholder="Optionnel" value={transfer.beneficiaryInstitution} onChange={e => setTransfer(p => ({ ...p, beneficiaryInstitution: e.target.value }))} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <button onClick={handleTransfer} disabled={sending || !transfer.to || !transfer.amount || (Number(transfer.amount) >= 1000 && !transfer.beneficiaryName?.trim())}
             className="w-full py-2.5 bg-[#6366F1] text-white text-[14px] font-medium rounded-xl hover:bg-[#5558E6] transition-colors disabled:opacity-40">
             {sending ? 'Envoi...' : 'Confirmer le transfert'}
           </button>

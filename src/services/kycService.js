@@ -97,3 +97,56 @@ export const KYC_STATUS = {
   complete: { label: 'Valide', color: '#059669', bg: '#ECFDF5' },
   failed: { label: 'Echec', color: '#DC2626', bg: '#FEF2F2' },
 };
+
+// ============ PERIODIC REVIEW ============
+
+// Get KYC review schedule for all clients
+export async function fetchKycReviewSchedule() {
+  const res = await fetch(`${API_BASE}/api/kyc/review-schedule`, { headers });
+  if (!res.ok) throw new Error('Echec lecture planning revue KYC');
+  return res.json();
+}
+
+// Trigger re-screening for a specific client
+export async function triggerRescreening(salesforceAccountId, email) {
+  const res = await fetch(`${API_BASE}/api/kyc/trigger-rescreening`, {
+    method: 'POST', headers,
+    body: JSON.stringify({ salesforceAccountId, initiatedByEmail: email }),
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Echec re-screening'); }
+  return res.json();
+}
+
+// Batch check all clients for expired KYC
+export async function batchReviewCheck() {
+  const res = await fetch(`${API_BASE}/api/kyc/batch-review-check`, {
+    method: 'POST', headers,
+  });
+  if (!res.ok) throw new Error('Echec verification batch KYC');
+  return res.json();
+}
+
+// ============ MONITORING ============
+
+export async function analyzeTransfer(data) {
+  const res = await fetch(`${API_BASE}/api/compliance/monitoring/analyze-transfer`, {
+    method: 'POST', headers,
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Echec analyse monitoring');
+  return res.json();
+}
+
+export async function fetchClientMonitoringProfile(accountId) {
+  const res = await fetch(`${API_BASE}/api/compliance/monitoring/client-profile/${accountId}`, { headers });
+  if (!res.ok) throw new Error('Echec lecture profil monitoring');
+  return res.json();
+}
+
+export async function runBatchMonitoring() {
+  const res = await fetch(`${API_BASE}/api/compliance/monitoring/run-batch`, {
+    method: 'POST', headers,
+  });
+  if (!res.ok) throw new Error('Echec monitoring batch');
+  return res.json();
+}
