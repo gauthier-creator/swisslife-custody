@@ -130,8 +130,110 @@ export default function ConfigPage({ onConfigured }) {
         </div>
       </div>
 
+      {/* Compliance settings */}
+      <ComplianceSettings />
+
       {/* Users management */}
       <UserManagement />
+    </div>
+  );
+}
+
+function ComplianceSettings() {
+  const [settings, setSettings] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/admin/settings`)
+      .then(r => r.json())
+      .then(data => { setSettings(data); setLoading(false); })
+      .catch(() => { setSettings({ kyc_module_enabled: false, filing_authority: 'tracfin' }); setLoading(false); });
+  }, []);
+
+  const save = async (updates) => {
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers = { 'Content-Type': 'application/json' };
+      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+      const res = await fetch(`${API_BASE}/api/admin/settings`, {
+        method: 'PUT', headers, body: JSON.stringify(updates),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSettings(data);
+      }
+    } catch { /* silent */ }
+    setSaving(false);
+  };
+
+  if (loading) return <div className="mt-8 text-center"><Spinner size="w-5 h-5" /></div>;
+
+  return (
+    <div className="mt-8">
+      <h3 className="text-[16px] font-semibold text-[#0F0F10] mb-4">Parametres compliance</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* KYC Module toggle */}
+        <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h4 className="text-[14px] font-semibold text-[#0F0F10]">Module KYC integre</h4>
+              <p className="text-[12px] text-[#787881] mt-0.5">Verification d'identite via ComplyCube (en complement du KYC bancaire)</p>
+            </div>
+            <button
+              onClick={() => save({ kyc_module_enabled: !settings?.kyc_module_enabled })}
+              disabled={saving}
+              className={`relative w-12 h-6 rounded-full transition-colors ${settings?.kyc_module_enabled ? 'bg-[#059669]' : 'bg-[rgba(0,0,29,0.15)]'}`}
+            >
+              <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${settings?.kyc_module_enabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
+            </button>
+          </div>
+          <div className={`text-[12px] px-3 py-2 rounded-lg ${settings?.kyc_module_enabled ? 'bg-[#ECFDF5] text-[#059669]' : 'bg-[rgba(0,0,23,0.03)] text-[#787881]'}`}>
+            {settings?.kyc_module_enabled
+              ? 'Active — L\'onglet KYC/KYB est visible dans les fiches clients'
+              : 'Desactive — Le KYC est gere par les outils existants de la banque'}
+          </div>
+          <p className="text-[11px] text-[#A8A29E] mt-2">
+            Le screening crypto (Chainalysis KYT) est gere directement par DFNS sur chaque transfert.
+          </p>
+        </div>
+
+        {/* Filing authority */}
+        <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-6">
+          <h4 className="text-[14px] font-semibold text-[#0F0F10] mb-1">Autorite de declaration</h4>
+          <p className="text-[12px] text-[#787881] mb-4">Destination des declarations d'activite suspecte (SAR/STR)</p>
+          <div className="space-y-2">
+            {[
+              { value: 'tracfin', label: 'Tracfin (France)', desc: 'Cellule de renseignement financier — art. L.561-15 CMF' },
+              { value: 'mros', label: 'MROS (Suisse)', desc: 'Money Laundering Reporting Office — LBA art. 9' },
+              { value: 'both', label: 'Les deux', desc: 'Declaration croisee France + Suisse' },
+            ].map(opt => (
+              <label
+                key={opt.value}
+                className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                  settings?.filing_authority === opt.value
+                    ? 'border-[#6366F1] bg-[#EEF2FF]'
+                    : 'border-[rgba(0,0,29,0.08)] hover:border-[rgba(0,0,29,0.15)]'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="filing_authority"
+                  value={opt.value}
+                  checked={settings?.filing_authority === opt.value}
+                  onChange={() => save({ filing_authority: opt.value })}
+                  className="mt-0.5"
+                />
+                <div>
+                  <p className="text-[13px] font-medium text-[#0F0F10]">{opt.label}</p>
+                  <p className="text-[11px] text-[#787881]">{opt.desc}</p>
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

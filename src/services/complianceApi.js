@@ -275,10 +275,10 @@ export async function reviewSAR(id, email) {
   return res.json();
 }
 
-export async function fileSAR(id, email, mrosReference) {
+export async function fileSAR(id, email, mrosReference, filingAuthority = 'tracfin') {
   const authHeaders = await getHeaders();
   const res = await fetch(`${API_BASE}/api/compliance/sar/${id}/file`, {
-    method: 'PATCH', headers: authHeaders, body: JSON.stringify({ filedByEmail: email, mrosReference }),
+    method: 'PATCH', headers: authHeaders, body: JSON.stringify({ filedByEmail: email, mrosReference, filingAuthority }),
   });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to file SAR'); }
   return res.json();

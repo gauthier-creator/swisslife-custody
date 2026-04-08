@@ -442,6 +442,34 @@ app.get('/api/dfns/wallets/:walletId/history', async (req, res) => {
   }
 });
 
+// List transfers for a wallet (with compliance status)
+app.get('/api/dfns/wallets/:walletId/transfers', async (req, res) => {
+  try {
+    const data = await dfns.wallets.listTransfers({
+      walletId: req.params.walletId,
+      query: { limit: req.query.limit || '50' }
+    });
+    res.json(data);
+  } catch (err) {
+    console.error('listTransfers error:', err.message);
+    res.status((err.httpStatus > 99 && err.httpStatus < 1000) ? err.httpStatus : 500).json({ error: err.message });
+  }
+});
+
+// Get single transfer details (includes policy/compliance status)
+app.get('/api/dfns/wallets/:walletId/transfers/:transferId', async (req, res) => {
+  try {
+    const data = await dfns.wallets.getTransfer({
+      walletId: req.params.walletId,
+      transferId: req.params.transferId
+    });
+    res.json(data);
+  } catch (err) {
+    console.error('getTransfer error:', err.message);
+    res.status((err.httpStatus > 99 && err.httpStatus < 1000) ? err.httpStatus : 500).json({ error: err.message });
+  }
+});
+
 app.post('/api/dfns/wallets/:walletId/transfers', requireAuth, async (req, res) => {
   try {
     // Audit log: transfer attempt
@@ -1082,6 +1110,73 @@ app.put('/api/compliance/risk/:accountId', async (req, res) => {
     res.json(data);
   } catch (err) {
     console.error('risk config update error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// ADMIN SETTINGS — Feature toggles
+// ============================================================
+app.get('/api/admin/settings', async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('admin_settings')
+      .select('*')
+      .single();
+    if (error && error.code === 'PGRST116') {
+      // No row exists yet, return defaults
+      return res.json({ kyc_module_enabled: false, filing_authority: 'tracfin' });
+    }
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    console.error('admin settings get error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/admin/settings', requireAdmin, async (req, res) => {
+  try {
+    const updates = {};
+    if (req.body.kyc_module_enabled !== undefined) updates.kyc_module_enabled = req.body.kyc_module_enabled;
+    if (req.body.filing_authority !== undefined) updates.filing_authority = req.body.filing_authority;
+    updates.updated_at = new Date().toISOString();
+
+    // Upsert — try update first, insert if not exists
+    const { data: existing } = await supabaseAdmin.from('admin_settings').select('id').limit(1);
+    let result;
+    if (existing && existing.length > 0) {
+      const { data, error } = await supabaseAdmin
+        .from('admin_settings')
+        .update(updates)
+        .eq('id', existing[0].id)
+        .select()
+        .single();
+      if (error) throw error;
+      result = data;
+    } else {
+      const { data, error } = await supabaseAdmin
+        .from('admin_settings')
+        .insert({ ...updates, kyc_module_enabled: updates.kyc_module_enabled ?? false, filing_authority: updates.filing_authority ?? 'tracfin' })
+        .select()
+        .single();
+      if (error) throw error;
+      result = data;
+    }
+
+    await logAudit({
+      userEmail: req.user?.email,
+      action: 'admin.settings_updated',
+      category: 'admin',
+      entityType: 'settings',
+      details: updates,
+      severity: 'info',
+      req,
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error('admin settings update error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -1773,6 +1868,8 @@ app.get('/api/compliance/sar/stats', async (req, res) => {
     for (const row of (data || [])) {
       byStatus[row.status] = (byStatus[row.status] || 0) + 1;
     }
+    // Aggregate both filing authorities under a combined "filed" count
+    byStatus.filed_total = (byStatus.filed_with_mros || 0) + (byStatus.filed_with_tracfin || 0);
 
     res.json({ byStatus, total: data?.length || 0 });
   } catch (err) {
@@ -1993,10 +2090,11 @@ app.patch('/api/compliance/sar/:id/file', requireAdmin, async (req, res) => {
     const { data, error } = await supabaseAdmin
       .from('suspicious_activity_reports')
       .update({
-        status: 'filed_with_mros',
+        status: req.body.filingAuthority === 'mros' ? 'filed_with_mros' : 'filed_with_tracfin',
         filed_by_email: filedByEmail || null,
         filed_at: new Date().toISOString(),
         mros_reference: mrosReference || null,
+        filing_authority: req.body.filingAuthority || 'tracfin',
         resolution: 'filed',
         updated_at: new Date().toISOString(),
       })
@@ -2008,11 +2106,11 @@ app.patch('/api/compliance/sar/:id/file', requireAdmin, async (req, res) => {
 
     await logAudit({
       userEmail: filedByEmail,
-      action: 'sar.filed_with_mros',
+      action: req.body.filingAuthority === 'mros' ? 'sar.filed_with_mros' : 'sar.filed_with_tracfin',
       category: 'compliance',
       entityType: 'sar',
       entityId: data.id,
-      details: { referenceNumber: data.reference_number, mrosReference },
+      details: { referenceNumber: data.reference_number, mrosReference, filingAuthority: req.body.filingAuthority || 'tracfin' },
       severity: 'critical',
       req,
     });

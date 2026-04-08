@@ -76,6 +76,22 @@ export async function transferAsset(walletId, { kind, to, amount, contract }) {
 }
 
 // ============================================================
+// Transfers (with compliance/policy status)
+// ============================================================
+export async function listTransfers(walletId) {
+  const res = await fetch(`${API_BASE}/api/dfns/wallets/${walletId}/transfers?limit=50`, { headers });
+  if (!res.ok) throw await dfnsError(res, 'Echec du chargement des transferts');
+  const data = await res.json();
+  return data.items || [];
+}
+
+export async function getTransfer(walletId, transferId) {
+  const res = await fetch(`${API_BASE}/api/dfns/wallets/${walletId}/transfers/${transferId}`, { headers });
+  if (!res.ok) throw await dfnsError(res, 'Transfert introuvable');
+  return res.json();
+}
+
+// ============================================================
 // Policies
 // ============================================================
 export async function listPolicies() {

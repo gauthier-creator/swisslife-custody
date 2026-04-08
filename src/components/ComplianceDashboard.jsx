@@ -58,6 +58,7 @@ const sarStatusBadge = (s) => {
     submitted: { label: 'Soumis', variant: 'warning' },
     under_review: { label: 'En revue', variant: 'info' },
     filed_with_mros: { label: 'Depose MROS', variant: 'error' },
+    filed_with_tracfin: { label: 'Depose Tracfin', variant: 'error' },
     closed: { label: 'Cloture', variant: 'success' },
   };
   const m = map[s] || { label: s || '—', variant: 'default' };
@@ -131,6 +132,7 @@ export default function ComplianceDashboard() {
   const [sarCloseNotes, setSarCloseNotes] = useState('');
   const [sarFileModal, setSarFileModal] = useState(null);
   const [sarMrosRef, setSarMrosRef] = useState('');
+  const [sarFilingAuthority, setSarFilingAuthority] = useState('tracfin');
   const [sarForm, setSarForm] = useState({
     clientName: '', salesforceAccountId: '', reportType: 'SAR',
     suspicionType: 'unusual_pattern', description: '', priority: 'medium',
@@ -328,10 +330,12 @@ export default function ComplianceDashboard() {
   const handleFileSAR = async () => {
     if (!sarFileModal) return;
     try {
-      await fileSAR(sarFileModal, profile?.email, sarMrosRef);
-      toast('Declaration deposee aupres du MROS');
+      await fileSAR(sarFileModal, profile?.email, sarMrosRef, sarFilingAuthority);
+      const dest = sarFilingAuthority === 'mros' ? 'MROS' : 'Tracfin';
+      toast(`Declaration deposee aupres de ${dest}`);
       setSarFileModal(null);
       setSarMrosRef('');
+      setSarFilingAuthority('tracfin');
       loadSARs();
     } catch (err) { toast(err.message, 'error'); }
   };
@@ -721,7 +725,7 @@ export default function ComplianceDashboard() {
                         actionBtn('Revue', () => handleReviewSAR(s.id), 'info')
                       )}
                       {s.status === 'under_review' && isAdmin && (
-                        actionBtn('Deposer MROS', () => { setSarFileModal(s.id); setSarMrosRef(''); }, 'error')
+                        actionBtn('Deposer', () => { setSarFileModal(s.id); setSarMrosRef(''); setSarFilingAuthority('tracfin'); }, 'error')
                       )}
                       {s.status !== 'closed' && isAdmin && (
                         actionBtn('Cloturer', () => { setSarCloseModal(s.id); setSarCloseResolution('dismissed'); setSarCloseNotes(''); }, 'default')
@@ -862,15 +866,42 @@ export default function ComplianceDashboard() {
       </Modal>
 
       {/* ── File with MROS Modal ─────────────────────────────────── */}
-      <Modal isOpen={!!sarFileModal} onClose={() => setSarFileModal(null)} title="Deposer aupres du MROS">
+      <Modal isOpen={!!sarFileModal} onClose={() => setSarFileModal(null)} title="Deposer la declaration">
         <div className="space-y-4">
           <div>
-            <label className={labelCls}>Reference MROS (optionnel)</label>
+            <label className={labelCls}>Autorite de declaration</label>
+            <div className="flex gap-2 mt-1">
+              {[
+                { value: 'tracfin', label: 'Tracfin (France)' },
+                { value: 'mros', label: 'MROS (Suisse)' },
+              ].map(opt => (
+                <label
+                  key={opt.value}
+                  className={`flex-1 flex items-center gap-2 p-3 rounded-xl border cursor-pointer transition-all text-[13px] ${
+                    sarFilingAuthority === opt.value
+                      ? 'border-[#6366F1] bg-[#EEF2FF] font-medium'
+                      : 'border-[rgba(0,0,29,0.08)]'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="sar_filing"
+                    value={opt.value}
+                    checked={sarFilingAuthority === opt.value}
+                    onChange={() => setSarFilingAuthority(opt.value)}
+                  />
+                  {opt.label}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className={labelCls}>Reference externe (optionnel)</label>
             <input
               value={sarMrosRef}
               onChange={e => setSarMrosRef(e.target.value)}
               className={inputCls}
-              placeholder="Reference externe MROS..."
+              placeholder={sarFilingAuthority === 'mros' ? 'Reference MROS...' : 'Reference Tracfin...'}
             />
           </div>
           <div className="flex justify-end gap-2">
@@ -884,7 +915,7 @@ export default function ComplianceDashboard() {
               onClick={handleFileSAR}
               className="px-4 py-2 text-[13px] font-medium text-white bg-[#DC2626] hover:bg-[#B91C1C] rounded-xl transition-colors"
             >
-              Confirmer le depot MROS
+              Confirmer le depot {sarFilingAuthority === 'mros' ? 'MROS' : 'Tracfin'}
             </button>
           </div>
         </div>

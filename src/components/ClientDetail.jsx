@@ -11,6 +11,7 @@ import { createApproval, checkTransferRisk, checkTravelRule, createTravelRuleRec
 import { getKycStatus, analyzeTransfer } from '../services/kycService';
 import { useAuth } from '../context/AuthContext';
 import { fmtEUR, Badge, Modal, Spinner, EmptyState, inputCls, selectCls, labelCls } from './shared';
+import { API_BASE } from '../config/constants';
 
 const truncAddr = (a, n = 8) => a ? `${a.slice(0, n)}...${a.slice(-n)}` : '—';
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
@@ -32,6 +33,7 @@ export default function ClientDetail({ client, onBack }) {
   const [loadingContacts, setLoadingContacts] = useState(true);
   const [error, setError] = useState(null);
   const [kycLive, setKycLive] = useState(null); // live KYC status from Supabase
+  const [kycModuleEnabled, setKycModuleEnabled] = useState(false);
   const [travelRule, setTravelRule] = useState({ beneficiaryName: '', beneficiaryInstitution: '', beneficiaryCountry: '' });
   const [showTravelRule, setShowTravelRule] = useState(false);
   const { user, isAdmin } = useAuth();
@@ -40,7 +42,10 @@ export default function ClientDetail({ client, onBack }) {
   // KYC is valid if either Salesforce description says so OR live KYC checks are validated
   const kycValid = kycLive?.overallStatus === 'validated' || parsed.kyc?.toLowerCase().includes('valid');
 
-  useEffect(() => { loadWallets(); loadContacts(); loadKycStatus(); }, []);
+  useEffect(() => {
+    loadWallets(); loadContacts(); loadKycStatus();
+    fetch(`${API_BASE}/api/admin/settings`).then(r => r.json()).then(s => setKycModuleEnabled(!!s.kyc_module_enabled)).catch(() => {});
+  }, []);
 
   const loadKycStatus = async () => {
     try {
@@ -284,7 +289,7 @@ export default function ClientDetail({ client, onBack }) {
       <div className="flex items-center gap-1 bg-[rgba(0,0,23,0.03)] rounded-lg p-0.5 mb-6 w-fit">
         {[
           { id: 'profile', label: 'Fiche client' },
-          { id: 'kyc', label: 'KYC / KYB' },
+          ...(kycModuleEnabled ? [{ id: 'kyc', label: 'KYC / KYB' }] : []),
           { id: 'documents', label: 'Documents' },
           { id: 'wallets', label: `Wallets (${wallets.length})` },
           { id: 'delegations', label: 'Delegations' },
