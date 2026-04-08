@@ -40,8 +40,11 @@ export default function ClientDetail({ client, onBack }) {
   const { user, isAdmin } = useAuth();
 
   const parsed = parseDescription(client.description);
-  // KYC is valid if either Salesforce description says so OR live KYC checks are validated
-  const kycValid = kycLive?.overallStatus === 'validated' || parsed.kyc?.toLowerCase().includes('valid');
+  // KYC is valid if:
+  // 1. KYC module is disabled (bank handles KYC externally) → always valid
+  // 2. OR Salesforce description says so
+  // 3. OR live KYC checks are validated in Supabase
+  const kycValid = !kycModuleEnabled || kycLive?.overallStatus === 'validated' || parsed.kyc?.toLowerCase().includes('valid');
 
   useEffect(() => {
     loadWallets(); loadContacts(); loadKycStatus();
