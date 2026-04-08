@@ -155,16 +155,22 @@ function ComplianceSettings() {
     setSaving(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const headers = { 'Content-Type': 'application/json' };
-      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
-      const res = await fetch(`${API_BASE}/api/admin/settings`, {
-        method: 'PUT', headers, body: JSON.stringify(updates),
+      const hdrs = { 'Content-Type': 'application/json' };
+      if (session?.access_token) hdrs.Authorization = `Bearer ${session.access_token}`;
+      const url = `${API_BASE}/api/admin/settings`;
+      console.log('[ConfigPage] save:', { url, updates, hasToken: !!session?.access_token });
+      const res = await fetch(url, {
+        method: 'PUT', headers: hdrs, body: JSON.stringify(updates),
       });
+      console.log('[ConfigPage] response:', res.status);
       if (res.ok) {
         const data = await res.json();
         setSettings(data);
+      } else {
+        const errText = await res.text();
+        console.error('[ConfigPage] save error:', res.status, errText.slice(0, 200));
       }
-    } catch { /* silent */ }
+    } catch (err) { console.error('[ConfigPage] save exception:', err); }
     setSaving(false);
   };
 
