@@ -299,35 +299,6 @@ export async function fetchSARStats() {
   return res.json();
 }
 
-// ============ TRAVEL RULE (FATF R.16) ============
-export async function checkTravelRule(amount, currency = 'CHF') {
-  const res = await fetch(`${API_BASE}/api/compliance/travel-rule/check`, {
-    method: 'POST', headers, body: JSON.stringify({ amount, currency }),
-  });
-  if (!res.ok) throw new Error('Failed to check travel rule');
-  return res.json();
-}
-
-export async function createTravelRuleRecord(data) {
-  const res = await fetch(`${API_BASE}/api/compliance/travel-rule/create`, {
-    method: 'POST', headers, body: JSON.stringify(data),
-  });
-  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to create travel rule record'); }
-  return res.json();
-}
-
-export async function getTravelRuleRecord(transferApprovalId) {
-  const res = await fetch(`${API_BASE}/api/compliance/travel-rule/${transferApprovalId}`, { headers });
-  if (!res.ok) { if (res.status === 404) return null; throw new Error('Failed to fetch travel rule record'); }
-  return res.json();
-}
-
-export async function fetchPendingTravelRule() {
-  const res = await fetch(`${API_BASE}/api/compliance/travel-rule/pending`, { headers });
-  if (!res.ok) throw new Error('Failed to fetch pending travel rule records');
-  return res.json();
-}
-
 // ============ DELEGATIONS ============
 export async function fetchDelegations(accountId) {
   const authHeaders = await getHeaders();
@@ -360,5 +331,80 @@ export async function updateDelegation(id, data) {
     method: 'PATCH', headers: authHeaders, body: JSON.stringify(data),
   });
   if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to update delegation'); }
+  return res.json();
+}
+
+// ============ WALLET FREEZE (GEL DES AVOIRS) ============
+export async function fetchFreezes(status) {
+  const params = status ? `?status=${status}` : '';
+  const res = await fetch(`${API_BASE}/api/compliance/freezes${params}`, { headers });
+  if (!res.ok) throw new Error('Failed to fetch freezes');
+  return res.json();
+}
+
+export async function checkWalletFreeze(walletId) {
+  const res = await fetch(`${API_BASE}/api/compliance/freezes/check/${walletId}`, { headers });
+  if (!res.ok) return { frozen: false };
+  return res.json();
+}
+
+export async function freezeWallet(data) {
+  const authHeaders = await getHeaders();
+  const res = await fetch(`${API_BASE}/api/compliance/freezes`, {
+    method: 'POST', headers: authHeaders, body: JSON.stringify(data),
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to freeze'); }
+  return res.json();
+}
+
+export async function unfreezeWallet(id, unfrozenByEmail, notes) {
+  const authHeaders = await getHeaders();
+  const res = await fetch(`${API_BASE}/api/compliance/freezes/${id}/unfreeze`, {
+    method: 'PATCH', headers: authHeaders, body: JSON.stringify({ unfrozenByEmail, notes }),
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to unfreeze'); }
+  return res.json();
+}
+
+// ============ UBO (BENEFICIAIRES EFFECTIFS) ============
+export async function fetchUBOs(accountId) {
+  const res = await fetch(`${API_BASE}/api/compliance/ubos/${accountId}`, { headers });
+  if (!res.ok) throw new Error('Failed to fetch UBOs');
+  return res.json();
+}
+
+export async function addUBO(data) {
+  const authHeaders = await getHeaders();
+  const res = await fetch(`${API_BASE}/api/compliance/ubos`, {
+    method: 'POST', headers: authHeaders, body: JSON.stringify(data),
+  });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Failed to add UBO'); }
+  return res.json();
+}
+
+export async function updateUBO(id, data) {
+  const authHeaders = await getHeaders();
+  const res = await fetch(`${API_BASE}/api/compliance/ubos/${id}`, {
+    method: 'PATCH', headers: authHeaders, body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update UBO');
+  return res.json();
+}
+
+export async function verifyUBO(id, verifiedByEmail) {
+  const authHeaders = await getHeaders();
+  const res = await fetch(`${API_BASE}/api/compliance/ubos/${id}/verify`, {
+    method: 'PATCH', headers: authHeaders, body: JSON.stringify({ verifiedByEmail }),
+  });
+  if (!res.ok) throw new Error('Failed to verify UBO');
+  return res.json();
+}
+
+export async function deleteUBO(id) {
+  const authHeaders = await getHeaders();
+  const res = await fetch(`${API_BASE}/api/compliance/ubos/${id}`, {
+    method: 'DELETE', headers: authHeaders,
+  });
+  if (!res.ok) throw new Error('Failed to delete UBO');
   return res.json();
 }

@@ -6,9 +6,11 @@ import WhitelistPanel from './WhitelistPanel';
 import RiskConfigPanel from './RiskConfigPanel';
 import KYCFlow from './KYCFlow';
 import DelegationPanel from './DelegationPanel';
+import UBOPanel from './UBOPanel';
+import WalletFreezePanel from './WalletFreezePanel';
 import { SUPPORTED_NETWORKS } from '../config/constants';
-import { createApproval, checkTransferRisk, checkTravelRule, createTravelRuleRecord } from '../services/complianceApi';
-import { getKycStatus, analyzeTransfer } from '../services/kycService';
+import { createApproval, checkTransferRisk, checkWalletFreeze } from '../services/complianceApi';
+import { getKycStatus } from '../services/kycService';
 import { useAuth } from '../context/AuthContext';
 import { fmtEUR, Badge, Modal, Spinner, EmptyState, inputCls, selectCls, labelCls } from './shared';
 import { API_BASE } from '../config/constants';
@@ -27,15 +29,14 @@ export default function ClientDetail({ client, onBack }) {
   const [assets, setAssets] = useState(null);
   const [history, setHistory] = useState([]);
   const [showTransfer, setShowTransfer] = useState(false);
-  const [transfer, setTransfer] = useState({ to: '', amount: '', kind: 'Native', beneficiaryName: '', beneficiaryCountry: '', beneficiaryInstitution: '' });
+  const [transfer, setTransfer] = useState({ to: '', amount: '', kind: 'Native' });
   const [sending, setSending] = useState(false);
   const [contacts, setContacts] = useState([]);
   const [loadingContacts, setLoadingContacts] = useState(true);
   const [error, setError] = useState(null);
   const [kycLive, setKycLive] = useState(null); // live KYC status from Supabase
   const [kycModuleEnabled, setKycModuleEnabled] = useState(false);
-  const [travelRule, setTravelRule] = useState({ beneficiaryName: '', beneficiaryInstitution: '', beneficiaryCountry: '' });
-  const [showTravelRule, setShowTravelRule] = useState(false);
+  const [frozenWallets, setFrozenWallets] = useState({}); // { walletId: true/false }
   const { user, isAdmin } = useAuth();
 
   const parsed = parseDescription(client.description);
@@ -60,6 +61,15 @@ export default function ClientDetail({ client, onBack }) {
     try {
       const all = await listWallets(client.id);
       setWallets(all);
+      // Check freeze status for each wallet
+      const freezeMap = {};
+      await Promise.all(all.map(async (w) => {
+        try {
+          const result = await checkWalletFreeze(w.id);
+          freezeMap[w.id] = result.frozen;
+        } catch { freezeMap[w.id] = false; }
+      }));
+      setFrozenWallets(freezeMap);
     } catch (err) {
       console.error('loadWallets error:', err);
       setError(err.message);
@@ -148,34 +158,7 @@ export default function ClientDetail({ client, onBack }) {
         return;
       }
 
-      // 2b. Transaction monitoring analysis
-      const monitoring = await analyzeTransfer({
-        salesforceAccountId: client.id,
-        to: transfer.to,
-        amount: transfer.amount,
-        network: selectedWallet.network,
-        walletId: selectedWallet.id,
-      }).catch(() => ({ riskScore: 0, riskLevel: 'low', flags: [], allowed: true }));
-
-      if (!monitoring.allowed) {
-        alert('TRANSFERT BLOQUE PAR LE MONITORING\n\nScore de risque: ' + monitoring.riskScore + '/100\n\n' + (monitoring.flags || []).map(f => f.message).join('\n'));
-        setSending(false);
-        return;
-      }
-
-      if (monitoring.riskScore >= 50) {
-        warningMsg += '\n\nMonitoring (score ' + monitoring.riskScore + '/100):\n- ' + (monitoring.flags || []).map(f => f.message).join('\n- ');
-      }
-
-      // 2c. Travel Rule check
-      const travelRuleRequired = Number(transfer.amount) >= 1000;
-      if (travelRuleRequired && !transfer.beneficiaryName?.trim()) {
-        alert('TRAVEL RULE (FATF R.16)\n\nPour les transferts >= 1\'000 CHF, le nom du beneficiaire est obligatoire.\nVeuillez remplir les informations Travel Rule.');
-        setSending(false);
-        return;
-      }
-
-      // 3. Create approval request (4-eye principle)
+      // 3. Create approval request (4-eye principle) — DFNS handles Travel Rule (Notabene) and monitoring (Chainalysis KYT)
       const approval = await createApproval({
         walletId: selectedWallet.id,
         walletName: selectedWallet.name,
@@ -189,29 +172,9 @@ export default function ClientDetail({ client, onBack }) {
         requestedByEmail: user?.email || 'unknown',
       });
 
-      // 4. Create Travel Rule record if required
-      if (travelRuleRequired && approval?.id) {
-        await createTravelRuleRecord({
-          transferApprovalId: approval.id,
-          originatorName: client.name,
-          originatorAccountNumber: client.accountNumber,
-          originatorAddress: [client.street, client.postalCode, client.city].filter(Boolean).join(', '),
-          originatorCountry: client.country,
-          originatorWalletAddress: selectedWallet.address,
-          beneficiaryName: transfer.beneficiaryName,
-          beneficiaryWalletAddress: transfer.to,
-          beneficiaryInstitution: transfer.beneficiaryInstitution || null,
-          beneficiaryCountry: transfer.beneficiaryCountry || null,
-          amount: transfer.amount,
-          assetType: transfer.kind,
-          network: selectedWallet.network,
-          createdByEmail: user?.email,
-        }).catch(err => console.error('Travel rule record error:', err));
-      }
-
       alert('Demande de transfert soumise avec succes.\n\nUn administrateur doit approuver la demande dans l\'onglet Compliance avant execution.');
       setShowTransfer(false);
-      setTransfer({ to: '', amount: '', kind: 'Native', beneficiaryName: '', beneficiaryCountry: '', beneficiaryInstitution: '' });
+      setTransfer({ to: '', amount: '', kind: 'Native' });
     } catch (err) {
       console.error('transfer error:', err);
       setError(err.message);
@@ -293,6 +256,7 @@ export default function ClientDetail({ client, onBack }) {
           { id: 'documents', label: 'Documents' },
           { id: 'wallets', label: `Wallets (${wallets.length})` },
           { id: 'delegations', label: 'Delegations' },
+          ...(client.type !== 'Customer - Direct' ? [{ id: 'ubo', label: 'UBO' }] : []),
           { id: 'transfers', label: 'Transferts' },
           { id: 'history', label: 'Historique' },
         ].map(t => (
@@ -497,6 +461,11 @@ export default function ClientDetail({ client, onBack }) {
         <DelegationPanel client={client} />
       )}
 
+      {/* ========== UBO TAB ========== */}
+      {tab === 'ubo' && (
+        <UBOPanel salesforceAccountId={client.id} clientName={client.name} />
+      )}
+
       {/* ========== WALLETS TAB ========== */}
       {tab === 'wallets' && (
         <div>
@@ -564,7 +533,12 @@ export default function ClientDetail({ client, onBack }) {
                         <p className="text-[14px] font-semibold text-[#0F0F10] truncate">{w.name || n.name}</p>
                         <p className="text-[11px] text-[#A8A29E]">{n.name}</p>
                       </div>
-                      <Badge variant={w.status === 'Active' ? 'success' : 'warning'}>{w.status}</Badge>
+                      <div className="flex items-center gap-1.5">
+                        {frozenWallets[w.id] && (
+                          <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded-md uppercase tracking-wide">GELE</span>
+                        )}
+                        <Badge variant={w.status === 'Active' ? 'success' : 'warning'}>{w.status}</Badge>
+                      </div>
                     </div>
                     <div className="font-mono text-[12px] text-[#787881] bg-[rgba(0,0,23,0.025)] rounded-lg px-3 py-2 truncate">
                       {truncAddr(w.address, 10)}
@@ -622,6 +596,17 @@ export default function ClientDetail({ client, onBack }) {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Wallet Freeze Panel */}
+          {selectedWallet && (
+            <div className="mt-4">
+              <WalletFreezePanel
+                walletId={selectedWallet.id}
+                salesforceAccountId={client.id}
+                clientName={client.name || client.Name}
+              />
             </div>
           )}
         </div>
@@ -753,34 +738,7 @@ export default function ClientDetail({ client, onBack }) {
               <option value="Erc20">ERC-20</option>
             </select>
           </div>
-          {/* Travel Rule section — shows when amount >= 1000 */}
-          {Number(transfer.amount) >= 1000 && (
-            <div className="bg-[#EFF6FF] border border-[rgba(59,130,246,0.15)] rounded-xl p-4 space-y-3">
-              <div className="flex items-center gap-2 mb-1">
-                <svg className="w-4 h-4 text-[#3B82F6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-[12px] font-semibold text-[#1E40AF]">Travel Rule (FATF R.16)</span>
-              </div>
-              <p className="text-[11px] text-[#3B82F6]">Transferts {'>'}= 1'000 CHF : informations beneficiaire obligatoires.</p>
-              <div>
-                <label className={labelCls}>Nom du beneficiaire *</label>
-                <input className={inputCls} placeholder="Nom complet du beneficiaire" value={transfer.beneficiaryName} onChange={e => setTransfer(p => ({ ...p, beneficiaryName: e.target.value }))} />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={labelCls}>Pays</label>
-                  <input className={inputCls} placeholder="CH, FR, DE..." value={transfer.beneficiaryCountry} onChange={e => setTransfer(p => ({ ...p, beneficiaryCountry: e.target.value }))} />
-                </div>
-                <div>
-                  <label className={labelCls}>VASP / Institution</label>
-                  <input className={inputCls} placeholder="Optionnel" value={transfer.beneficiaryInstitution} onChange={e => setTransfer(p => ({ ...p, beneficiaryInstitution: e.target.value }))} />
-                </div>
-              </div>
-            </div>
-          )}
-
-          <button onClick={handleTransfer} disabled={sending || !transfer.to || !transfer.amount || (Number(transfer.amount) >= 1000 && !transfer.beneficiaryName?.trim())}
+          <button onClick={handleTransfer} disabled={sending || !transfer.to || !transfer.amount}
             className="w-full py-2.5 bg-[#6366F1] text-white text-[14px] font-medium rounded-xl hover:bg-[#5558E6] transition-colors disabled:opacity-40">
             {sending ? 'Envoi...' : 'Confirmer le transfert'}
           </button>

@@ -2389,719 +2389,6 @@ app.get('/api/compliance/reports/kyc-export', async (req, res) => {
   }
 });
 
-// ============================================================
-// TRAVEL RULE — FATF Recommendation 16 Compliance
-// ============================================================
-/*
-  CREATE TABLE IF NOT EXISTS travel_rule_records (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    transfer_approval_id UUID REFERENCES transfer_approvals(id),
-
-    -- Originator info (our client)
-    originator_name TEXT NOT NULL,
-    originator_account_number TEXT, -- Salesforce account number
-    originator_address TEXT,
-    originator_country TEXT,
-    originator_wallet_address TEXT,
-
-    -- Beneficiary info
-    beneficiary_name TEXT,
-    beneficiary_wallet_address TEXT NOT NULL,
-    beneficiary_institution TEXT, -- VASP name if known
-    beneficiary_country TEXT,
-
-    -- Transaction details
-    amount NUMERIC NOT NULL,
-    currency TEXT DEFAULT 'CHF',
-    asset_type TEXT, -- Native, ERC20, etc
-    network TEXT,
-
-    -- Compliance
-    threshold_exceeded BOOLEAN DEFAULT false, -- true if > 1000 CHF
-    travel_rule_required BOOLEAN DEFAULT false,
-    travel_rule_satisfied BOOLEAN DEFAULT false,
-    verification_method TEXT, -- 'manual', 'openvasp', 'sygna', 'notabene'
-
-    -- Metadata
-    created_by_email TEXT,
-    created_at TIMESTAMPTZ DEFAULT now()
-  );
-*/
-
-// POST /api/compliance/travel-rule/check — Check if travel rule applies
-app.post('/api/compliance/travel-rule/check', async (req, res) => {
-  try {
-    const { amount, currency = 'CHF', network } = req.body;
-    const threshold = 1000;
-    const numericAmount = parseFloat(amount);
-    const required = !isNaN(numericAmount) && numericAmount >= threshold;
-    res.json({ required, threshold, currency: 'CHF', amount: numericAmount, network: network || null });
-  } catch (err) {
-    console.error('travel-rule check error:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// POST /api/compliance/travel-rule/create — Create travel rule record
-app.post('/api/compliance/travel-rule/create', async (req, res) => {
-  try {
-    const {
-      transferApprovalId,
-      originatorName, originatorAccountNumber, originatorAddress, originatorCountry, originatorWalletAddress,
-      beneficiaryName, beneficiaryWalletAddress, beneficiaryInstitution, beneficiaryCountry,
-      amount, currency, assetType, network,
-      createdByEmail,
-    } = req.body;
-
-    if (!originatorName) return res.status(400).json({ error: 'originatorName is required' });
-    if (!beneficiaryWalletAddress) return res.status(400).json({ error: 'beneficiaryWalletAddress is required' });
-    if (!amount) return res.status(400).json({ error: 'amount is required' });
-
-    const numericAmount = parseFloat(amount);
-    const thresholdExceeded = numericAmount >= 1000;
-    const travelRuleRequired = thresholdExceeded;
-    const travelRuleSatisfied = travelRuleRequired ? !!(beneficiaryName && originatorName) : true;
-
-    const { data, error } = await supabaseAdmin.from('travel_rule_records').insert({
-      transfer_approval_id: transferApprovalId || null,
-      originator_name: originatorName,
-      originator_account_number: originatorAccountNumber || null,
-      originator_address: originatorAddress || null,
-      originator_country: originatorCountry || null,
-      originator_wallet_address: originatorWalletAddress || null,
-      beneficiary_name: beneficiaryName || null,
-      beneficiary_wallet_address: beneficiaryWalletAddress,
-      beneficiary_institution: beneficiaryInstitution || null,
-      beneficiary_country: beneficiaryCountry || null,
-      amount: numericAmount,
-      currency: currency || 'CHF',
-      asset_type: assetType || null,
-      network: network || null,
-      threshold_exceeded: thresholdExceeded,
-      travel_rule_required: travelRuleRequired,
-      travel_rule_satisfied: travelRuleSatisfied,
-      verification_method: 'manual',
-      created_by_email: createdByEmail || null,
-    }).select().single();
-
-    if (error) throw error;
-
-    await logAudit({
-      userEmail: createdByEmail,
-      action: 'travel_rule.created',
-      category: 'transfer',
-      entityType: 'travel_rule_record',
-      entityId: data.id,
-      details: { transferApprovalId, amount: numericAmount, thresholdExceeded, travelRuleSatisfied, beneficiaryName },
-      severity: travelRuleRequired && !travelRuleSatisfied ? 'warning' : 'info',
-      req,
-    });
-
-    res.json(data);
-  } catch (err) {
-    console.error('travel-rule create error:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /api/compliance/travel-rule/pending — List transfers missing travel rule info
-app.get('/api/compliance/travel-rule/pending', async (req, res) => {
-  try {
-    const { data, error } = await supabaseAdmin
-      .from('travel_rule_records')
-      .select('*')
-      .eq('travel_rule_required', true)
-      .eq('travel_rule_satisfied', false)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    res.json({ data: data || [] });
-  } catch (err) {
-    console.error('travel-rule pending error:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /api/compliance/travel-rule/:transferApprovalId — Get travel rule record for a transfer
-app.get('/api/compliance/travel-rule/:transferApprovalId', async (req, res) => {
-  try {
-    const { data, error } = await supabaseAdmin
-      .from('travel_rule_records')
-      .select('*')
-      .eq('transfer_approval_id', req.params.transferApprovalId)
-      .maybeSingle();
-
-    if (error) throw error;
-    if (!data) return res.status(404).json({ error: 'No travel rule record found' });
-    res.json(data);
-  } catch (err) {
-    console.error('travel-rule get error:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ============================================================
-// KYC PERIODIC REVIEW — Expiry, Re-screening & EDD
-// ============================================================
-
-// Review period in months based on risk level (Swiss LBA)
-const REVIEW_MONTHS = { critical: 12, high: 12, standard: 24, low: 36 };
-
-// GET /api/kyc/review-schedule — List all clients with KYC review dates, ordered by urgency
-app.get('/api/kyc/review-schedule', async (req, res) => {
-  try {
-    const { data: validations, error: valErr } = await supabaseAdmin
-      .from('kyc_checks')
-      .select('salesforce_account_id, client_name, created_at, initiated_by_email')
-      .eq('check_type', 'manual_validation')
-      .eq('status', 'complete')
-      .order('created_at', { ascending: false });
-
-    if (valErr) throw valErr;
-    if (!validations || validations.length === 0) {
-      return res.json([]);
-    }
-
-    // De-duplicate: keep the latest validation per account
-    const latestByAccount = {};
-    for (const v of validations) {
-      if (!latestByAccount[v.salesforce_account_id]) {
-        latestByAccount[v.salesforce_account_id] = v;
-      }
-    }
-
-    // Get risk configs for all accounts
-    const accountIds = Object.keys(latestByAccount);
-    const { data: riskConfigs } = await supabaseAdmin
-      .from('client_risk_config')
-      .select('salesforce_account_id, risk_level')
-      .in('salesforce_account_id', accountIds);
-
-    const riskMap = {};
-    for (const rc of (riskConfigs || [])) {
-      riskMap[rc.salesforce_account_id] = rc.risk_level;
-    }
-
-    const now = new Date();
-    const results = [];
-
-    for (const [accountId, val] of Object.entries(latestByAccount)) {
-      const riskLevel = riskMap[accountId] || 'standard';
-      const months = REVIEW_MONTHS[riskLevel] || 24;
-      const lastValidation = new Date(val.created_at);
-      const nextReview = new Date(lastValidation);
-      nextReview.setMonth(nextReview.getMonth() + months);
-      const daysUntilExpiry = Math.ceil((nextReview - now) / (1000 * 60 * 60 * 24));
-
-      let status = 'valid';
-      if (daysUntilExpiry <= 0) status = 'expired';
-      else if (daysUntilExpiry <= 30) status = 'expiring';
-
-      results.push({
-        salesforceAccountId: accountId,
-        clientName: val.client_name || accountId,
-        lastValidation: val.created_at,
-        nextReview: nextReview.toISOString(),
-        daysUntilExpiry,
-        riskLevel,
-        status,
-      });
-    }
-
-    // Sort by urgency: expired first, then expiring, then valid (by days ascending)
-    results.sort((a, b) => a.daysUntilExpiry - b.daysUntilExpiry);
-
-    res.json(results);
-  } catch (err) {
-    console.error('KYC review schedule error:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// POST /api/kyc/trigger-rescreening — Re-run AML screening for a specific client
-app.post('/api/kyc/trigger-rescreening', async (req, res) => {
-  try {
-    const { salesforceAccountId, initiatedByEmail } = req.body;
-
-    if (!salesforceAccountId) {
-      return res.status(400).json({ error: 'salesforceAccountId is required' });
-    }
-
-    // Get client name from existing checks
-    const { data: existingChecks } = await supabaseAdmin
-      .from('kyc_checks')
-      .select('client_name, complycube_client_id')
-      .eq('salesforce_account_id', salesforceAccountId)
-      .not('client_name', 'is', null)
-      .limit(1);
-
-    const clientName = existingChecks?.[0]?.client_name || salesforceAccountId;
-
-    if (!COMPLYCUBE_KEY) {
-      return res.status(503).json({ error: 'ComplyCube API key not configured' });
-    }
-
-    let screenResult;
-
-    {
-      const complyCubeClientId = existingChecks?.[0]?.complycube_client_id;
-      if (!complyCubeClientId) {
-        return res.status(400).json({ error: 'No ComplyCube client found for this account.' });
-      }
-      const check = await complyCubeRequest('POST', '/checks', {
-        clientId: complyCubeClientId,
-        type: 'screening_check',
-      });
-      screenResult = {
-        id: check.id,
-        status: check.status === 'complete' ? (check.result?.outcome === 'clear' ? 'complete' : 'failed') : 'processing',
-        result: check.result || {},
-      };
-    }
-
-    // Save as rescreening check
-    const { data: kycCheck, error: dbError } = await supabaseAdmin
-      .from('kyc_checks')
-      .insert({
-        salesforce_account_id: salesforceAccountId,
-        client_name: clientName,
-        complycube_check_id: screenResult.id,
-        check_type: 'rescreening',
-        status: screenResult.status,
-        result: screenResult.result,
-        initiated_by_email: initiatedByEmail,
-      })
-      .select()
-      .single();
-
-    if (dbError) throw dbError;
-
-    // Audit log
-    await logAudit({
-      userEmail: initiatedByEmail,
-      action: 'kyc.rescreening',
-      category: 'kyc',
-      entityType: 'kyc_check',
-      entityId: kycCheck.id,
-      clientName,
-      salesforceAccountId,
-      details: { status: screenResult.status, outcome: screenResult.result?.outcome, type: 'periodic_rescreening' },
-      severity: screenResult.status === 'failed' ? 'warning' : 'info',
-      req,
-    });
-
-    // If issues found, auto-create compliance alert
-    if (screenResult.status === 'failed') {
-      await supabaseAdmin.from('compliance_alerts').insert({
-        alert_type: 'aml_rescreening',
-        severity: 'critical',
-        title: `Re-screening AML — ${clientName}`,
-        description: `Le re-screening periodique AML pour ${clientName} a detecte des correspondances potentielles. Revue EDD requise.`,
-        salesforce_account_id: salesforceAccountId,
-        client_name: clientName,
-        details: screenResult.result,
-        status: 'open',
-      });
-    }
-
-    res.json(kycCheck);
-  } catch (err) {
-    console.error('KYC trigger rescreening error:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// POST /api/kyc/batch-review-check — Batch check all clients for expired KYC
-app.post('/api/kyc/batch-review-check', async (req, res) => {
-  try {
-    const { data: validations, error: valErr } = await supabaseAdmin
-      .from('kyc_checks')
-      .select('salesforce_account_id, client_name, created_at')
-      .eq('check_type', 'manual_validation')
-      .eq('status', 'complete')
-      .order('created_at', { ascending: false });
-
-    if (valErr) throw valErr;
-
-    // De-duplicate: latest per account
-    const latestByAccount = {};
-    for (const v of (validations || [])) {
-      if (!latestByAccount[v.salesforce_account_id]) {
-        latestByAccount[v.salesforce_account_id] = v;
-      }
-    }
-
-    const accountIds = Object.keys(latestByAccount);
-    if (accountIds.length === 0) {
-      return res.json({ checked: 0, expiring: 0, expired: 0, alertsCreated: 0 });
-    }
-
-    // Get risk configs
-    const { data: riskConfigs } = await supabaseAdmin
-      .from('client_risk_config')
-      .select('salesforce_account_id, risk_level')
-      .in('salesforce_account_id', accountIds);
-
-    const riskMap = {};
-    for (const rc of (riskConfigs || [])) {
-      riskMap[rc.salesforce_account_id] = rc.risk_level;
-    }
-
-    const now = new Date();
-    let expiring = 0;
-    let expired = 0;
-    let alertsCreated = 0;
-
-    for (const [accountId, val] of Object.entries(latestByAccount)) {
-      const riskLevel = riskMap[accountId] || 'standard';
-      const months = REVIEW_MONTHS[riskLevel] || 24;
-      const lastValidation = new Date(val.created_at);
-      const nextReview = new Date(lastValidation);
-      nextReview.setMonth(nextReview.getMonth() + months);
-      const daysUntilExpiry = Math.ceil((nextReview - now) / (1000 * 60 * 60 * 24));
-
-      if (daysUntilExpiry <= 0) {
-        expired++;
-        const { error: alertErr } = await supabaseAdmin.from('compliance_alerts').insert({
-          alert_type: 'kyc_expired',
-          severity: 'high',
-          title: `KYC expire — ${val.client_name || accountId}`,
-          description: `La revue KYC periodique pour ${val.client_name || accountId} est echue depuis ${Math.abs(daysUntilExpiry)} jours. Re-screening et revue EDD requis (risque: ${riskLevel}).`,
-          salesforce_account_id: accountId,
-          client_name: val.client_name || null,
-          details: { riskLevel, daysOverdue: Math.abs(daysUntilExpiry), lastValidation: val.created_at, nextReview: nextReview.toISOString() },
-          status: 'open',
-        });
-        if (!alertErr) alertsCreated++;
-      } else if (daysUntilExpiry <= 30) {
-        expiring++;
-        const { error: alertErr } = await supabaseAdmin.from('compliance_alerts').insert({
-          alert_type: 'kyc_expiring',
-          severity: 'medium',
-          title: `KYC bientot expire — ${val.client_name || accountId}`,
-          description: `La revue KYC periodique pour ${val.client_name || accountId} expire dans ${daysUntilExpiry} jours. Planifier le re-screening (risque: ${riskLevel}).`,
-          salesforce_account_id: accountId,
-          client_name: val.client_name || null,
-          details: { riskLevel, daysUntilExpiry, lastValidation: val.created_at, nextReview: nextReview.toISOString() },
-          status: 'open',
-        });
-        if (!alertErr) alertsCreated++;
-      }
-    }
-
-    // Audit log
-    await logAudit({
-      userEmail: req.body?.initiatedByEmail || 'system',
-      action: 'kyc.batch_review_check',
-      category: 'kyc',
-      entityType: 'batch_review',
-      details: { checked: accountIds.length, expiring, expired, alertsCreated },
-      severity: expired > 0 ? 'warning' : 'info',
-      req,
-    });
-
-    res.json({ checked: accountIds.length, expiring, expired, alertsCreated });
-  } catch (err) {
-    console.error('KYC batch review check error:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ============================================================
-// TRANSACTION MONITORING — Pattern Detection & Risk Scoring
-// ============================================================
-
-// POST /api/compliance/monitoring/analyze-transfer — Deep analysis before transfer
-app.post('/api/compliance/monitoring/analyze-transfer', async (req, res) => {
-  try {
-    const { salesforceAccountId, to, amount, network, walletId } = req.body;
-    if (!salesforceAccountId || !to || !amount) {
-      return res.status(400).json({ error: 'salesforceAccountId, to, amount required' });
-    }
-
-    const numAmount = Number(amount);
-    const flags = [];
-    let riskScore = 0;
-    const now = new Date();
-
-    // 1. Velocity check — transfers in last 1h, 24h, 7d
-    const oneHourAgo = new Date(now - 3600_000).toISOString();
-    const oneDayAgo = new Date(now - 86400_000).toISOString();
-    const sevenDaysAgo = new Date(now - 7 * 86400_000).toISOString();
-
-    const { data: recentTransfers } = await supabaseAdmin
-      .from('transfer_approvals')
-      .select('amount, requested_at, status')
-      .eq('salesforce_account_id', salesforceAccountId)
-      .gte('requested_at', sevenDaysAgo)
-      .order('requested_at', { ascending: false });
-
-    const transfers7d = recentTransfers || [];
-    const transfers24h = transfers7d.filter(t => t.requested_at >= oneDayAgo);
-    const transfers1h = transfers7d.filter(t => t.requested_at >= oneHourAgo);
-
-    if (transfers1h.length >= 3) {
-      flags.push({ type: 'velocity_1h', severity: 'high', message: `${transfers1h.length} transferts dans la derniere heure` });
-      riskScore += 25;
-    }
-    if (transfers24h.length >= 10) {
-      flags.push({ type: 'velocity_24h', severity: 'high', message: `${transfers24h.length} transferts dans les 24 dernieres heures` });
-      riskScore += 20;
-    }
-    if (transfers7d.length >= 30) {
-      flags.push({ type: 'velocity_7d', severity: 'medium', message: `${transfers7d.length} transferts dans les 7 derniers jours` });
-      riskScore += 15;
-    }
-
-    // 2. Structuring detection — multiple transfers just below threshold
-    const { data: riskConfig } = await supabaseAdmin
-      .from('client_risk_config')
-      .select('single_transfer_limit, daily_transfer_limit')
-      .eq('salesforce_account_id', salesforceAccountId)
-      .single().catch(() => ({ data: null }));
-
-    if (riskConfig?.single_transfer_limit) {
-      const limit = Number(riskConfig.single_transfer_limit);
-      const nearLimit = transfers24h.filter(t => {
-        const a = Number(t.amount);
-        return a >= limit * 0.8 && a < limit;
-      });
-      if (nearLimit.length >= 2) {
-        flags.push({ type: 'structuring', severity: 'critical', message: `${nearLimit.length} transferts proches de la limite (${limit}) — possible fractionnement` });
-        riskScore += 35;
-      }
-    }
-
-    // 3. Time anomaly — transfers between 22:00-06:00 CET
-    const cetHour = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Zurich' })).getHours();
-    if (cetHour >= 22 || cetHour < 6) {
-      flags.push({ type: 'time_anomaly', severity: 'medium', message: `Transfert initie en dehors des heures de bureau (${cetHour}h CET)` });
-      riskScore += 10;
-    }
-
-    // 4. Round amount detection
-    if (numAmount >= 100 && numAmount === Math.round(numAmount) && numAmount % 100 === 0) {
-      flags.push({ type: 'round_amount', severity: 'low', message: `Montant rond (${numAmount}) — potentiel indicateur de fractionnement` });
-      riskScore += 5;
-    }
-
-    // 5. Peer comparison — is amount > 3x average?
-    const executedTransfers = transfers7d.filter(t => t.status === 'executed' || t.status === 'approved');
-    if (executedTransfers.length >= 3) {
-      const avg = executedTransfers.reduce((s, t) => s + Number(t.amount || 0), 0) / executedTransfers.length;
-      if (numAmount > avg * 3) {
-        flags.push({ type: 'peer_anomaly', severity: 'high', message: `Montant ${numAmount} est ${(numAmount / avg).toFixed(1)}x la moyenne client (${avg.toFixed(2)})` });
-        riskScore += 20;
-      }
-    }
-
-    // 6. New destination — first time sending to this address?
-    const { data: prevToAddr } = await supabaseAdmin
-      .from('transfer_approvals')
-      .select('id')
-      .eq('salesforce_account_id', salesforceAccountId)
-      .eq('to_address', to)
-      .limit(1);
-
-    if (!prevToAddr || prevToAddr.length === 0) {
-      flags.push({ type: 'new_destination', severity: 'medium', message: `Premiere transaction vers cette adresse` });
-      riskScore += 10;
-    }
-
-    // Cap score at 100
-    riskScore = Math.min(riskScore, 100);
-    const riskLevel = riskScore >= 70 ? 'critical' : riskScore >= 50 ? 'high' : riskScore >= 25 ? 'medium' : 'low';
-
-    // Save score
-    await supabaseAdmin.from('monitoring_scores').insert({
-      salesforce_account_id: salesforceAccountId,
-      risk_score: riskScore,
-      risk_level: riskLevel,
-      flags,
-      analysis: { amount: numAmount, to, network, transfersLastHour: transfers1h.length, transfersLastDay: transfers24h.length, transfersLastWeek: transfers7d.length },
-    });
-
-    // Auto-generate alert if critical
-    if (riskLevel === 'critical') {
-      await supabaseAdmin.from('compliance_alerts').insert({
-        alert_type: 'transaction_monitoring',
-        severity: 'critical',
-        title: `Alerte monitoring — Score ${riskScore}/100`,
-        description: flags.map(f => f.message).join('. '),
-        salesforce_account_id: salesforceAccountId,
-        details: { riskScore, flags, amount: numAmount, to, network },
-        status: 'open',
-      });
-    }
-
-    await logAudit({
-      action: 'monitoring.transfer_analyzed',
-      category: 'monitoring',
-      entityType: 'transfer_analysis',
-      salesforceAccountId,
-      details: { riskScore, riskLevel, flagCount: flags.length, amount: numAmount },
-      severity: riskLevel === 'critical' ? 'critical' : riskLevel === 'high' ? 'warning' : 'info',
-      req,
-    });
-
-    res.json({ riskScore, riskLevel, flags, allowed: riskLevel !== 'critical' });
-  } catch (err) {
-    console.error('monitoring analyze error:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /api/compliance/monitoring/client-profile/:accountId — Transaction behavior profile
-app.get('/api/compliance/monitoring/client-profile/:accountId', async (req, res) => {
-  try {
-    const accountId = req.params.accountId;
-    const ninetyDaysAgo = new Date(Date.now() - 90 * 86400_000).toISOString();
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400_000).toISOString();
-
-    const { data: transfers } = await supabaseAdmin
-      .from('transfer_approvals')
-      .select('amount, to_address, network, status, requested_at, executed_at')
-      .eq('salesforce_account_id', accountId)
-      .gte('requested_at', ninetyDaysAgo)
-      .order('requested_at', { ascending: false });
-
-    const all = transfers || [];
-    const executed = all.filter(t => t.status === 'executed');
-    const last30 = all.filter(t => t.requested_at >= thirtyDaysAgo);
-
-    // Averages
-    const avgAmount = executed.length > 0 ? executed.reduce((s, t) => s + Number(t.amount || 0), 0) / executed.length : 0;
-    const weeklyFreq = all.length > 0 ? (all.length / 13).toFixed(1) : 0; // 90 days ≈ 13 weeks
-
-    // Most used networks
-    const networkCounts = {};
-    all.forEach(t => { networkCounts[t.network || 'unknown'] = (networkCounts[t.network || 'unknown'] || 0) + 1; });
-    const topNetworks = Object.entries(networkCounts).sort((a, b) => b[1] - a[1]).slice(0, 3);
-
-    // Most used destinations
-    const destCounts = {};
-    all.forEach(t => { destCounts[t.to_address] = (destCounts[t.to_address] || 0) + 1; });
-    const topDestinations = Object.entries(destCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
-
-    // Volumes
-    const volume90d = executed.reduce((s, t) => s + Number(t.amount || 0), 0);
-    const volume30d = last30.filter(t => t.status === 'executed').reduce((s, t) => s + Number(t.amount || 0), 0);
-
-    // Latest risk scores
-    const { data: scores } = await supabaseAdmin
-      .from('monitoring_scores')
-      .select('risk_score, risk_level, created_at')
-      .eq('salesforce_account_id', accountId)
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    res.json({
-      averageTransferAmount: avgAmount,
-      weeklyFrequency: Number(weeklyFreq),
-      topNetworks,
-      topDestinations: topDestinations.map(([addr, count]) => ({ address: addr, count })),
-      volume30d,
-      volume90d,
-      totalTransfers90d: all.length,
-      executedTransfers90d: executed.length,
-      riskScores: scores || [],
-    });
-  } catch (err) {
-    console.error('monitoring client-profile error:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// POST /api/compliance/monitoring/run-batch — Batch monitoring on recent transfers
-app.post('/api/compliance/monitoring/run-batch', async (req, res) => {
-  try {
-    const oneDayAgo = new Date(Date.now() - 86400_000).toISOString();
-
-    const { data: recentApprovals } = await supabaseAdmin
-      .from('transfer_approvals')
-      .select('id, salesforce_account_id, to_address, amount, network, wallet_id, client_name')
-      .gte('requested_at', oneDayAgo)
-      .order('requested_at', { ascending: false });
-
-    const results = [];
-    let alertsCreated = 0;
-
-    for (const approval of (recentApprovals || [])) {
-      // Check if already analyzed
-      const { data: existing } = await supabaseAdmin
-        .from('monitoring_scores')
-        .select('id')
-        .eq('transfer_approval_id', approval.id)
-        .limit(1);
-
-      if (existing && existing.length > 0) continue;
-
-      // Simplified inline analysis
-      const flags = [];
-      let riskScore = 0;
-      const numAmount = Number(approval.amount || 0);
-
-      // Check velocity for this account
-      const { data: dayTransfers } = await supabaseAdmin
-        .from('transfer_approvals')
-        .select('amount')
-        .eq('salesforce_account_id', approval.salesforce_account_id)
-        .gte('requested_at', oneDayAgo);
-
-      if ((dayTransfers || []).length >= 10) {
-        flags.push({ type: 'velocity_24h', severity: 'high', message: `${dayTransfers.length} transferts en 24h` });
-        riskScore += 25;
-      }
-
-      if (numAmount >= 100 && numAmount === Math.round(numAmount) && numAmount % 1000 === 0) {
-        flags.push({ type: 'round_amount', severity: 'low', message: `Montant rond: ${numAmount}` });
-        riskScore += 5;
-      }
-
-      riskScore = Math.min(riskScore, 100);
-      const riskLevel = riskScore >= 70 ? 'critical' : riskScore >= 50 ? 'high' : riskScore >= 25 ? 'medium' : 'low';
-
-      await supabaseAdmin.from('monitoring_scores').insert({
-        salesforce_account_id: approval.salesforce_account_id,
-        transfer_approval_id: approval.id,
-        risk_score: riskScore,
-        risk_level: riskLevel,
-        flags,
-        analysis: { amount: numAmount, to: approval.to_address, network: approval.network },
-      });
-
-      if (riskLevel === 'critical' || riskLevel === 'high') {
-        await supabaseAdmin.from('compliance_alerts').insert({
-          alert_type: 'batch_monitoring',
-          severity: riskLevel,
-          title: `Monitoring batch — ${approval.client_name || approval.salesforce_account_id}`,
-          description: flags.map(f => f.message).join('. ') || 'Score de risque eleve detecte',
-          salesforce_account_id: approval.salesforce_account_id,
-          client_name: approval.client_name,
-          details: { riskScore, flags, transferApprovalId: approval.id },
-          status: 'open',
-        });
-        alertsCreated++;
-      }
-
-      results.push({ transferId: approval.id, riskScore, riskLevel, flagCount: flags.length });
-    }
-
-    await logAudit({
-      action: 'monitoring.batch_run',
-      category: 'monitoring',
-      details: { analyzed: results.length, alertsCreated },
-      severity: 'info',
-      req,
-    });
-
-    res.json({ analyzed: results.length, alertsCreated, results });
-  } catch (err) {
-    console.error('monitoring batch error:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // Serve static frontend in production
 const distPath = path.join(__dirname, '..', 'dist');
 if (fs.existsSync(distPath)) {
@@ -3258,6 +2545,197 @@ app.patch('/api/delegations/:id', requireAuth, async (req, res) => {
     res.json(data);
   } catch (err) {
     console.error('delegation update error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// WALLET FREEZE (GEL DES AVOIRS) — LCB-FT Compliance
+// ============================================================
+
+// GET /api/compliance/freezes — list all freezes
+app.get('/api/compliance/freezes', async (req, res) => {
+  try {
+    const { status } = req.query;
+    let query = supabaseAdmin.from('wallet_freezes').select('*').order('created_at', { ascending: false });
+    if (status) query = query.eq('status', status);
+    const { data, error } = await query;
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+  } catch (err) {
+    console.error('freezes list error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/compliance/freezes/check/:walletId — check if wallet is frozen
+app.get('/api/compliance/freezes/check/:walletId', async (req, res) => {
+  try {
+    const { data } = await supabaseAdmin.from('wallet_freezes')
+      .select('*').eq('wallet_id', req.params.walletId).eq('status', 'frozen').limit(1);
+    res.json({ frozen: data && data.length > 0, freeze: data?.[0] || null });
+  } catch (err) {
+    console.error('freeze check error:', err.message);
+    res.json({ frozen: false, freeze: null });
+  }
+});
+
+// POST /api/compliance/freezes — freeze a wallet (admin only)
+app.post('/api/compliance/freezes', requireAdmin, async (req, res) => {
+  try {
+    const { walletId, salesforceAccountId, clientName, reason, legalReference, frozenByEmail, notes } = req.body;
+    if (!walletId || !reason || !frozenByEmail) {
+      return res.status(400).json({ error: 'walletId, reason, frozenByEmail required' });
+    }
+    // Check if already frozen
+    const { data: existing } = await supabaseAdmin.from('wallet_freezes')
+      .select('id').eq('wallet_id', walletId).eq('status', 'frozen');
+    if (existing?.length > 0) {
+      return res.status(409).json({ error: 'Wallet already frozen' });
+    }
+    const { data, error } = await supabaseAdmin.from('wallet_freezes').insert({
+      wallet_id: walletId,
+      salesforce_account_id: salesforceAccountId,
+      client_name: clientName,
+      reason,
+      legal_reference: legalReference,
+      frozen_by_email: frozenByEmail,
+      notes,
+    }).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    // Audit log
+    await logAudit({
+      userEmail: frozenByEmail,
+      action: 'wallet_frozen',
+      category: 'compliance',
+      entityType: 'wallet',
+      entityId: walletId,
+      clientName,
+      salesforceAccountId,
+      details: { walletId, reason, legalReference, frozenBy: frozenByEmail },
+      severity: 'high',
+      req,
+    });
+    res.json(data);
+  } catch (err) {
+    console.error('freeze create error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/compliance/freezes/:id/unfreeze — unfreeze (admin only)
+app.patch('/api/compliance/freezes/:id/unfreeze', requireAdmin, async (req, res) => {
+  try {
+    const { unfrozenByEmail, notes } = req.body;
+    if (!unfrozenByEmail) {
+      return res.status(400).json({ error: 'unfrozenByEmail required' });
+    }
+    const { data, error } = await supabaseAdmin.from('wallet_freezes').update({
+      status: 'unfrozen',
+      unfrozen_by_email: unfrozenByEmail,
+      unfrozen_at: new Date().toISOString(),
+      notes,
+    }).eq('id', req.params.id).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    await logAudit({
+      userEmail: unfrozenByEmail,
+      action: 'wallet_unfrozen',
+      category: 'compliance',
+      entityType: 'wallet',
+      entityId: data.wallet_id,
+      clientName: data.client_name,
+      salesforceAccountId: data.salesforce_account_id,
+      details: { walletId: data.wallet_id, unfrozenBy: unfrozenByEmail },
+      severity: 'high',
+      req,
+    });
+    res.json(data);
+  } catch (err) {
+    console.error('unfreeze error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// UBO (BENEFICIAIRES EFFECTIFS) — Art. L.561-2-2 CMF
+// ============================================================
+app.get('/api/compliance/ubos/:accountId', async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin.from('ubos')
+      .select('*').eq('salesforce_account_id', req.params.accountId).order('ownership_percentage', { ascending: false });
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+  } catch (err) {
+    console.error('UBO list error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/compliance/ubos', requireAuth, async (req, res) => {
+  try {
+    const { salesforceAccountId, fullName, birthDate, nationality, ownershipPercentage, controlType, address, documentType, documentReference, addedByEmail, notes } = req.body;
+    if (!salesforceAccountId || !fullName || !addedByEmail) return res.status(400).json({ error: 'Required: salesforceAccountId, fullName, addedByEmail' });
+    const { data, error } = await supabaseAdmin.from('ubos').insert({
+      salesforce_account_id: salesforceAccountId, full_name: fullName, birth_date: birthDate,
+      nationality, ownership_percentage: ownershipPercentage, control_type: controlType,
+      address, document_type: documentType, document_reference: documentReference,
+      added_by_email: addedByEmail, notes,
+    }).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    await supabaseAdmin.from('audit_log').insert({
+      category: 'compliance', action: 'ubo_added', severity: 'medium',
+      salesforce_account_id: salesforceAccountId,
+      details: { fullName, ownershipPercentage, controlType },
+      performed_by: addedByEmail,
+    });
+    res.json(data);
+  } catch (err) {
+    console.error('UBO create error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/api/compliance/ubos/:id', requireAuth, async (req, res) => {
+  try {
+    const updates = {};
+    const allowed = ['full_name', 'birth_date', 'nationality', 'ownership_percentage', 'control_type', 'address', 'document_type', 'document_reference', 'notes'];
+    const camelToSnake = { fullName: 'full_name', birthDate: 'birth_date', ownershipPercentage: 'ownership_percentage', controlType: 'control_type', documentType: 'document_type', documentReference: 'document_reference' };
+    for (const [key, val] of Object.entries(req.body)) {
+      const snakeKey = camelToSnake[key] || key;
+      if (allowed.includes(snakeKey) && val !== undefined) updates[snakeKey] = val;
+    }
+    updates.updated_at = new Date().toISOString();
+    const { data, error } = await supabaseAdmin.from('ubos').update(updates).eq('id', req.params.id).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+  } catch (err) {
+    console.error('UBO update error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/api/compliance/ubos/:id/verify', requireAdmin, async (req, res) => {
+  try {
+    const { verifiedByEmail } = req.body;
+    if (!verifiedByEmail) return res.status(400).json({ error: 'verifiedByEmail required' });
+    const { data, error } = await supabaseAdmin.from('ubos').update({
+      verified: true, verified_by_email: verifiedByEmail, verified_at: new Date().toISOString(),
+    }).eq('id', req.params.id).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+  } catch (err) {
+    console.error('UBO verify error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/compliance/ubos/:id', requireAdmin, async (req, res) => {
+  try {
+    const { error } = await supabaseAdmin.from('ubos').delete().eq('id', req.params.id);
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('UBO delete error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

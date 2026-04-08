@@ -8,7 +8,6 @@ import {
   fetchWhitelist, approveWhitelistAddress, revokeWhitelistAddress,
   fetchSARs, createSAR, submitSAR, reviewSAR, fileSAR, closeSAR, fetchSARStats,
 } from '../services/complianceApi';
-import KYCReviewDashboard from './KYCReviewDashboard';
 import ComplianceReports from './ComplianceReports';
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -48,7 +47,6 @@ const TABS = [
   { id: 'audit', label: "Journal d'audit" },
   { id: 'whitelist', label: 'Whitelist' },
   { id: 'declarations', label: 'Declarations' },
-  { id: 'kyc-review', label: 'Revue KYC' },
   { id: 'reports', label: 'Rapports' },
 ];
 
@@ -737,11 +735,6 @@ export default function ComplianceDashboard() {
             </Table>
           )}
         </>
-      )}
-
-      {/* ── KYC Review Tab ─────────────────────────────────────── */}
-      {tab === 'kyc-review' && (
-        <KYCReviewDashboard />
       )}
 
       {/* ── Reports Tab ──────────────────────────────────────────── */}

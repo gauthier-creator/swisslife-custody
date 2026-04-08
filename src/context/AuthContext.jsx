@@ -1,11 +1,15 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext(null);
 
+const INACTIVITY_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
+
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined); // undefined = loading
   const [profile, setProfile] = useState(null);
+  const inactivityTimer = useRef(null);
+  const isSigningOut = useRef(false);
 
   // Fetch profile from custody_profiles
   const fetchProfile = useCallback(async (userId) => {
@@ -17,6 +21,38 @@ export function AuthProvider({ children }) {
     if (!error && data) setProfile(data);
     return data;
   }, []);
+
+  const performSignOut = useCallback(async () => {
+    if (isSigningOut.current) return;
+    isSigningOut.current = true;
+    await supabase.auth.signOut();
+    setProfile(null);
+    setSession(null);
+    isSigningOut.current = false;
+  }, []);
+
+  // Inactivity timeout — auto-logout after 15 min without user interaction
+  const resetInactivityTimer = useCallback(() => {
+    if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+    inactivityTimer.current = setTimeout(() => {
+      if (session) performSignOut();
+    }, INACTIVITY_TIMEOUT_MS);
+  }, [session, performSignOut]);
+
+  useEffect(() => {
+    if (!session) return;
+
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    const handler = () => resetInactivityTimer();
+
+    events.forEach(e => window.addEventListener(e, handler, { passive: true }));
+    resetInactivityTimer(); // start timer
+
+    return () => {
+      events.forEach(e => window.removeEventListener(e, handler));
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+    };
+  }, [session, resetInactivityTimer]);
 
   useEffect(() => {
     // Get initial session
@@ -55,10 +91,8 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
-    setProfile(null);
-    setSession(null);
-  }, []);
+    await performSignOut();
+  }, [performSignOut]);
 
   const isAdmin = profile?.role === 'admin';
   const isBanquier = profile?.role === 'banquier';
