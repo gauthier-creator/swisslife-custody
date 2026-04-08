@@ -152,6 +152,41 @@ app.get('/api/salesforce/status', (req, res) => {
   });
 });
 
+// SF Account PATCH — update custom fields (requires auth)
+app.patch('/api/salesforce/account/:accountId', requireAuth, async (req, res) => {
+  if (!SF_CONFIGURED) {
+    return res.status(501).json({ error: 'Salesforce not configured' });
+  }
+  try {
+    const { accessToken, instanceUrl } = await getSalesforceToken();
+    const response = await fetch(`${instanceUrl}/services/data/v59.0/sobjects/Account/${req.params.accountId}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(req.body),
+    });
+    if (response.status === 204) {
+      // Log the update
+      await logAudit({
+        userId: req.user?.id,
+        userEmail: req.user?.email,
+        userRole: req.user?.role,
+        action: 'salesforce_account_update',
+        category: 'custody',
+        entityType: 'Account',
+        entityId: req.params.accountId,
+        details: { updatedFields: Object.keys(req.body) },
+        req,
+      });
+      return res.json({ success: true });
+    }
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (err) {
+    console.error('Salesforce account PATCH error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // SF proxy — server handles auth
 app.use('/api/salesforce', async (req, res) => {
   if (!SF_CONFIGURED) {
@@ -598,6 +633,30 @@ app.get('/api/compliance/audit-log/stats', async (req, res) => {
     res.json({ byCategory, bySeverity, total: allLogs?.length || 0 });
   } catch (err) {
     console.error('audit-log stats error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/audit-log — Create audit entry from frontend
+app.post('/api/audit-log', requireAuth, async (req, res) => {
+  try {
+    const { action, category, entityType, entityId, clientName, salesforceAccountId, details } = req.body;
+    await logAudit({
+      userId: req.user?.id,
+      userEmail: req.user?.email,
+      userRole: req.user?.role,
+      action,
+      category,
+      entityType,
+      entityId,
+      clientName,
+      salesforceAccountId,
+      details,
+      req,
+    });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('audit-log create error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

@@ -1,4 +1,5 @@
 import { API_BASE } from '../config/constants';
+import { supabase } from '../lib/supabase';
 
 const headers = { 'Content-Type': 'application/json' };
 
@@ -13,7 +14,7 @@ export async function getSalesforceStatus() {
   }
 }
 
-const ACCOUNT_FIELDS = 'Id, Name, Phone, Industry, Type, AnnualRevenue, CreatedDate, BillingStreet, BillingCity, BillingPostalCode, BillingCountry, Website, Description, NumberOfEmployees, OwnerId, AccountNumber';
+const ACCOUNT_FIELDS = 'Id, Name, Phone, Industry, Type, AnnualRevenue, CreatedDate, BillingStreet, BillingCity, BillingPostalCode, BillingCountry, Website, Description, NumberOfEmployees, OwnerId, AccountNumber, Custody_KYC_Status__c, Custody_Risk_Level__c, Custody_Sanctions_Clear__c, Custody_Adequacy_Done__c, Custody_Contract_Signed__c, Custody_Eligible__c';
 
 export async function fetchClients(search = '') {
   const soql = search
@@ -73,6 +74,23 @@ export async function testConnection() {
   }
 }
 
+export async function updateAccountFields(accountId, fields) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const authHeaders = session?.access_token
+    ? { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }
+    : headers;
+  const res = await fetch(`${API_BASE}/api/salesforce/account/${accountId}`, {
+    method: 'PATCH',
+    headers: authHeaders,
+    body: JSON.stringify(fields),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Salesforce update failed');
+  }
+  return res.json();
+}
+
 function mapAccount(a) {
   return {
     id: a.Id,
@@ -91,5 +109,11 @@ function mapAccount(a) {
     employees: a.NumberOfEmployees,
     ownerId: a.OwnerId,
     accountNumber: a.AccountNumber,
+    Custody_KYC_Status__c: a.Custody_KYC_Status__c || null,
+    Custody_Risk_Level__c: a.Custody_Risk_Level__c || null,
+    Custody_Sanctions_Clear__c: !!a.Custody_Sanctions_Clear__c,
+    Custody_Adequacy_Done__c: !!a.Custody_Adequacy_Done__c,
+    Custody_Contract_Signed__c: !!a.Custody_Contract_Signed__c,
+    Custody_Eligible__c: !!a.Custody_Eligible__c,
   };
 }

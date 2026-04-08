@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { listWallets, createWallet, getWalletAssets, transferAsset, getWalletHistory } from '../services/dfnsApi';
-import { fetchContacts, parseDescription } from '../services/salesforceApi';
+import { fetchContacts, fetchClientById, parseDescription } from '../services/salesforceApi';
 import DocumentsPanel from './DocumentsPanel';
 import WhitelistPanel from './WhitelistPanel';
 import RiskConfigPanel from './RiskConfigPanel';
@@ -8,6 +8,7 @@ import KYCFlow from './KYCFlow';
 import DelegationPanel from './DelegationPanel';
 import UBOPanel from './UBOPanel';
 import WalletFreezePanel from './WalletFreezePanel';
+import CustodyEligibilityPanel from './CustodyEligibilityPanel';
 import { SUPPORTED_NETWORKS } from '../config/constants';
 import { createApproval, checkTransferRisk, checkWalletFreeze } from '../services/complianceApi';
 import { getKycStatus } from '../services/kycService';
@@ -18,7 +19,8 @@ import { API_BASE } from '../config/constants';
 const truncAddr = (a, n = 8) => a ? `${a.slice(0, n)}...${a.slice(-n)}` : '—';
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
 
-export default function ClientDetail({ client, onBack }) {
+export default function ClientDetail({ client: initialClient, onBack }) {
+  const [client, setClient] = useState(initialClient);
   const [tab, setTab] = useState('profile');
   const [wallets, setWallets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +40,15 @@ export default function ClientDetail({ client, onBack }) {
   const [kycModuleEnabled, setKycModuleEnabled] = useState(false);
   const [frozenWallets, setFrozenWallets] = useState({}); // { walletId: true/false }
   const { user, isAdmin } = useAuth();
+
+  const reloadClient = async () => {
+    try {
+      const updated = await fetchClientById(client.id);
+      setClient(updated);
+    } catch (err) {
+      console.error('reloadClient error:', err);
+    }
+  };
 
   const parsed = parseDescription(client.description);
   // KYC is valid if:
@@ -91,9 +102,9 @@ export default function ClientDetail({ client, onBack }) {
   };
 
   const handleCreate = async () => {
-    // Compliance check: KYC must be validated before creating wallets
-    if (!kycValid) {
-      alert('Compliance: Le KYC du client doit etre valide avant de creer un wallet. Veuillez completer la verification KYC dans Salesforce.');
+    // Compliance check: client must be eligible for custody before creating wallets
+    if (client.Custody_Eligible__c !== true && !kycValid) {
+      alert('Compliance: Le client doit etre eligible a la custody avant de creer un wallet. Veuillez completer les etapes dans l\'onglet Eligibilite.');
       return;
     }
     setCreating(true);
@@ -255,6 +266,7 @@ export default function ClientDetail({ client, onBack }) {
       <div className="flex items-center gap-1 bg-[rgba(0,0,23,0.03)] rounded-lg p-0.5 mb-6 w-fit">
         {[
           { id: 'profile', label: 'Fiche client' },
+          { id: 'eligibility', label: 'Eligibilite' },
           ...(kycModuleEnabled ? [{ id: 'kyc', label: 'KYC / KYB' }] : []),
           { id: 'documents', label: 'Documents' },
           { id: 'wallets', label: `Wallets (${wallets.length})` },
@@ -449,6 +461,11 @@ export default function ClientDetail({ client, onBack }) {
         </div>
       )}
 
+      {/* ========== ELIGIBILITY TAB ========== */}
+      {tab === 'eligibility' && (
+        <CustodyEligibilityPanel client={client} onUpdate={reloadClient} />
+      )}
+
       {/* ========== KYC TAB ========== */}
       {tab === 'kyc' && (
         <KYCFlow client={client} onComplete={loadKycStatus} />
@@ -472,17 +489,17 @@ export default function ClientDetail({ client, onBack }) {
       {/* ========== WALLETS TAB ========== */}
       {tab === 'wallets' && (
         <div>
-          {/* KYC Warning */}
-          {!kycValid && (
+          {/* Eligibility Warning */}
+          {client.Custody_Eligible__c !== true && !kycValid && (
             <div className="bg-[#FFFBEB] border border-[rgba(217,119,6,0.15)] rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
               <svg className="w-5 h-5 text-[#D97706] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.072 16.5c-.77.833.192 2.5 1.732 2.5z" />
               </svg>
               <div>
-                <p className="text-[13px] font-medium text-[#92400E]">Compliance : KYC non valide</p>
+                <p className="text-[13px] font-medium text-[#92400E]">Compliance : Client non eligible</p>
                 <p className="text-[12px] text-[#B45309]">
-                  La creation de wallets et les transferts necessitent un KYC valide.{' '}
-                  <button onClick={() => setTab('kyc')} className="underline font-medium hover:text-[#92400E]">Lancer la verification KYC</button>
+                  La creation de wallets et les transferts necessitent que le client soit eligible a la custody.{' '}
+                  <button onClick={() => setTab('eligibility')} className="underline font-medium hover:text-[#92400E]">Voir l'onglet Eligibilite</button>
                 </p>
               </div>
             </div>
@@ -507,7 +524,7 @@ export default function ClientDetail({ client, onBack }) {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-[16px] font-semibold text-[#0F0F10]">Wallets Dfns</h3>
             <button onClick={() => setShowCreate(true)}
-              disabled={!kycValid}
+              disabled={client.Custody_Eligible__c !== true && !kycValid}
               className="px-4 py-2 bg-[#0F0F10] text-white text-[13px] font-medium rounded-xl hover:bg-[#1a1a1a] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
               + Creer un wallet
             </button>
@@ -558,9 +575,9 @@ export default function ClientDetail({ client, onBack }) {
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-[16px] font-semibold text-[#0F0F10]">{selectedWallet.name || 'Wallet'}</h4>
                 <button onClick={() => setShowTransfer(true)}
-                  disabled={!kycValid}
+                  disabled={client.Custody_Eligible__c !== true && !kycValid}
                   className="px-4 py-2 bg-[#6366F1] text-white text-[13px] font-medium rounded-xl hover:bg-[#5558E6] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                  title={!kycValid ? 'KYC requis pour les transferts' : ''}>
+                  title={client.Custody_Eligible__c !== true && !kycValid ? 'Eligibilite requise pour les transferts' : ''}>
                   Envoyer
                 </button>
               </div>
