@@ -187,6 +187,170 @@ app.patch('/api/salesforce/account/:accountId', requireAuth, async (req, res) =>
   }
 });
 
+// ============================================================
+// CONTRACT SIGNING — Public endpoints (no auth required)
+// ============================================================
+import crypto from 'crypto';
+
+// Generate signing link
+app.post('/api/signing/generate', requireAuth, async (req, res) => {
+  try {
+    const { salesforceAccountId, clientName, clientEmail, clientStreet, clientCity, clientPostalCode, clientCountry, clientPhone } = req.body;
+    if (!salesforceAccountId || !clientName) {
+      return res.status(400).json({ error: 'salesforceAccountId and clientName are required' });
+    }
+
+    const token = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
+
+    const { data, error } = await supabaseAdmin.from('signing_tokens').insert({
+      token,
+      salesforce_account_id: salesforceAccountId,
+      client_name: clientName,
+      client_email: clientEmail || null,
+      client_street: clientStreet || null,
+      client_city: clientCity || null,
+      client_postal_code: clientPostalCode || null,
+      client_country: clientCountry || null,
+      client_phone: clientPhone || null,
+      status: 'pending',
+      created_by: req.user?.email || 'unknown',
+      expires_at: expiresAt,
+    }).select().single();
+
+    if (error) throw error;
+
+    await logAudit({
+      userId: req.user?.id,
+      userEmail: req.user?.email,
+      userRole: req.user?.role,
+      action: 'signing_link_generated',
+      category: 'custody',
+      entityType: 'Account',
+      entityId: salesforceAccountId,
+      clientName,
+      salesforceAccountId,
+      details: { token, expiresAt },
+      req,
+    });
+
+    res.json({ token, expiresAt, url: `/sign/${token}` });
+  } catch (err) {
+    console.error('Generate signing link error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get contract data (public — no auth)
+app.get('/api/signing/:token', async (req, res) => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('signing_tokens')
+      .select('*')
+      .eq('token', req.params.token)
+      .single();
+
+    if (error || !data) {
+      return res.status(404).json({ error: 'Lien de signature invalide ou introuvable' });
+    }
+
+    if (data.status === 'revoked') {
+      return res.status(410).json({ error: 'Ce lien de signature a ete revoque' });
+    }
+
+    if (new Date(data.expires_at) < new Date() && data.status !== 'signed') {
+      return res.status(410).json({ error: 'Ce lien de signature a expire. Contactez votre banquier pour en obtenir un nouveau.' });
+    }
+
+    res.json({
+      client_name: data.client_name,
+      client_street: data.client_street,
+      client_city: data.client_city,
+      client_postal_code: data.client_postal_code,
+      client_country: data.client_country,
+      client_phone: data.client_phone,
+      status: data.status,
+      signed_at: data.signed_at,
+    });
+  } catch (err) {
+    console.error('Get signing token error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Sign contract (public — no auth)
+app.post('/api/signing/:token/sign', async (req, res) => {
+  try {
+    const { signerName } = req.body;
+
+    const { data: tokenData, error: fetchErr } = await supabaseAdmin
+      .from('signing_tokens')
+      .select('*')
+      .eq('token', req.params.token)
+      .single();
+
+    if (fetchErr || !tokenData) {
+      return res.status(404).json({ error: 'Lien de signature invalide' });
+    }
+
+    if (tokenData.status === 'signed') {
+      return res.status(400).json({ error: 'Ce contrat a deja ete signe' });
+    }
+
+    if (tokenData.status === 'revoked') {
+      return res.status(410).json({ error: 'Ce lien a ete revoque' });
+    }
+
+    if (new Date(tokenData.expires_at) < new Date()) {
+      return res.status(410).json({ error: 'Ce lien a expire' });
+    }
+
+    const signerIp = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+    const signedAt = new Date().toISOString();
+
+    // 1. Update signing token
+    const { error: updateErr } = await supabaseAdmin
+      .from('signing_tokens')
+      .update({ status: 'signed', signed_at: signedAt, signer_ip: signerIp })
+      .eq('token', req.params.token);
+
+    if (updateErr) throw updateErr;
+
+    // 2. Update Salesforce if configured
+    if (SF_CONFIGURED) {
+      try {
+        const { accessToken, instanceUrl } = await getSalesforceToken();
+        await fetch(`${instanceUrl}/services/data/v59.0/sobjects/Account/${tokenData.salesforce_account_id}`, {
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ Custody_Contract_Signed__c: true }),
+        });
+      } catch (sfErr) {
+        console.error('Salesforce update after signing failed:', sfErr.message);
+        // Non-blocking — contract is still signed in our system
+      }
+    }
+
+    // 3. Audit log
+    await logAudit({
+      action: 'custody_contract_signed_by_client',
+      category: 'custody',
+      entityType: 'Account',
+      entityId: tokenData.salesforce_account_id,
+      clientName: tokenData.client_name,
+      salesforceAccountId: tokenData.salesforce_account_id,
+      details: { signerName, signerIp, signedAt, token: req.params.token },
+      severity: 'info',
+      req,
+    });
+
+    res.json({ success: true, signedAt });
+  } catch (err) {
+    console.error('Sign contract error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // SF proxy — server handles auth
 app.use('/api/salesforce', async (req, res) => {
   if (!SF_CONFIGURED) {

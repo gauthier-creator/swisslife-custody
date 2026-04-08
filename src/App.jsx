@@ -9,12 +9,25 @@ import ClientDetail from './components/ClientDetail';
 import WalletList from './components/WalletList';
 import PolicyList from './components/PolicyList';
 import ComplianceDashboard from './components/ComplianceDashboard';
+import ContractSigningPage from './components/ContractSigningPage';
+
+// Check if current URL is a public signing page
+function getSigningToken() {
+  const match = window.location.pathname.match(/^\/sign\/([a-f0-9-]+)$/i);
+  return match ? match[1] : null;
+}
 
 function AppInner() {
   const { session, profile, loading, isAdmin } = useAuth();
   const { toasts, toast } = useToast();
   const [section, setSection] = useState('clients');
   const [selectedClient, setSelectedClient] = useState(null);
+
+  // Public signing page — no auth needed
+  const signingToken = getSigningToken();
+  if (signingToken) {
+    return <ContractSigningPage token={signingToken} />;
+  }
 
   // Loading state
   if (loading) {
