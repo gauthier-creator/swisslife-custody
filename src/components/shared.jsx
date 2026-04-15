@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 
 /* ═══════════════════════════════════════════════════════
-   Shared primitives — Revolut-inspired, fintech-grade
-   Soft shadows · rounded-18 · stylized circular icons
+   Shared primitives — Apple-grade private banking
+   Monochrome · hairline borders · editorial typography
    ═══════════════════════════════════════════════════════ */
 
 // ─── Toasts ───────────────────────────────────────────
@@ -18,11 +18,11 @@ export function useToast() {
 
 export function ToastContainer({ toasts }) {
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
+    <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-2">
       {toasts.map(t => (
         <div
           key={t.id}
-          className="bg-[#191C1F] text-white px-5 py-3 text-[14px] font-medium rounded-2xl shadow-[0_8px_32px_-8px_rgba(0,0,0,0.3)] animate-slide-up"
+          className="bg-[#0A0A0A] text-white px-5 py-3.5 text-[13px] font-medium rounded-xl shadow-[0_12px_32px_-8px_rgba(10,10,10,0.35)] animate-slide-up tracking-[-0.01em]"
         >
           {t.msg}
         </div>
@@ -33,15 +33,16 @@ export function ToastContainer({ toasts }) {
 
 // ─── Form primitives ──────────────────────────────────
 export const inputCls =
-  "w-full h-11 px-4 text-[14px] text-[#191C1F] bg-white border border-[rgba(25,28,31,0.1)] rounded-xl outline-none transition-colors focus:border-[#0666EB] focus:ring-4 focus:ring-[rgba(6,102,235,0.1)] placeholder:text-[#A5ADB6]";
+  "w-full h-11 px-4 text-[14px] text-[#0A0A0A] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none transition-all focus:border-[rgba(10,10,10,0.35)] focus:ring-4 focus:ring-[rgba(10,10,10,0.04)] placeholder:text-[#9B9B9B] tracking-[-0.006em]";
 
 export const selectCls =
-  "w-full h-11 px-4 pr-9 text-[14px] text-[#191C1F] bg-white border border-[rgba(25,28,31,0.1)] rounded-xl outline-none transition-colors focus:border-[#0666EB] focus:ring-4 focus:ring-[rgba(6,102,235,0.1)] appearance-none cursor-pointer";
+  "w-full h-11 px-4 pr-9 text-[14px] text-[#0A0A0A] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none transition-all focus:border-[rgba(10,10,10,0.35)] focus:ring-4 focus:ring-[rgba(10,10,10,0.04)] appearance-none cursor-pointer tracking-[-0.006em]";
 
 export const textareaCls =
-  "w-full px-4 py-3 text-[14px] text-[#191C1F] bg-white border border-[rgba(25,28,31,0.1)] rounded-xl outline-none transition-colors focus:border-[#0666EB] focus:ring-4 focus:ring-[rgba(6,102,235,0.1)] placeholder:text-[#A5ADB6] resize-none";
+  "w-full px-4 py-3 text-[14px] text-[#0A0A0A] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none transition-all focus:border-[rgba(10,10,10,0.35)] focus:ring-4 focus:ring-[rgba(10,10,10,0.04)] placeholder:text-[#9B9B9B] resize-none tracking-[-0.006em]";
 
-export const labelCls = "block text-[13px] font-medium text-[#52585F] mb-2";
+export const labelCls =
+  "block text-[12px] font-medium text-[#4A4A4A] mb-2 tracking-[-0.003em]";
 
 // ─── Format helpers ───────────────────────────────────
 export const fmtEUR = (n) =>
@@ -49,7 +50,16 @@ export const fmtEUR = (n) =>
 export const fmtUSD = (n) =>
   Number(n || 0).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
 
-// Extract initials from a name
+// Compact currency — €18.9B, €4.2M — for display KPIs
+export const fmtCompactEUR = (n) => {
+  const num = Number(n || 0);
+  if (num >= 1e9) return `€${(num / 1e9).toFixed(1)}B`;
+  if (num >= 1e6) return `€${(num / 1e6).toFixed(1)}M`;
+  if (num >= 1e3) return `€${(num / 1e3).toFixed(0)}K`;
+  return `€${num}`;
+};
+
+// Extract initials
 export const initials = (name = '') =>
   name
     .split(/\s+/)
@@ -58,51 +68,38 @@ export const initials = (name = '') =>
     .map(s => s[0]?.toUpperCase() || '')
     .join('') || '?';
 
-// Deterministic color from a string (for avatars)
-const AVATAR_COLORS = [
-  { bg: '#EC7E00', fg: '#FFFFFF' }, // orange
-  { bg: '#0666EB', fg: '#FFFFFF' }, // Revolut blue
-  { bg: '#00BE90', fg: '#FFFFFF' }, // green
-  { bg: '#E950A4', fg: '#FFFFFF' }, // pink
-  { bg: '#6A8EAD', fg: '#FFFFFF' }, // slate blue
-  { bg: '#4F56F1', fg: '#FFFFFF' }, // indigo
-  { bg: '#0B84FF', fg: '#FFFFFF' }, // bright blue
-  { bg: '#FFB800', fg: '#191C1F' }, // amber
-];
-export const avatarColor = (key = '') => {
-  let hash = 0;
-  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) | 0;
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-};
+// Kept for back-compat — returns a neutral palette (no longer used colorfully)
+export const avatarColor = () => ({ bg: '#F5F3EE', fg: '#0A0A0A' });
 
 // ─── Button ───────────────────────────────────────────
+// Apple-style pill buttons, tracking-tight, no loud variants
 export function Button({ variant = 'primary', size = 'md', children, className = '', ...props }) {
   const variants = {
     primary:
-      'bg-[#191C1F] text-white border border-[#191C1F] hover:bg-[#2A2E33] shadow-[0_1px_2px_rgba(0,0,0,0.04)]',
+      'bg-[#0A0A0A] text-white border border-[#0A0A0A] hover:bg-[#2A2A2A] shadow-[0_1px_2px_rgba(10,10,10,0.06)]',
     accent:
-      'bg-[#0666EB] text-white border border-[#0666EB] hover:bg-[#0558C8] shadow-[0_4px_16px_-4px_rgba(6,102,235,0.4)]',
+      'bg-[#7C5E3C] text-white border border-[#7C5E3C] hover:bg-[#6A4F30] shadow-[0_1px_2px_rgba(124,94,60,0.12)]',
     secondary:
-      'bg-white text-[#191C1F] border border-[rgba(25,28,31,0.1)] hover:bg-[#F7F8FA] hover:border-[rgba(25,28,31,0.15)]',
+      'bg-white text-[#0A0A0A] border border-[rgba(10,10,10,0.12)] hover:bg-[#FBFAF7] hover:border-[rgba(10,10,10,0.2)]',
     soft:
-      'bg-[#E6F0FD] text-[#0666EB] border border-transparent hover:bg-[#D6E6FC]',
+      'bg-[#F5F3EE] text-[#0A0A0A] border border-transparent hover:bg-[#EFECE4]',
     ghost:
-      'bg-transparent text-[#52585F] border border-transparent hover:bg-[#F1F3F6] hover:text-[#191C1F]',
+      'bg-transparent text-[#4A4A4A] border border-transparent hover:bg-[#F5F3EE] hover:text-[#0A0A0A]',
     danger:
-      'bg-[#EC4C5A] text-white border border-[#EC4C5A] hover:bg-[#D63B49]',
+      'bg-white text-[#DC2626] border border-[rgba(220,38,38,0.25)] hover:bg-[#FEF2F2] hover:border-[rgba(220,38,38,0.4)]',
     link:
-      'bg-transparent text-[#0666EB] border-0 hover:underline px-0 h-auto',
+      'bg-transparent text-[#0A0A0A] border-0 hover:underline underline-offset-4 px-0 h-auto',
   };
   const sizes = {
-    sm: 'h-8 px-3 text-[13px] rounded-lg',
-    md: 'h-10 px-4 text-[14px] rounded-xl',
-    lg: 'h-12 px-5 text-[14px] rounded-xl',
-    pill: 'h-10 px-5 text-[14px] rounded-full',
+    sm: 'h-8 px-3.5 text-[13px] rounded-full',
+    md: 'h-10 px-5 text-[13.5px] rounded-full',
+    lg: 'h-12 px-6 text-[14px] rounded-full',
+    pill: 'h-10 px-5 text-[13.5px] rounded-full',
   };
   return (
     <button
       {...props}
-      className={`inline-flex items-center justify-center gap-2 font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed tracking-[-0.1px] ${variants[variant]} ${variant !== 'link' ? sizes[size] : ''} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed tracking-[-0.01em] whitespace-nowrap ${variants[variant]} ${variant !== 'link' ? sizes[size] : ''} ${className}`}
     >
       {children}
     </button>
@@ -110,47 +107,42 @@ export function Button({ variant = 'primary', size = 'md', children, className =
 }
 
 // ─── Badge ────────────────────────────────────────────
+// Outline style — no loud backgrounds. Dot conveys semantic color.
 export function Badge({ children, variant = 'default', dot = false, size = 'md' }) {
-  const styles = {
-    default: 'bg-[#F1F3F6] text-[#52585F]',
-    success: 'bg-[#E6F9F2] text-[#008266]',
-    warning: 'bg-[#FFF6E0] text-[#B07800]',
-    error:   'bg-[#FDECEE] text-[#C93545]',
-    info:    'bg-[#E6F0FD] text-[#0666EB]',
-    gold:    'bg-[#FDEFDB] text-[#B05E00]',
-    pink:    'bg-[#FCEAF4] text-[#B83680]',
-    purple:  'bg-[#EDE9FE] text-[#5B21B6]',
-  };
-  const dotColors = {
-    default: 'bg-[#A5ADB6]',
-    success: 'bg-[#00BE90]',
-    warning: 'bg-[#FFB800]',
-    error:   'bg-[#EC4C5A]',
-    info:    'bg-[#0666EB]',
-    gold:    'bg-[#EC7E00]',
-    pink:    'bg-[#E950A4]',
-    purple:  'bg-[#8B5CF6]',
+  const tone = {
+    default: { text: '#4A4A4A', dot: '#9B9B9B' },
+    success: { text: '#166534', dot: '#16A34A' },
+    warning: { text: '#92400E', dot: '#CA8A04' },
+    error:   { text: '#991B1B', dot: '#DC2626' },
+    info:    { text: '#1E40AF', dot: '#2563EB' },
+    gold:    { text: '#7C5E3C', dot: '#7C5E3C' },
+    pink:    { text: '#4A4A4A', dot: '#9B9B9B' },
+    purple:  { text: '#4A4A4A', dot: '#9B9B9B' },
   };
   const sizes = {
-    sm: 'px-2 py-0.5 text-[11px] rounded-md',
-    md: 'px-2.5 py-1 text-[12px] rounded-lg',
+    sm: 'h-5 px-2 text-[11px]',
+    md: 'h-6 px-2.5 text-[12px]',
   };
+  const t = tone[variant] || tone.default;
   return (
-    <span className={`inline-flex items-center gap-1.5 font-semibold ${sizes[size]} ${styles[variant] || styles.default}`}>
-      {dot && <span className={`w-1.5 h-1.5 rounded-full ${dotColors[variant] || dotColors.default}`} />}
+    <span
+      className={`inline-flex items-center gap-1.5 font-medium rounded-full border border-[rgba(10,10,10,0.1)] bg-white tracking-[-0.003em] ${sizes[size]}`}
+      style={{ color: t.text }}
+    >
+      {dot && <span className="w-1.5 h-1.5 rounded-full" style={{ background: t.dot }} />}
       {children}
     </span>
   );
 }
 
 // ─── Card ─────────────────────────────────────────────
-// Revolut-inspired: soft drop-shadow, rounded-[18px], no hard border
+// Hairline border, warm white, barely-there shadow. Apple restraint.
 export function Card({ children, className = '', variant = 'elevated', ...props }) {
   const variants = {
-    elevated: 'bg-white rounded-[18px] shadow-[0_0_20px_-10px_rgba(0,0,0,0.16)] border border-[rgba(25,28,31,0.04)]',
-    flat:     'bg-white rounded-[18px] border border-[rgba(25,28,31,0.08)]',
-    soft:     'bg-[#F7F8FA] rounded-[18px] border border-[rgba(25,28,31,0.04)]',
-    dark:     'bg-[#191C1F] text-white rounded-[18px] shadow-[0_8px_32px_-12px_rgba(0,0,0,0.3)]',
+    elevated: 'bg-white rounded-[14px] border border-[rgba(10,10,10,0.08)] shadow-[0_1px_2px_rgba(10,10,10,0.03)]',
+    flat:     'bg-white rounded-[14px] border border-[rgba(10,10,10,0.08)]',
+    soft:     'bg-[#F5F3EE] rounded-[14px] border border-[rgba(10,10,10,0.04)]',
+    dark:     'bg-[#0A0A0A] text-white rounded-[14px] shadow-[0_12px_32px_-12px_rgba(10,10,10,0.3)]',
   };
   return (
     <div
@@ -163,23 +155,25 @@ export function Card({ children, className = '', variant = 'elevated', ...props 
 }
 
 // ─── Avatar ───────────────────────────────────────────
-// Revolut-style colored circle with initials or image
-export function Avatar({ name = '', src, size = 40, ring = false, status }) {
-  const { bg, fg } = avatarColor(name);
+// Monochrome — warm paper bg, dark initials, hairline inner border. Private-bank refined.
+export function Avatar({ name = '', src, size = 40, ring = false, status, tone = 'default' }) {
   const dim = typeof size === 'number' ? `${size}px` : size;
-  const fontSize = Math.round((typeof size === 'number' ? size : 40) * 0.4);
+  const fontSize = Math.round((typeof size === 'number' ? size : 40) * 0.36);
+  const bg = tone === 'dark' ? '#0A0A0A' : tone === 'accent' ? '#7C5E3C' : '#F5F3EE';
+  const fg = tone === 'dark' || tone === 'accent' ? '#FFFFFF' : '#0A0A0A';
+  const border = tone === 'default' ? '1px solid rgba(10, 10, 10, 0.08)' : 'none';
   return (
     <div className="relative inline-flex flex-shrink-0" style={{ width: dim, height: dim }}>
       <div
-        className={`w-full h-full rounded-full flex items-center justify-center font-semibold tracking-[-0.2px] overflow-hidden ${ring ? 'ring-2 ring-white' : ''}`}
-        style={{ background: src ? undefined : bg, color: fg, fontSize: `${fontSize}px` }}
+        className={`w-full h-full rounded-full flex items-center justify-center font-medium overflow-hidden tracking-[-0.02em] ${ring ? 'ring-[3px] ring-white' : ''}`}
+        style={{ background: src ? undefined : bg, color: fg, fontSize: `${fontSize}px`, border }}
       >
         {src ? <img src={src} alt={name} className="w-full h-full object-cover" /> : initials(name)}
       </div>
       {status && (
         <span
-          className="absolute bottom-0 right-0 w-[30%] h-[30%] rounded-full border-2 border-white"
-          style={{ background: status === 'online' ? '#00BE90' : status === 'busy' ? '#EC4C5A' : '#A5ADB6' }}
+          className="absolute bottom-0 right-0 w-[28%] h-[28%] rounded-full border-2 border-white"
+          style={{ background: status === 'online' ? '#16A34A' : status === 'busy' ? '#DC2626' : '#9B9B9B' }}
         />
       )}
     </div>
@@ -199,8 +193,8 @@ export function AvatarStack({ items = [], size = 32, max = 3 }) {
       ))}
       {rest > 0 && (
         <div
-          className="-ml-2 rounded-full bg-[#F1F3F6] text-[#52585F] flex items-center justify-center font-semibold ring-2 ring-white"
-          style={{ width: size, height: size, fontSize: Math.round(size * 0.35) }}
+          className="-ml-2 rounded-full bg-[#F5F3EE] text-[#0A0A0A] flex items-center justify-center font-medium ring-[3px] ring-white border border-[rgba(10,10,10,0.08)]"
+          style={{ width: size, height: size, fontSize: Math.round(size * 0.32) }}
         >
           +{rest}
         </div>
@@ -209,25 +203,29 @@ export function AvatarStack({ items = [], size = 32, max = 3 }) {
   );
 }
 
-// ─── Icon Pill ────────────────────────────────────────
-// Circular colored background with centered icon — Revolut signature
-export function IconPill({ children, tone = 'blue', size = 40 }) {
-  const tones = {
-    blue:   { bg: '#E6F0FD', fg: '#0666EB' },
-    green:  { bg: '#E6F9F2', fg: '#00BE90' },
-    pink:   { bg: '#FCEAF4', fg: '#E950A4' },
-    orange: { bg: '#FDEFDB', fg: '#EC7E00' },
-    gray:   { bg: '#F1F3F6', fg: '#52585F' },
-    indigo: { bg: '#EDE9FE', fg: '#4F56F1' },
-    amber:  { bg: '#FFF6E0', fg: '#B07800' },
-    red:    { bg: '#FDECEE', fg: '#EC4C5A' },
-    dark:   { bg: '#191C1F', fg: '#FFFFFF' },
+// ─── Icon Container ───────────────────────────────────
+// Monochrome square container for icons (replaces colorful IconPill)
+export function IconPill({ children, tone = 'default', size = 40 }) {
+  // tone kept for back-compat; now mostly ignored except semantic contexts
+  const styles = {
+    default: { bg: '#F5F3EE', fg: '#0A0A0A', border: '1px solid rgba(10, 10, 10, 0.06)' },
+    dark:    { bg: '#0A0A0A', fg: '#FFFFFF', border: 'none' },
+    accent:  { bg: 'rgba(124, 94, 60, 0.08)', fg: '#7C5E3C', border: '1px solid rgba(124, 94, 60, 0.16)' },
+    green:   { bg: '#F5F3EE', fg: '#166534', border: '1px solid rgba(10, 10, 10, 0.06)' },
+    amber:   { bg: '#F5F3EE', fg: '#92400E', border: '1px solid rgba(10, 10, 10, 0.06)' },
+    red:     { bg: '#F5F3EE', fg: '#991B1B', border: '1px solid rgba(10, 10, 10, 0.06)' },
+    blue:    { bg: '#F5F3EE', fg: '#0A0A0A', border: '1px solid rgba(10, 10, 10, 0.06)' },
+    pink:    { bg: '#F5F3EE', fg: '#0A0A0A', border: '1px solid rgba(10, 10, 10, 0.06)' },
+    orange:  { bg: '#F5F3EE', fg: '#0A0A0A', border: '1px solid rgba(10, 10, 10, 0.06)' },
+    gray:    { bg: '#F5F3EE', fg: '#4A4A4A', border: '1px solid rgba(10, 10, 10, 0.06)' },
+    indigo:  { bg: '#F5F3EE', fg: '#0A0A0A', border: '1px solid rgba(10, 10, 10, 0.06)' },
   };
-  const { bg, fg } = tones[tone] || tones.blue;
+  const { bg, fg, border } = styles[tone] || styles.default;
+  const radius = size >= 44 ? '12px' : '10px';
   return (
     <div
-      className="rounded-full flex-shrink-0 flex items-center justify-center"
-      style={{ width: size, height: size, background: bg, color: fg }}
+      className="flex-shrink-0 flex items-center justify-center"
+      style={{ width: size, height: size, background: bg, color: fg, border, borderRadius: radius }}
     >
       {children}
     </div>
@@ -235,98 +233,121 @@ export function IconPill({ children, tone = 'blue', size = 40 }) {
 }
 
 // ─── Delta Indicator ──────────────────────────────────
-// Little arrow + value, colored by direction (Revolut pattern)
+// Tiny directional value — used in metric footers
 export function Delta({ value, positive, tone, prefix = '' }) {
   const isUp = positive ?? (typeof value === 'number' ? value >= 0 : true);
-  const color = tone || (isUp ? '#00BE90' : '#EC4C5A');
+  const color = tone || (isUp ? '#16A34A' : '#DC2626');
   return (
-    <div className="inline-flex items-center gap-1 text-[14px] font-medium tabular-nums" style={{ color }}>
-      <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="currentColor">
+    <span className="inline-flex items-center gap-1 text-[12px] font-medium tabular-nums tracking-[-0.003em]" style={{ color }}>
+      <svg className="w-2 h-2" viewBox="0 0 10 10" fill="currentColor">
         {isUp
-          ? <path d="M5 1L9 7H1L5 1Z" />
-          : <path d="M5 9L1 3H9L5 9Z" />}
+          ? <path d="M5 1.5L8.5 7H1.5L5 1.5Z" />
+          : <path d="M5 8.5L1.5 3H8.5L5 8.5Z" />}
       </svg>
       <span>{prefix}{value}</span>
+    </span>
+  );
+}
+
+// ─── Metric ───────────────────────────────────────────
+// The core editorial metric: small label, big display number, muted caption.
+// Used individually, or in a MetricRow (inside a Card with dividers).
+export function Metric({ label, value, caption, delta, align = 'left', className = '' }) {
+  const alignCls = align === 'right' ? 'text-right items-end' : 'text-left items-start';
+  return (
+    <div className={`flex flex-col ${alignCls} ${className}`}>
+      <span className="text-[12px] font-medium text-[#6B6B6B] tracking-[-0.003em]">{label}</span>
+      <span className="mt-2 text-[30px] font-medium text-[#0A0A0A] tabular-nums tracking-[-0.03em] leading-[1.1]">
+        {value}
+      </span>
+      {(caption || delta) && (
+        <div className="mt-1.5 flex items-center gap-2">
+          {delta && (typeof delta === 'string' || typeof delta === 'number'
+            ? <Delta value={delta} positive prefix={typeof delta === 'string' && delta.startsWith('-') ? '' : '+'} />
+            : delta)}
+          {caption && <span className="text-[12px] text-[#6B6B6B] tracking-[-0.003em]">{caption}</span>}
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── KPI Tile ─────────────────────────────────────────
-// The signature Revolut 190x190 tile: label · big amount · delta · visual
-export function KPITile({ label, value, delta, tone = 'blue', visual, onClick, className = '' }) {
+// ─── MetricRow ────────────────────────────────────────
+// Horizontal strip of metrics inside a Card with vertical dividers. Mercury/Stripe pattern.
+export function MetricRow({ children, className = '' }) {
+  // expects an array of <Metric /> children; splits them with hairline dividers
+  const items = Array.isArray(children) ? children : [children];
+  return (
+    <Card className={`flex divide-x divide-[rgba(10,10,10,0.08)] ${className}`}>
+      {items.map((child, i) => (
+        <div key={i} className="flex-1 px-6 py-6 animate-slide-up" style={{ animationDelay: `${i * 40}ms` }}>
+          {child}
+        </div>
+      ))}
+    </Card>
+  );
+}
+
+// ─── KPITile (compat shim → now a clean Metric card) ──
+// Kept for back-compat. Ignores visual/tone/sparklines — renders a clean bordered metric.
+export function KPITile({ label, value, delta, visual, onClick, className = '' }) {
   const clickable = !!onClick;
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-[18px] p-5 border border-[rgba(25,28,31,0.04)] shadow-[0_0_20px_-10px_rgba(0,0,0,0.16)] ${clickable ? 'tile-hover cursor-pointer' : ''} ${className}`}
+      className={`bg-white rounded-[14px] p-6 border border-[rgba(10,10,10,0.08)] shadow-[0_1px_2px_rgba(10,10,10,0.03)] ${clickable ? 'lift cursor-pointer' : ''} ${className}`}
     >
-      <div className="flex flex-col h-full justify-between gap-4 min-h-[140px]">
-        <div>
-          <p className="text-[13px] text-[#75808A] font-medium">{label}</p>
-          <p className="mt-0.5 text-[22px] font-semibold text-[#191C1F] tabular-nums tracking-[-0.3px] leading-[1.2]">
-            {value}
-          </p>
-          {delta && (
-            <div className="mt-1">
-              {typeof delta === 'string' || typeof delta === 'number'
-                ? <Delta value={delta} tone={tone === 'pink' ? '#E950A4' : tone === 'blue' ? '#0666EB' : undefined} />
-                : delta}
-            </div>
-          )}
+      <p className="text-[12px] font-medium text-[#6B6B6B] tracking-[-0.003em]">{label}</p>
+      <p className="mt-2 text-[28px] font-medium text-[#0A0A0A] tabular-nums tracking-[-0.03em] leading-[1.1]">
+        {value}
+      </p>
+      {delta && (
+        <div className="mt-2">
+          {typeof delta === 'string' || typeof delta === 'number'
+            ? <Delta value={delta} positive />
+            : delta}
         </div>
-        {visual && <div className="flex items-end">{visual}</div>}
-      </div>
+      )}
     </div>
   );
 }
 
-// ─── Sparkline ────────────────────────────────────────
-// Stylized mini-chart for KPI tiles
-export function Sparkline({ points = [0.4, 0.3, 0.55, 0.42, 0.65, 0.5, 0.8, 0.7, 0.95], tone = 'blue', width = 150, height = 44 }) {
-  const stroke = tone === 'pink' ? '#E950A4' : tone === 'green' ? '#00BE90' : '#0666EB';
-  const fill = tone === 'pink' ? 'sparkline-gradient-pink' : tone === 'green' ? 'sparkline-gradient-green' : 'sparkline-gradient-blue';
+// ─── Sparkline (now monochrome, single stroke) ────────
+export function Sparkline({ points = [0.4, 0.3, 0.55, 0.42, 0.65, 0.5, 0.8, 0.7, 0.95], width = 120, height = 32 }) {
   const max = Math.max(...points), min = Math.min(...points);
   const range = max - min || 1;
   const step = width / (points.length - 1);
   const coords = points.map((p, i) => [i * step, height - ((p - min) / range) * height * 0.9 - 2]);
   const line = coords.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
-  const area = `${line} L${width},${height} L0,${height} Z`;
   return (
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
-      <defs>
-        <linearGradient id={`spark-${tone}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={stroke} stopOpacity="0.25" />
-          <stop offset="100%" stopColor={stroke} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={area} fill={`url(#spark-${tone})`} />
-      <path d={line} stroke={stroke} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={line} stroke="#0A0A0A" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
 // ─── List Row ─────────────────────────────────────────
-// Revolut's signature horizontal row: icon + title/subtitle + trailing
-export function ListRow({ icon, tone = 'blue', title, subtitle, trailing, trailingSub, onClick, divider = true }) {
+// Editorial horizontal row — typography-led, hairline divider
+export function ListRow({ icon, tone = 'default', title, subtitle, trailing, trailingSub, onClick, divider = true }) {
   const clickable = !!onClick;
   return (
     <div
       onClick={onClick}
-      className={`flex items-center gap-4 px-5 py-3.5 ${divider ? 'border-b border-[rgba(25,28,31,0.06)] last:border-0' : ''} ${clickable ? 'cursor-pointer hover:bg-[#F7F8FA] transition-colors' : ''}`}
+      className={`flex items-center gap-4 px-6 py-4 ${divider ? 'border-b border-[rgba(10,10,10,0.06)] last:border-0' : ''} ${clickable ? 'cursor-pointer hover:bg-[#FBFAF7] transition-colors' : ''}`}
     >
       {icon && (
         typeof icon === 'string' || typeof icon === 'number'
-          ? <IconPill tone={tone}><span className="text-[14px] font-semibold">{icon}</span></IconPill>
+          ? <IconPill tone={tone}><span className="text-[13px] font-medium">{icon}</span></IconPill>
           : <IconPill tone={tone}>{icon}</IconPill>
       )}
       <div className="flex-1 min-w-0">
-        <p className="text-[15px] font-semibold text-[#191C1F] truncate tracking-[-0.15px]">{title}</p>
-        {subtitle && <p className="text-[13px] text-[#75808A] truncate mt-0.5">{subtitle}</p>}
+        <p className="text-[14px] font-medium text-[#0A0A0A] truncate tracking-[-0.01em]">{title}</p>
+        {subtitle && <p className="text-[12.5px] text-[#6B6B6B] truncate mt-0.5 tracking-[-0.003em]">{subtitle}</p>}
       </div>
       {(trailing || trailingSub) && (
         <div className="text-right flex-shrink-0">
-          {trailing && <p className="text-[15px] font-semibold text-[#191C1F] tabular-nums tracking-[-0.15px]">{trailing}</p>}
-          {trailingSub && <p className="text-[12px] text-[#75808A] mt-0.5">{trailingSub}</p>}
+          {trailing && <p className="text-[14px] font-medium text-[#0A0A0A] tabular-nums tracking-[-0.015em]">{trailing}</p>}
+          {trailingSub && <p className="text-[12px] text-[#6B6B6B] mt-0.5 tracking-[-0.003em]">{trailingSub}</p>}
         </div>
       )}
     </div>
@@ -334,11 +355,10 @@ export function ListRow({ icon, tone = 'blue', title, subtitle, trailing, traili
 }
 
 // ─── Section Title ────────────────────────────────────
-// Compact section header inside a card
 export function SectionTitle({ children, action }) {
   return (
-    <div className="px-5 pt-4 pb-2 flex items-center justify-between">
-      <h3 className="text-[13px] font-medium text-[#75808A]">{children}</h3>
+    <div className="px-6 pt-5 pb-3 flex items-center justify-between border-b border-[rgba(10,10,10,0.06)]">
+      <h3 className="text-[13px] font-medium text-[#0A0A0A] tracking-[-0.01em]">{children}</h3>
       {action}
     </div>
   );
@@ -357,30 +377,30 @@ export function Modal({ isOpen, onClose, title, subtitle, children, maxWidth = '
   return (
     <>
       <div
-        className="fixed inset-0 bg-[rgba(25,28,31,0.5)] backdrop-blur-sm z-40 animate-fade"
+        className="fixed inset-0 bg-[rgba(10,10,10,0.4)] backdrop-blur-[6px] z-40 animate-fade"
         onClick={onClose}
       />
       <div
-        className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white z-50 w-[calc(100%-2rem)] ${maxWidth} max-h-[85vh] rounded-[22px] shadow-[0_24px_64px_-24px_rgba(0,0,0,0.4)] flex flex-col animate-scale border border-[rgba(25,28,31,0.04)]`}
+        className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white z-50 w-[calc(100%-2rem)] ${maxWidth} max-h-[85vh] rounded-[18px] shadow-[0_24px_64px_-24px_rgba(10,10,10,0.35)] flex flex-col animate-scale border border-[rgba(10,10,10,0.08)] overflow-hidden`}
       >
         {(title || subtitle) && (
-          <header className="px-6 pt-6 pb-5 flex items-start justify-between gap-4">
+          <header className="px-7 pt-7 pb-5 flex items-start justify-between gap-4 border-b border-[rgba(10,10,10,0.06)]">
             <div>
-              {title && <h2 className="text-[20px] font-semibold text-[#191C1F] tracking-[-0.3px]">{title}</h2>}
-              {subtitle && <p className="mt-1.5 text-[13px] text-[#75808A] leading-relaxed">{subtitle}</p>}
+              {title && <h2 className="text-[20px] font-medium text-[#0A0A0A] tracking-[-0.025em]">{title}</h2>}
+              {subtitle && <p className="mt-1.5 text-[13px] text-[#6B6B6B] leading-relaxed max-w-md tracking-[-0.003em]">{subtitle}</p>}
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center text-[#75808A] hover:text-[#191C1F] hover:bg-[#F1F3F6] rounded-full transition-colors -mr-1"
+              className="w-8 h-8 flex items-center justify-center text-[#6B6B6B] hover:text-[#0A0A0A] hover:bg-[#F5F3EE] rounded-full transition-colors -mr-1.5 flex-shrink-0"
               aria-label="Fermer"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </header>
         )}
-        <div className="px-6 pb-6 overflow-y-auto">{children}</div>
+        <div className="px-7 py-6 overflow-y-auto">{children}</div>
       </div>
     </>
   );
@@ -391,15 +411,15 @@ export function EmptyState({ title, description, action, icon }) {
   return (
     <div className="text-center py-16 px-6">
       {icon && (
-        <IconPill tone="gray" size={56}>
+        <div className="w-14 h-14 mx-auto rounded-full bg-[#F5F3EE] border border-[rgba(10,10,10,0.06)] flex items-center justify-center text-[#4A4A4A]">
           {icon}
-        </IconPill>
+        </div>
       )}
-      <p className="text-[16px] font-semibold text-[#191C1F] tracking-[-0.2px] mt-4">{title}</p>
+      <p className="text-[16px] font-medium text-[#0A0A0A] tracking-[-0.015em] mt-5">{title}</p>
       {description && (
-        <p className="text-[14px] text-[#75808A] mt-1.5 max-w-sm mx-auto leading-relaxed">{description}</p>
+        <p className="text-[13.5px] text-[#6B6B6B] mt-2 max-w-sm mx-auto leading-relaxed tracking-[-0.003em]">{description}</p>
       )}
-      {action && <div className="mt-5">{action}</div>}
+      {action && <div className="mt-6">{action}</div>}
     </div>
   );
 }
@@ -408,7 +428,7 @@ export function EmptyState({ title, description, action, icon }) {
 export function Spinner({ size = 'w-4 h-4' }) {
   return (
     <span
-      className={`${size} inline-block border-2 border-[rgba(25,28,31,0.12)] border-t-[#0666EB] rounded-full animate-spin`}
+      className={`${size} inline-block border-[1.5px] border-[rgba(10,10,10,0.12)] border-t-[#0A0A0A] rounded-full animate-spin`}
     />
   );
 }
@@ -417,35 +437,63 @@ export function Spinner({ size = 'w-4 h-4' }) {
 // Thin horizontal strip cell — for secondary KPI rows inside a card
 export function StatCell({ label, value, sub, className = '' }) {
   return (
-    <div className={`px-5 py-4 ${className}`}>
-      <p className="text-[12px] font-medium text-[#75808A]">{label}</p>
-      <p className="mt-1 text-[16px] font-semibold text-[#191C1F] tabular-nums tracking-[-0.2px] truncate">{value || '—'}</p>
-      {sub && <p className="text-[12px] text-[#A5ADB6] mt-0.5 truncate">{sub}</p>}
+    <div className={`px-6 py-5 ${className}`}>
+      <p className="text-[12px] font-medium text-[#6B6B6B] tracking-[-0.003em]">{label}</p>
+      <p className="mt-2 text-[22px] font-medium text-[#0A0A0A] tabular-nums tracking-[-0.025em] truncate leading-[1.15]">{value || '—'}</p>
+      {sub && <p className="text-[12px] text-[#9B9B9B] mt-1 truncate tracking-[-0.003em]">{sub}</p>}
     </div>
   );
 }
 
 // ─── Action Button ────────────────────────────────────
-// Revolut's signature circular action with label below (Add money, Exchange, etc.)
-export function ActionButton({ icon, label, tone = 'dark', onClick }) {
-  const tones = {
-    dark:  { bg: '#191C1F', fg: '#FFFFFF' },
-    blue:  { bg: '#0666EB', fg: '#FFFFFF' },
-    soft:  { bg: '#E6F0FD', fg: '#0666EB' },
-    white: { bg: '#FFFFFF', fg: '#191C1F' },
-  };
-  const { bg, fg } = tones[tone] || tones.dark;
+// Circular icon button with label — Apple action tray style
+export function ActionButton({ icon, label, onClick }) {
   return (
     <button onClick={onClick} className="flex flex-col items-center gap-2 group">
-      <div
-        className="w-11 h-11 rounded-full flex items-center justify-center transition-transform group-hover:scale-105 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
-        style={{ background: bg, color: fg }}
-      >
+      <div className="w-11 h-11 rounded-full flex items-center justify-center bg-[#F5F3EE] border border-[rgba(10,10,10,0.06)] text-[#0A0A0A] group-hover:bg-[#EFECE4] transition-colors">
         {icon}
       </div>
-      <span className="text-[12px] font-medium text-[#52585F] group-hover:text-[#191C1F] transition-colors">
+      <span className="text-[11px] font-medium text-[#4A4A4A] group-hover:text-[#0A0A0A] transition-colors tracking-[-0.003em]">
         {label}
       </span>
     </button>
+  );
+}
+
+// ─── Divider ──────────────────────────────────────────
+export function Divider({ className = '' }) {
+  return <div className={`h-px bg-[rgba(10,10,10,0.08)] ${className}`} />;
+}
+
+// ─── Logo ─────────────────────────────────────────────
+// Refined SL monogram — serif wordmark, editorial feel
+export function Logo({ size = 'md', variant = 'full' }) {
+  const sizes = {
+    sm: { monogram: 28, title: 13, sub: 10 },
+    md: { monogram: 32, title: 14, sub: 11 },
+    lg: { monogram: 44, title: 18, sub: 12 },
+  };
+  const s = sizes[size] || sizes.md;
+  return (
+    <div className="flex items-center gap-3">
+      <div
+        className="flex items-center justify-center rounded-[10px] bg-[#0A0A0A] text-white"
+        style={{ width: s.monogram, height: s.monogram }}
+      >
+        <span className="font-display" style={{ fontSize: `${Math.round(s.monogram * 0.45)}px`, lineHeight: 1, letterSpacing: '-0.04em' }}>
+          Sℓ
+        </span>
+      </div>
+      {variant === 'full' && (
+        <div className="flex flex-col leading-none">
+          <span className="font-display text-[#0A0A0A]" style={{ fontSize: `${s.title}px`, letterSpacing: '-0.02em' }}>
+            SwissLife
+          </span>
+          <span className="text-[#6B6B6B] font-medium mt-1" style={{ fontSize: `${s.sub}px`, letterSpacing: '0.02em' }}>
+            Custody · Banque Privée
+          </span>
+        </div>
+      )}
+    </div>
   );
 }

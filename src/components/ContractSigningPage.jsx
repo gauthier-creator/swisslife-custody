@@ -57,13 +57,13 @@ export default function ContractSigningPage({ token }) {
     w.document.write(`<html><head><title>Contrat · ${data.client_name}</title>
       <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
-        body{font-family:'Inter',-apple-system,sans-serif;max-width:720px;margin:40px auto;padding:40px;color:#09090B;line-height:1.6;font-size:13px;background:#fff}
+        body{font-family:'Inter',-apple-system,sans-serif;max-width:720px;margin:40px auto;padding:40px;color:#0A0A0A;line-height:1.6;font-size:13px;background:#fff}
         h1{font-size:22px;font-weight:600;margin:0 0 24px;letter-spacing:-0.015em}
-        h2{font-size:13px;font-weight:600;margin:24px 0 8px;color:#09090B}
-        .label{font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#71717A;margin-bottom:4px}
+        h2{font-size:13px;font-weight:600;margin:24px 0 8px;color:#0A0A0A}
+        .label{font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#6B6B6B;margin-bottom:4px}
         p{margin:6px 0}
         .signature{margin-top:48px;display:flex;justify-content:space-between;gap:32px}
-        .signature div{flex:1;border-top:1px solid #09090B;padding-top:8px}
+        .signature div{flex:1;border-top:1px solid #0A0A0A;padding-top:8px}
         @media print{body{margin:0;padding:20px}}
       </style>
       </head><body>${content.innerHTML}</body></html>`);
@@ -74,8 +74,8 @@ export default function ContractSigningPage({ token }) {
   // ── Loading ───────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
-        <div className="flex items-center gap-2 text-[#71717A]">
+      <div className="min-h-screen bg-[#FBFAF7] flex items-center justify-center">
+        <div className="flex items-center gap-2 text-[#6B6B6B]">
           <Spinner />
           <span className="text-[13px]">Chargement du contrat…</span>
         </div>
@@ -86,16 +86,16 @@ export default function ContractSigningPage({ token }) {
   // ── Error ─────────────────────────────────────────────
   if (error) {
     return (
-      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center px-6">
+      <div className="min-h-screen bg-[#FBFAF7] flex items-center justify-center px-6">
         <Card className="max-w-md w-full p-8 text-center">
           <div className="w-10 h-10 rounded-full bg-[#FEF2F2] flex items-center justify-center mx-auto mb-4">
             <svg className="w-5 h-5 text-[#B91C1C]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h1 className="text-[15px] font-semibold text-[#09090B]">Lien invalide</h1>
-          <p className="text-[13px] text-[#71717A] mt-2 leading-relaxed">{error}</p>
-          <p className="mt-6 pt-4 border-t border-[rgba(9,9,11,0.06)] text-[11px] text-[#A1A1AA] font-medium uppercase tracking-wider">
+          <h1 className="text-[15px] font-semibold text-[#0A0A0A]">Lien invalide</h1>
+          <p className="text-[13px] text-[#6B6B6B] mt-2 leading-relaxed">{error}</p>
+          <p className="mt-6 pt-4 border-t border-[rgba(10,10,10,0.06)] text-[11px] text-[#9B9B9B] font-medium uppercase tracking-wider">
             SwissLife Banque Privée
           </p>
         </Card>
@@ -106,24 +106,24 @@ export default function ContractSigningPage({ token }) {
   // ── Success ───────────────────────────────────────────
   if (signed) {
     return (
-      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center px-6">
+      <div className="min-h-screen bg-[#FBFAF7] flex items-center justify-center px-6">
         <Card className="max-w-lg w-full p-10 text-center animate-fade">
           <div className="w-12 h-12 rounded-full bg-[#ECFDF5] flex items-center justify-center mx-auto mb-5">
             <svg className="w-6 h-6 text-[#10B981]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="text-[22px] font-semibold text-[#09090B] tracking-tight">
+          <h1 className="text-[22px] font-semibold text-[#0A0A0A] tracking-tight">
             Merci, {data.client_name.split(' ')[0]}.
           </h1>
-          <p className="mt-2 text-[13px] text-[#71717A] leading-relaxed max-w-sm mx-auto">
+          <p className="mt-2 text-[13px] text-[#6B6B6B] leading-relaxed max-w-sm mx-auto">
             Votre contrat de conservation d'actifs numériques a été enregistré et versé à votre dossier. Votre banquier privé vous contactera pour les prochaines étapes.
           </p>
-          <div className="mt-8 pt-5 border-t border-[rgba(9,9,11,0.06)]">
-            <p className="text-[11px] text-[#A1A1AA] font-medium uppercase tracking-wider">
+          <div className="mt-8 pt-5 border-t border-[rgba(10,10,10,0.06)]">
+            <p className="text-[11px] text-[#9B9B9B] font-medium uppercase tracking-wider">
               SwissLife Banque Privée · Paris
             </p>
-            <p className="text-[11px] text-[#A1A1AA] mt-1">
+            <p className="text-[11px] text-[#9B9B9B] mt-1">
               Signature électronique · Art. 1367 C. civ.
             </p>
           </div>
@@ -151,15 +151,15 @@ export default function ContractSigningPage({ token }) {
   ];
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] text-[#09090B]">
+    <div className="min-h-screen bg-[#FBFAF7] text-[#0A0A0A]">
       {/* ── Top nav ─────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-[rgba(9,9,11,0.08)]">
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-[rgba(10,10,10,0.08)]">
         <div className="max-w-[760px] mx-auto px-6 h-12 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 bg-[#09090B] rounded-md flex items-center justify-center">
+            <div className="w-6 h-6 bg-[#0A0A0A] rounded-md flex items-center justify-center">
               <span className="text-white text-[10px] font-bold tracking-tight">SL</span>
             </div>
-            <span className="text-[13px] font-semibold text-[#09090B] tracking-tight">SwissLife Custody</span>
+            <span className="text-[13px] font-semibold text-[#0A0A0A] tracking-tight">SwissLife Custody</span>
             <Badge variant="info">Conservation</Badge>
           </div>
           <Button size="sm" variant="secondary" onClick={handlePrint}>
@@ -174,25 +174,25 @@ export default function ContractSigningPage({ token }) {
       <div className="max-w-[760px] mx-auto px-6 py-8">
         {/* ── Header ─────────────────────────────────── */}
         <div className="mb-5">
-          <p className="text-[11px] font-medium text-[#71717A] uppercase tracking-wider mb-2">
+          <p className="text-[11px] font-medium text-[#6B6B6B] uppercase tracking-wider mb-2">
             Document contractuel · {currentDate}
           </p>
-          <h1 className="text-[26px] font-semibold text-[#09090B] tracking-tight leading-tight">
+          <h1 className="text-[26px] font-semibold text-[#0A0A0A] tracking-tight leading-tight">
             Contrat de conservation d'actifs numériques
           </h1>
-          <p className="mt-3 text-[13px] text-[#71717A] leading-relaxed max-w-xl">
+          <p className="mt-3 text-[13px] text-[#6B6B6B] leading-relaxed max-w-xl">
             Veuillez prendre le temps de lire ce document en entier. Il décrit les conditions selon lesquelles SwissLife Banque Privée assure la garde de vos actifs numériques, conformément au règlement européen MiCA et au Code monétaire et financier.
           </p>
         </div>
 
         {/* ── Contract body card ─────────────────────── */}
-        <div ref={contractRef} className="bg-white border border-[rgba(9,9,11,0.08)] rounded-lg p-8">
+        <div ref={contractRef} className="bg-white border border-[rgba(10,10,10,0.08)] rounded-lg p-8">
           {/* Parties */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pb-6 border-b border-[rgba(9,9,11,0.08)]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pb-6 border-b border-[rgba(10,10,10,0.08)]">
             <div>
-              <p className="label text-[11px] font-semibold text-[#71717A] uppercase tracking-wider mb-1.5">La Banque</p>
-              <p className="text-[14px] font-semibold text-[#09090B]">SwissLife Banque Privée</p>
-              <div className="mt-1.5 text-[12px] text-[#71717A] leading-relaxed">
+              <p className="label text-[11px] font-semibold text-[#6B6B6B] uppercase tracking-wider mb-1.5">La Banque</p>
+              <p className="text-[14px] font-semibold text-[#0A0A0A]">SwissLife Banque Privée</p>
+              <div className="mt-1.5 text-[12px] text-[#6B6B6B] leading-relaxed">
                 Société Anonyme · 7 rue Belgrand<br />
                 92300 Levallois-Perret<br />
                 RCS Nanterre<br />
@@ -200,9 +200,9 @@ export default function ContractSigningPage({ token }) {
               </div>
             </div>
             <div>
-              <p className="label text-[11px] font-semibold text-[#71717A] uppercase tracking-wider mb-1.5">Le Client</p>
-              <p className="text-[14px] font-semibold text-[#09090B]">{clientName}</p>
-              <div className="mt-1.5 text-[12px] text-[#71717A] leading-relaxed">
+              <p className="label text-[11px] font-semibold text-[#6B6B6B] uppercase tracking-wider mb-1.5">Le Client</p>
+              <p className="text-[14px] font-semibold text-[#0A0A0A]">{clientName}</p>
+              <div className="mt-1.5 text-[12px] text-[#6B6B6B] leading-relaxed">
                 {clientAddress}<br />
                 {clientPhone}
               </div>
@@ -214,29 +214,29 @@ export default function ContractSigningPage({ token }) {
             {articles.map(a => (
               <section key={a.n} className="grid grid-cols-12 gap-4">
                 <div className="col-span-12 sm:col-span-3">
-                  <p className="text-[11px] font-semibold text-[#71717A] uppercase tracking-wider tabular-nums">
+                  <p className="text-[11px] font-semibold text-[#6B6B6B] uppercase tracking-wider tabular-nums">
                     Article {String(a.n).padStart(2, '0')}
                   </p>
                 </div>
                 <div className="col-span-12 sm:col-span-9">
-                  <h2 className="text-[13px] font-semibold text-[#09090B] mb-1">{a.title}</h2>
-                  <p className="text-[13px] text-[#52525B] leading-relaxed">{a.body}</p>
+                  <h2 className="text-[13px] font-semibold text-[#0A0A0A] mb-1">{a.title}</h2>
+                  <p className="text-[13px] text-[#4A4A4A] leading-relaxed">{a.body}</p>
                 </div>
               </section>
             ))}
           </div>
 
           {/* Closing */}
-          <div className="mt-8 pt-6 border-t border-[rgba(9,9,11,0.08)]">
-            <p className="text-[13px] text-[#52525B]">Fait à Paris, le {currentDate}.</p>
+          <div className="mt-8 pt-6 border-t border-[rgba(10,10,10,0.08)]">
+            <p className="text-[13px] text-[#4A4A4A]">Fait à Paris, le {currentDate}.</p>
             <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="border-t border-[#09090B] pt-2">
-                <p className="text-[11px] font-semibold text-[#71717A] uppercase tracking-wider mb-1">Le Client</p>
-                <p className="text-[13px] font-medium text-[#09090B]">{clientName}</p>
+              <div className="border-t border-[#0A0A0A] pt-2">
+                <p className="text-[11px] font-semibold text-[#6B6B6B] uppercase tracking-wider mb-1">Le Client</p>
+                <p className="text-[13px] font-medium text-[#0A0A0A]">{clientName}</p>
               </div>
-              <div className="border-t border-[#09090B] pt-2">
-                <p className="text-[11px] font-semibold text-[#71717A] uppercase tracking-wider mb-1">La Banque</p>
-                <p className="text-[13px] font-medium text-[#09090B]">SwissLife Banque Privée</p>
+              <div className="border-t border-[#0A0A0A] pt-2">
+                <p className="text-[11px] font-semibold text-[#6B6B6B] uppercase tracking-wider mb-1">La Banque</p>
+                <p className="text-[13px] font-medium text-[#0A0A0A]">SwissLife Banque Privée</p>
               </div>
             </div>
           </div>
@@ -245,10 +245,10 @@ export default function ContractSigningPage({ token }) {
         {/* ── Signature card ──────────────────────────── */}
         <Card className="mt-4 p-6">
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-[15px] font-semibold text-[#09090B] tracking-tight">Signature électronique</h3>
+            <h3 className="text-[15px] font-semibold text-[#0A0A0A] tracking-tight">Signature électronique</h3>
             <Badge variant="default">Art. 1367 C. civ.</Badge>
           </div>
-          <p className="text-[12px] text-[#71717A] leading-relaxed max-w-xl">
+          <p className="text-[12px] text-[#6B6B6B] leading-relaxed max-w-xl">
             En signant, vous acceptez les conditions ci-dessus. Cette signature électronique a valeur contractuelle. L'horodatage et l'adresse IP sont enregistrés pour la conformité réglementaire.
           </p>
 
@@ -273,16 +273,16 @@ export default function ContractSigningPage({ token }) {
               {signing && <Spinner />}
               {signing ? 'Signature en cours…' : 'Signer le contrat'}
             </Button>
-            <span className="text-[11px] text-[#A1A1AA]">Horodatage & IP enregistrés</span>
+            <span className="text-[11px] text-[#9B9B9B]">Horodatage & IP enregistrés</span>
           </div>
         </Card>
 
         {/* ── Footer ──────────────────────────────────── */}
-        <footer className="mt-8 pt-4 border-t border-[rgba(9,9,11,0.08)] flex items-center justify-between">
-          <p className="text-[11px] text-[#A1A1AA] font-medium uppercase tracking-wider">
+        <footer className="mt-8 pt-4 border-t border-[rgba(10,10,10,0.08)] flex items-center justify-between">
+          <p className="text-[11px] text-[#9B9B9B] font-medium uppercase tracking-wider">
             SwissLife Banque Privée · Paris
           </p>
-          <p className="text-[11px] text-[#A1A1AA] font-medium uppercase tracking-wider">
+          <p className="text-[11px] text-[#9B9B9B] font-medium uppercase tracking-wider">
             AMF · ACPR · MiCA Art. 60
           </p>
         </footer>

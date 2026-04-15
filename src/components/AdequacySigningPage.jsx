@@ -59,8 +59,8 @@ export default function AdequacySigningPage({ token }) {
   // ── Loading ───────────────────────────────────────────
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center">
-        <div className="flex items-center gap-2 text-[#71717A]">
+      <div className="min-h-screen bg-[#FBFAF7] flex items-center justify-center">
+        <div className="flex items-center gap-2 text-[#6B6B6B]">
           <Spinner />
           <span className="text-[13px]">Chargement…</span>
         </div>
@@ -71,16 +71,16 @@ export default function AdequacySigningPage({ token }) {
   // ── Error ─────────────────────────────────────────────
   if (error) {
     return (
-      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center px-6">
+      <div className="min-h-screen bg-[#FBFAF7] flex items-center justify-center px-6">
         <Card className="max-w-md w-full p-8 text-center">
           <div className="w-10 h-10 rounded-full bg-[#FEF2F2] flex items-center justify-center mx-auto mb-4">
             <svg className="w-5 h-5 text-[#B91C1C]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h1 className="text-[15px] font-semibold text-[#09090B]">Lien invalide</h1>
-          <p className="text-[13px] text-[#71717A] mt-2 leading-relaxed">{error}</p>
-          <p className="mt-6 pt-4 border-t border-[rgba(9,9,11,0.06)] text-[11px] text-[#A1A1AA] font-medium uppercase tracking-wider">
+          <h1 className="text-[15px] font-semibold text-[#0A0A0A]">Lien invalide</h1>
+          <p className="text-[13px] text-[#6B6B6B] mt-2 leading-relaxed">{error}</p>
+          <p className="mt-6 pt-4 border-t border-[rgba(10,10,10,0.06)] text-[11px] text-[#9B9B9B] font-medium uppercase tracking-wider">
             SwissLife Banque Privée
           </p>
         </Card>
@@ -91,24 +91,24 @@ export default function AdequacySigningPage({ token }) {
   // ── Success ───────────────────────────────────────────
   if (signed) {
     return (
-      <div className="min-h-screen bg-[#FAFAFA] flex items-center justify-center px-6">
+      <div className="min-h-screen bg-[#FBFAF7] flex items-center justify-center px-6">
         <Card className="max-w-lg w-full p-10 text-center animate-fade">
           <div className="w-12 h-12 rounded-full bg-[#ECFDF5] flex items-center justify-center mx-auto mb-5">
             <svg className="w-6 h-6 text-[#10B981]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="text-[22px] font-semibold text-[#09090B] tracking-tight">
+          <h1 className="text-[22px] font-semibold text-[#0A0A0A] tracking-tight">
             Merci, {data.client_name.split(' ')[0]}.
           </h1>
-          <p className="mt-2 text-[13px] text-[#71717A] leading-relaxed max-w-sm mx-auto">
+          <p className="mt-2 text-[13px] text-[#6B6B6B] leading-relaxed max-w-sm mx-auto">
             Votre questionnaire d'adéquation a été enregistré et versé à votre dossier.
           </p>
-          <div className="mt-8 pt-5 border-t border-[rgba(9,9,11,0.06)]">
-            <p className="text-[11px] text-[#A1A1AA] font-medium uppercase tracking-wider">
+          <div className="mt-8 pt-5 border-t border-[rgba(10,10,10,0.06)]">
+            <p className="text-[11px] text-[#9B9B9B] font-medium uppercase tracking-wider">
               SwissLife Banque Privée · Paris
             </p>
-            <p className="text-[11px] text-[#A1A1AA] mt-1">MiCA Art. 66 · Signature électronique</p>
+            <p className="text-[11px] text-[#9B9B9B] mt-1">MiCA Art. 66 · Signature électronique</p>
           </div>
         </Card>
       </div>
@@ -119,14 +119,14 @@ export default function AdequacySigningPage({ token }) {
   const answers = [assessment.q1, assessment.q2, assessment.q3, assessment.q4];
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] text-[#09090B]">
+    <div className="min-h-screen bg-[#FBFAF7] text-[#0A0A0A]">
       {/* ── Top nav ─────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-[rgba(9,9,11,0.08)]">
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-[rgba(10,10,10,0.08)]">
         <div className="max-w-[760px] mx-auto px-6 h-12 flex items-center gap-3">
-          <div className="w-6 h-6 bg-[#09090B] rounded-md flex items-center justify-center">
+          <div className="w-6 h-6 bg-[#0A0A0A] rounded-md flex items-center justify-center">
             <span className="text-white text-[10px] font-bold tracking-tight">SL</span>
           </div>
-          <span className="text-[13px] font-semibold text-[#09090B] tracking-tight">SwissLife Custody</span>
+          <span className="text-[13px] font-semibold text-[#0A0A0A] tracking-tight">SwissLife Custody</span>
           <Badge variant="info">MiCA Art. 66</Badge>
         </div>
       </header>
@@ -134,13 +134,13 @@ export default function AdequacySigningPage({ token }) {
       <div className="max-w-[760px] mx-auto px-6 py-8">
         {/* ── Header ─────────────────────────────────── */}
         <div className="mb-5">
-          <p className="text-[11px] font-medium text-[#71717A] uppercase tracking-wider mb-2">
+          <p className="text-[11px] font-medium text-[#6B6B6B] uppercase tracking-wider mb-2">
             Évaluation d'adéquation · {fmtDateFR()}
           </p>
-          <h1 className="text-[26px] font-semibold text-[#09090B] tracking-tight leading-tight">
+          <h1 className="text-[26px] font-semibold text-[#0A0A0A] tracking-tight leading-tight">
             Questionnaire d'adéquation
           </h1>
-          <p className="mt-3 text-[13px] text-[#71717A] leading-relaxed max-w-xl">
+          <p className="mt-3 text-[13px] text-[#6B6B6B] leading-relaxed max-w-xl">
             Votre banquier privé a préparé cette évaluation préalable aux services de conservation d'actifs numériques. Veuillez vérifier les réponses ci-dessous et apposer votre signature.
           </p>
         </div>
@@ -149,20 +149,20 @@ export default function AdequacySigningPage({ token }) {
         <Card className="p-5 mb-4">
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <p className="text-[11px] font-semibold text-[#71717A] uppercase tracking-wider mb-1">Client</p>
-              <p className="text-[14px] font-semibold text-[#09090B]">{data.client_name}</p>
+              <p className="text-[11px] font-semibold text-[#6B6B6B] uppercase tracking-wider mb-1">Client</p>
+              <p className="text-[14px] font-semibold text-[#0A0A0A]">{data.client_name}</p>
             </div>
             <div>
-              <p className="text-[11px] font-semibold text-[#71717A] uppercase tracking-wider mb-1">Date</p>
-              <p className="text-[14px] font-semibold text-[#09090B]">{fmtDateFR()}</p>
+              <p className="text-[11px] font-semibold text-[#6B6B6B] uppercase tracking-wider mb-1">Date</p>
+              <p className="text-[14px] font-semibold text-[#0A0A0A]">{fmtDateFR()}</p>
             </div>
           </div>
         </Card>
 
         {/* ── Questions card ─────────────────────────── */}
         <Card className="mb-4">
-          <div className="px-5 py-3 border-b border-[rgba(9,9,11,0.06)] bg-[#FAFAFA]">
-            <p className="text-[11px] font-semibold text-[#71717A] uppercase tracking-wider">
+          <div className="px-5 py-3 border-b border-[rgba(10,10,10,0.06)] bg-[#FBFAF7]">
+            <p className="text-[11px] font-semibold text-[#6B6B6B] uppercase tracking-wider">
               Évaluation — réponses préparées
             </p>
           </div>
@@ -173,13 +173,13 @@ export default function AdequacySigningPage({ token }) {
               return (
                 <li
                   key={i}
-                  className={`px-5 py-4 flex items-start justify-between gap-4 ${i < QUESTIONS.length - 1 ? 'border-b border-[rgba(9,9,11,0.06)]' : ''}`}
+                  className={`px-5 py-4 flex items-start justify-between gap-4 ${i < QUESTIONS.length - 1 ? 'border-b border-[rgba(10,10,10,0.06)]' : ''}`}
                 >
                   <div className="flex items-start gap-3 min-w-0 flex-1">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#F4F4F5] text-[11px] font-semibold text-[#52525B] flex items-center justify-center tabular-nums mt-0.5">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#F5F3EE] text-[11px] font-semibold text-[#4A4A4A] flex items-center justify-center tabular-nums mt-0.5">
                       {i + 1}
                     </span>
-                    <p className="text-[13px] text-[#09090B] leading-relaxed">{q}</p>
+                    <p className="text-[13px] text-[#0A0A0A] leading-relaxed">{q}</p>
                   </div>
                   <div className="flex-shrink-0">
                     <Badge variant={isOui ? 'success' : 'error'} dot>
@@ -191,11 +191,11 @@ export default function AdequacySigningPage({ token }) {
             })}
           </ul>
           {assessment.notes && (
-            <div className="px-5 py-4 border-t border-[rgba(9,9,11,0.06)] bg-[#FAFAFA]">
-              <p className="text-[11px] font-semibold text-[#71717A] uppercase tracking-wider mb-1.5">
+            <div className="px-5 py-4 border-t border-[rgba(10,10,10,0.06)] bg-[#FBFAF7]">
+              <p className="text-[11px] font-semibold text-[#6B6B6B] uppercase tracking-wider mb-1.5">
                 Notes du banquier
               </p>
-              <p className="text-[13px] text-[#52525B] leading-relaxed">« {assessment.notes} »</p>
+              <p className="text-[13px] text-[#4A4A4A] leading-relaxed">« {assessment.notes} »</p>
             </div>
           )}
         </Card>
@@ -203,10 +203,10 @@ export default function AdequacySigningPage({ token }) {
         {/* ── Signature card ──────────────────────────── */}
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-[15px] font-semibold text-[#09090B] tracking-tight">Signature électronique</h3>
+            <h3 className="text-[15px] font-semibold text-[#0A0A0A] tracking-tight">Signature électronique</h3>
             <Badge variant="default">Art. 1367 C. civ.</Badge>
           </div>
-          <p className="text-[12px] text-[#71717A] leading-relaxed max-w-xl">
+          <p className="text-[12px] text-[#6B6B6B] leading-relaxed max-w-xl">
             En signant, vous confirmez avoir pris connaissance des réponses ci-dessus. Cette signature électronique est enregistrée avec horodatage et adresse IP pour la conformité réglementaire.
           </p>
 
@@ -231,16 +231,16 @@ export default function AdequacySigningPage({ token }) {
               {signing && <Spinner />}
               {signing ? 'Signature en cours…' : 'Signer le questionnaire'}
             </Button>
-            <span className="text-[11px] text-[#A1A1AA]">Horodatage & IP enregistrés</span>
+            <span className="text-[11px] text-[#9B9B9B]">Horodatage & IP enregistrés</span>
           </div>
         </Card>
 
         {/* ── Footer ──────────────────────────────────── */}
-        <footer className="mt-8 pt-4 border-t border-[rgba(9,9,11,0.08)] flex items-center justify-between">
-          <p className="text-[11px] text-[#A1A1AA] font-medium uppercase tracking-wider">
+        <footer className="mt-8 pt-4 border-t border-[rgba(10,10,10,0.08)] flex items-center justify-between">
+          <p className="text-[11px] text-[#9B9B9B] font-medium uppercase tracking-wider">
             SwissLife Banque Privée · Paris
           </p>
-          <p className="text-[11px] text-[#A1A1AA] font-medium uppercase tracking-wider">
+          <p className="text-[11px] text-[#9B9B9B] font-medium uppercase tracking-wider">
             AMF · ACPR · MiCA Art. 60
           </p>
         </footer>
