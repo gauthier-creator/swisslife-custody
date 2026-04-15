@@ -432,7 +432,7 @@ export function ProductCarousel({ title, eyebrow, children, className = '' }) {
 
       <div
         ref={scrollerRef}
-        className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 -mx-10 px-10"
+        className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 pr-12 -mr-12"
         style={{ scrollbarWidth: 'none' }}
       >
         {children}
@@ -871,7 +871,7 @@ export function MandatCarousel({ title, eyebrow, children, trailing, className =
 
       <div
         ref={scrollerRef}
-        className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 -mx-10 px-10"
+        className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 pr-12 -mr-12"
         style={{ scrollbarWidth: 'none' }}
       >
         {children}

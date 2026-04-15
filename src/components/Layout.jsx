@@ -65,12 +65,15 @@ const NAV_ITEMS = [
 ];
 
 /* ── NavButton — refined sidebar item with active bronze ruler ── */
-function NavButton({ item, active, onClick }) {
+function NavButton({ item, active, onClick, collapsed }) {
   const { Icon, label, shortcut, id } = item;
   return (
     <button
       onClick={onClick}
-      className={`group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-[13.5px] font-medium tracking-[-0.006em] transition-all duration-200 ${
+      title={collapsed ? label : undefined}
+      className={`group relative w-full flex items-center gap-3 rounded-[10px] text-[13.5px] font-medium tracking-[-0.006em] transition-all duration-200 ${
+        collapsed ? 'justify-center h-11 px-0' : 'px-3 py-2.5'
+      } ${
         active
           ? 'bg-[#F5EEE0] text-[#0A0A0A]'
           : 'text-[#6B6B6B] hover:text-[#0A0A0A] hover:bg-[#FAFAF8]'
@@ -86,34 +89,61 @@ function NavButton({ item, active, onClick }) {
         }`}
       />
       <Icon className="w-[18px] h-[18px] flex-shrink-0" />
-      <span className="flex-1 text-left">{label}</span>
-      {id === 'compliance' && (
-        <span className="inline-flex items-center gap-1 text-[9.5px] font-semibold uppercase tracking-[0.08em] px-1.5 py-0.5 rounded-[5px] bg-[#FBF6EC] text-[#7C5E3C] border border-[rgba(124,94,60,0.2)]">
-          <span className="relative flex w-[5px] h-[5px]">
-            <span className="absolute inset-0 rounded-full bg-[#C8924B] opacity-60 animate-ping" />
-            <span className="relative inline-flex w-[5px] h-[5px] rounded-full bg-[#C8924B]" />
-          </span>
-          Live
-        </span>
+      {!collapsed && (
+        <>
+          <span className="flex-1 text-left truncate">{label}</span>
+          {id === 'compliance' && (
+            <span className="inline-flex items-center gap-1 text-[9.5px] font-semibold uppercase tracking-[0.08em] px-1.5 py-0.5 rounded-[5px] bg-[#FBF6EC] text-[#7C5E3C] border border-[rgba(124,94,60,0.2)]">
+              <span className="relative flex w-[5px] h-[5px]">
+                <span className="absolute inset-0 rounded-full bg-[#C8924B] opacity-60 animate-ping" />
+                <span className="relative inline-flex w-[5px] h-[5px] rounded-full bg-[#C8924B]" />
+              </span>
+              Live
+            </span>
+          )}
+          {shortcut && id !== 'compliance' && (
+            <span
+              className={`text-[10px] font-mono tabular-nums transition-opacity ${
+                active ? 'text-[#7C5E3C] opacity-70' : 'text-[#BFBFBF] opacity-0 group-hover:opacity-100'
+              }`}
+            >
+              {shortcut}
+            </span>
+          )}
+        </>
       )}
-      {shortcut && id !== 'compliance' && (
-        <span
-          className={`text-[10px] font-mono tabular-nums transition-opacity ${
-            active ? 'text-[#7C5E3C] opacity-70' : 'text-[#BFBFBF] opacity-0 group-hover:opacity-100'
-          }`}
-        >
-          {shortcut}
-        </span>
+      {/* Compliance "live" dot indicator in collapsed mode */}
+      {collapsed && id === 'compliance' && (
+        <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-[#C8924B] shadow-[0_0_0_2px_#FFFFFF]" />
       )}
     </button>
   );
 }
 
+/* ── IconChevron — sidebar collapse toggle arrow ── */
+const IconChevron = (props) => (
+  <svg {...props} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+  </svg>
+);
+
 export default function Layout({ children, section, onNavigate }) {
   const { signOut, profile, isAdmin } = useAuth();
   const [paletteOpen, setPaletteOpen] = useState(false);
 
-  // ⌘K / Ctrl+K — open palette  ·  G + 1..5 — jump between sections
+  // Sidebar collapse state — persisted in localStorage
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('sl-sidebar-collapsed') === '1';
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('sl-sidebar-collapsed', collapsed ? '1' : '0');
+    } catch {}
+  }, [collapsed]);
+  const toggleSidebar = () => setCollapsed(c => !c);
+
+  // ⌘K / Ctrl+K — open palette  ·  G + 1..5 — jump between sections  ·  ⌘\ — toggle sidebar
   useEffect(() => {
     let gPressed = false;
     let gTimer = null;
@@ -124,6 +154,11 @@ export default function Layout({ children, section, onNavigate }) {
       if (mod && (e.key === 'k' || e.key === 'K')) {
         e.preventDefault();
         setPaletteOpen(o => !o);
+        return;
+      }
+      if (mod && e.key === '\\') {
+        e.preventDefault();
+        setCollapsed(c => !c);
         return;
       }
       // Skip number shortcuts while typing in inputs
@@ -157,9 +192,13 @@ export default function Layout({ children, section, onNavigate }) {
   return (
     <div className="min-h-screen bg-white text-[#0A0A0A] flex">
       {/* ── Sidebar ─────────────────────────────────────── */}
-      <aside className="w-[260px] flex-shrink-0 border-r border-[rgba(10,10,10,0.08)] bg-white flex flex-col h-screen sticky top-0">
+      <aside
+        className={`flex-shrink-0 border-r border-[rgba(10,10,10,0.08)] bg-white flex flex-col h-screen sticky top-0 transition-[width] duration-[280ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
+          collapsed ? 'w-[76px]' : 'w-[260px]'
+        }`}
+      >
         {/* Brand */}
-        <div className="px-6 h-[72px] flex items-center gap-3 border-b border-[rgba(10,10,10,0.04)]">
+        <div className={`h-[72px] flex items-center border-b border-[rgba(10,10,10,0.04)] ${collapsed ? 'justify-center' : 'px-6 gap-3'}`}>
           <button
             onClick={() => onNavigate('clients')}
             className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
@@ -168,25 +207,32 @@ export default function Layout({ children, section, onNavigate }) {
             <span className="w-8 h-8 rounded-[9px] bg-[#0A0A0A] text-white flex items-center justify-center shadow-[0_1px_0_rgba(255,255,255,0.14)_inset,0_1px_2px_rgba(10,10,10,0.2),0_4px_10px_-4px_rgba(10,10,10,0.3)]">
               <span className="font-display text-[14px] leading-none" style={{ letterSpacing: '-0.04em' }}>Sℓ</span>
             </span>
-            <span className="font-display text-[19px] text-[#0A0A0A] leading-none" style={{ letterSpacing: '-0.02em' }}>
-              swisslife
-            </span>
+            {!collapsed && (
+              <span className="font-display text-[19px] text-[#0A0A0A] leading-none" style={{ letterSpacing: '-0.02em' }}>
+                swisslife
+              </span>
+            )}
           </button>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto px-4 py-5">
+        <nav className={`flex-1 overflow-y-auto overflow-x-hidden py-5 ${collapsed ? 'px-3' : 'px-4'}`}>
           {/* Section label · Produit */}
-          <p className="px-3 mb-2.5 text-[9.5px] font-medium uppercase tracking-[0.16em] text-[#7C5E3C] flex items-center gap-2">
-            <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
-            Produit
-          </p>
+          {!collapsed ? (
+            <p className="px-3 mb-2.5 text-[9.5px] font-medium uppercase tracking-[0.16em] text-[#7C5E3C] flex items-center gap-2">
+              <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
+              Produit
+            </p>
+          ) : (
+            <div className="h-px mx-2 mb-3 bg-[rgba(124,94,60,0.18)]" />
+          )}
           <div className="space-y-0.5">
             {navItems.map((item) => (
               <NavButton
                 key={item.id}
                 item={item}
                 active={section === item.id}
+                collapsed={collapsed}
                 onClick={() => onNavigate(item.id)}
               />
             ))}
@@ -196,16 +242,19 @@ export default function Layout({ children, section, onNavigate }) {
             <>
               {/* Hairline separator */}
               <div className="mx-3 my-5 h-px bg-gradient-to-r from-transparent via-[rgba(124,94,60,0.18)] to-transparent" />
-              <p className="px-3 mb-2.5 text-[9.5px] font-medium uppercase tracking-[0.16em] text-[#7C5E3C] flex items-center gap-2">
-                <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
-                Administration
-              </p>
+              {!collapsed && (
+                <p className="px-3 mb-2.5 text-[9.5px] font-medium uppercase tracking-[0.16em] text-[#7C5E3C] flex items-center gap-2">
+                  <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
+                  Administration
+                </p>
+              )}
               <div className="space-y-0.5">
                 {adminItems.map((item) => (
                   <NavButton
                     key={item.id}
                     item={item}
                     active={section === item.id}
+                    collapsed={collapsed}
                     onClick={() => onNavigate(item.id)}
                   />
                 ))}
@@ -215,39 +264,72 @@ export default function Layout({ children, section, onNavigate }) {
         </nav>
 
         {/* Command palette trigger */}
-        <div className="px-4 pb-3">
+        <div className={`pb-3 ${collapsed ? 'px-3' : 'px-4'}`}>
           <button
             onClick={() => setPaletteOpen(true)}
-            className="w-full inline-flex items-center gap-2.5 h-10 px-3 rounded-[10px] border border-[rgba(10,10,10,0.08)] bg-white text-[#6B6B6B] hover:text-[#0A0A0A] hover:border-[rgba(10,10,10,0.18)] transition-colors"
+            title={collapsed ? 'Rechercher  ⌘K' : undefined}
+            className={`w-full inline-flex items-center rounded-[10px] border border-[rgba(10,10,10,0.08)] bg-white text-[#6B6B6B] hover:text-[#0A0A0A] hover:border-[rgba(10,10,10,0.18)] transition-colors ${
+              collapsed ? 'justify-center h-11' : 'gap-2.5 h-10 px-3'
+            }`}
           >
             <IconSearch className="w-[15px] h-[15px]" />
-            <span className="flex-1 text-left text-[12.5px] font-medium tracking-[-0.006em]">Rechercher</span>
-            <span className="flex items-center gap-0.5"><Kbd>⌘</Kbd><Kbd>K</Kbd></span>
+            {!collapsed && (
+              <>
+                <span className="flex-1 text-left text-[12.5px] font-medium tracking-[-0.006em]">Rechercher</span>
+                <span className="flex items-center gap-0.5"><Kbd>⌘</Kbd><Kbd>K</Kbd></span>
+              </>
+            )}
           </button>
         </div>
 
         {/* Account pill */}
-        <div className="px-4 pb-5 pt-2 border-t border-[rgba(10,10,10,0.04)]">
-          <div className="flex items-center gap-3 px-2 py-2 rounded-[10px] hover:bg-[#FAFAF8] transition-colors">
-            <Avatar name={displayName} size={34} />
-            <div className="flex-1 min-w-0 leading-tight">
-              <p className="text-[12.5px] font-semibold text-[#0A0A0A] tracking-[-0.006em] truncate">
-                {displayName}
-              </p>
-              <p className="text-[10.5px] text-[#9B9B9B] font-medium uppercase tracking-[0.06em] mt-0.5">
-                {roleLabel}
-              </p>
+        <div className={`pb-5 pt-2 border-t border-[rgba(10,10,10,0.04)] ${collapsed ? 'px-3' : 'px-4'}`}>
+          {collapsed ? (
+            <div className="flex flex-col items-center gap-2">
+              <div title={displayName}>
+                <Avatar name={displayName} size={34} />
+              </div>
+              <button
+                onClick={signOut}
+                className="w-9 h-9 flex items-center justify-center rounded-[8px] text-[#9B9B9B] hover:text-[#0A0A0A] hover:bg-[#FAFAF8] transition-colors"
+                aria-label="Déconnexion"
+                title="Déconnexion"
+              >
+                <IconLogout className="w-4 h-4" />
+              </button>
             </div>
-            <button
-              onClick={signOut}
-              className="w-8 h-8 flex items-center justify-center rounded-[8px] text-[#9B9B9B] hover:text-[#0A0A0A] hover:bg-white transition-colors"
-              aria-label="Déconnexion"
-              title="Déconnexion"
-            >
-              <IconLogout className="w-4 h-4" />
-            </button>
-          </div>
+          ) : (
+            <div className="flex items-center gap-3 px-2 py-2 rounded-[10px] hover:bg-[#FAFAF8] transition-colors">
+              <Avatar name={displayName} size={34} />
+              <div className="flex-1 min-w-0 leading-tight">
+                <p className="text-[12.5px] font-semibold text-[#0A0A0A] tracking-[-0.006em] truncate">
+                  {displayName}
+                </p>
+                <p className="text-[10.5px] text-[#9B9B9B] font-medium uppercase tracking-[0.06em] mt-0.5">
+                  {roleLabel}
+                </p>
+              </div>
+              <button
+                onClick={signOut}
+                className="w-8 h-8 flex items-center justify-center rounded-[8px] text-[#9B9B9B] hover:text-[#0A0A0A] hover:bg-white transition-colors"
+                aria-label="Déconnexion"
+                title="Déconnexion"
+              >
+                <IconLogout className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
+
+        {/* Collapse toggle — floats on the right border edge */}
+        <button
+          onClick={toggleSidebar}
+          aria-label={collapsed ? 'Déployer le menu' : 'Réduire le menu'}
+          title={collapsed ? 'Déployer (⌘\\)' : 'Réduire (⌘\\)'}
+          className="absolute top-[54px] -right-3 z-10 w-6 h-6 flex items-center justify-center rounded-full bg-white border border-[rgba(10,10,10,0.12)] text-[#6B6B6B] hover:text-[#0A0A0A] hover:border-[rgba(124,94,60,0.32)] hover:bg-[#FBF6EC] shadow-[0_1px_2px_rgba(10,10,10,0.05),0_4px_10px_-4px_rgba(10,10,10,0.15)] transition-all duration-200"
+        >
+          <IconChevron className={`w-3 h-3 transition-transform duration-300 ${collapsed ? 'rotate-180' : ''}`} />
+        </button>
       </aside>
 
       <CommandPalette
@@ -260,7 +342,7 @@ export default function Layout({ children, section, onNavigate }) {
       {/* ── Main ─────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Utility bar (top-right icon card buttons) */}
-        <header className="h-[72px] flex items-center justify-end gap-2.5 px-10 border-b border-[rgba(10,10,10,0.04)]">
+        <header className="h-[72px] flex items-center justify-end gap-2.5 px-12 lg:px-14 border-b border-[rgba(10,10,10,0.04)]">
           <IconButton ariaLabel="Support" size="md">
             <IconChat className="w-[17px] h-[17px]" />
           </IconButton>
@@ -272,7 +354,7 @@ export default function Layout({ children, section, onNavigate }) {
           </IconButton>
         </header>
 
-        <main className="flex-1 px-10 py-10 animate-fade">
+        <main className="flex-1 px-12 lg:px-14 py-10 animate-fade">
           <div className="max-w-[1240px] mx-auto">
             {children}
           </div>
