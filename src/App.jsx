@@ -43,10 +43,13 @@ function AppInner() {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FAFAF9] flex items-center justify-center">
-        <div className="text-center">
-          <Spinner size="w-8 h-8" />
-          <p className="text-[13px] text-[#787881] mt-3">Chargement...</p>
+      <div className="min-h-screen bg-paper flex items-center justify-center">
+        <div className="text-center animate-fade">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white border border-[rgba(10,10,10,0.08)] shadow-crisp mb-4">
+            <Spinner size="w-5 h-5" />
+          </div>
+          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#9B9B9B]">Chargement</p>
+          <p className="text-[13px] text-[#6B6B6B] mt-1 tracking-[-0.006em]">Initialisation de la session…</p>
         </div>
       </div>
     );
@@ -65,10 +68,13 @@ function AppInner() {
   // Waiting for profile to load
   if (!profile) {
     return (
-      <div className="min-h-screen bg-[#FAFAF9] flex items-center justify-center">
-        <div className="text-center">
-          <Spinner size="w-8 h-8" />
-          <p className="text-[13px] text-[#787881] mt-3">Chargement du profil...</p>
+      <div className="min-h-screen bg-paper flex items-center justify-center">
+        <div className="text-center animate-fade">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white border border-[rgba(10,10,10,0.08)] shadow-crisp mb-4">
+            <Spinner size="w-5 h-5" />
+          </div>
+          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#9B9B9B]">Profil</p>
+          <p className="text-[13px] text-[#6B6B6B] mt-1 tracking-[-0.006em]">Chargement des habilitations…</p>
         </div>
       </div>
     );

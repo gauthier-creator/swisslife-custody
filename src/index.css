@@ -173,6 +173,165 @@ input:focus, select:focus, textarea:focus { outline: none; }
 }
 
 /* ═════════════════════════════════════════════════════
+   SIGNATURE DETAILS — the small refined touches
+   ═════════════════════════════════════════════════════ */
+
+/* Layered elevation — subtle + distant. The "expensive" card shadow. */
+.shadow-crisp {
+  box-shadow:
+    0 1px 2px rgba(10, 10, 10, 0.04),
+    0 1px 1px rgba(10, 10, 10, 0.02);
+}
+.shadow-lift {
+  box-shadow:
+    0 1px 2px rgba(10, 10, 10, 0.04),
+    0 8px 24px -12px rgba(10, 10, 10, 0.1),
+    0 2px 6px -2px rgba(10, 10, 10, 0.04);
+}
+.shadow-press {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 2px rgba(10, 10, 10, 0.05),
+    0 20px 40px -20px rgba(10, 10, 10, 0.18);
+}
+.shadow-plate {
+  box-shadow:
+    0 0 0 1px rgba(10, 10, 10, 0.06),
+    0 12px 32px -16px rgba(10, 10, 10, 0.12);
+}
+
+/* Signature bronze glow — under premium CTAs */
+.shadow-bronze {
+  box-shadow:
+    0 1px 2px rgba(124, 94, 60, 0.18),
+    0 12px 28px -14px rgba(124, 94, 60, 0.28);
+}
+
+/* Subtle dotted grid — for configuration / system pages */
+.bg-dotgrid {
+  background-image: radial-gradient(rgba(10, 10, 10, 0.08) 1px, transparent 1px);
+  background-size: 18px 18px;
+  background-position: 0 0;
+}
+
+/* Hairline checker for decorative strips */
+.bg-hairline-weave {
+  background-image:
+    linear-gradient(to right, rgba(10, 10, 10, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(10, 10, 10, 0.05) 1px, transparent 1px);
+  background-size: 14px 14px;
+}
+
+/* Grain — the touch that reads "crafted" */
+.bg-grain {
+  position: relative;
+}
+.bg-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.92' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.045 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  border-radius: inherit;
+}
+
+/* Pulsing status dot */
+@keyframes pulseDot {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.35); }
+  50%      { box-shadow: 0 0 0 6px rgba(22, 163, 74, 0); }
+}
+.status-pulse {
+  animation: pulseDot 2.4s ease-out infinite;
+}
+@keyframes pulseDotBronze {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(124, 94, 60, 0.3); }
+  50%      { box-shadow: 0 0 0 6px rgba(124, 94, 60, 0); }
+}
+.status-pulse-bronze {
+  animation: pulseDotBronze 2.4s ease-out infinite;
+}
+
+/* Bronze accent top rule — sits on top of premium cards */
+.accent-rule-top {
+  position: relative;
+}
+.accent-rule-top::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48px;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: linear-gradient(90deg, transparent, #7C5E3C, transparent);
+}
+
+/* Bronze vertical accent ruler (Patek-style stripe) */
+.accent-ruler-left {
+  position: relative;
+}
+.accent-ruler-left::before {
+  content: "";
+  position: absolute;
+  top: 14%;
+  bottom: 14%;
+  left: 0;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, transparent, #7C5E3C 50%, transparent);
+}
+
+/* Watermark monogram (decorative serif corner) */
+.watermark-sl {
+  position: relative;
+  overflow: hidden;
+}
+.watermark-sl::after {
+  content: "Sℓ";
+  position: absolute;
+  right: -8px;
+  bottom: -30px;
+  font-family: "Fraunces", ui-serif, Georgia, serif;
+  font-size: 120px;
+  line-height: 1;
+  font-weight: 500;
+  letter-spacing: -0.05em;
+  color: rgba(10, 10, 10, 0.025);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Command-K pill */
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-family: "SF Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: #4A4A4A;
+  background: #FFFFFF;
+  border: 1px solid rgba(10, 10, 10, 0.12);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  letter-spacing: 0.02em;
+}
+
+/* Subtle inset highlight (used on premium white cards) */
+.inset-highlight {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    inset 0 0 0 1px rgba(10, 10, 10, 0.04),
+    0 1px 2px rgba(10, 10, 10, 0.03);
+}
+
+/* ═════════════════════════════════════════════════════
    MOTION — refined, fast, functional
    ═════════════════════════════════════════════════════ */
 @keyframes fadeIn {

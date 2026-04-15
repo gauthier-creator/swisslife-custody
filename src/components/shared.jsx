@@ -407,15 +407,20 @@ export function Modal({ isOpen, onClose, title, subtitle, children, maxWidth = '
 }
 
 // ─── Empty state ──────────────────────────────────────
-export function EmptyState({ title, description, action, icon }) {
+// Accepts either an illustration name (rendered via <Illustration />) or a custom icon
+export function EmptyState({ title, description, action, icon, illustration }) {
   return (
-    <div className="text-center py-16 px-6">
-      {icon && (
+    <div className="text-center py-20 px-6">
+      {illustration ? (
+        <div className="mx-auto w-[88px] h-[88px] flex items-center justify-center">
+          <Illustration name={illustration} size={88} />
+        </div>
+      ) : icon ? (
         <div className="w-14 h-14 mx-auto rounded-full bg-[#F5F3EE] border border-[rgba(10,10,10,0.06)] flex items-center justify-center text-[#4A4A4A]">
           {icon}
         </div>
-      )}
-      <p className="text-[16px] font-medium text-[#0A0A0A] tracking-[-0.015em] mt-5">{title}</p>
+      ) : null}
+      <p className="text-[16px] font-medium text-[#0A0A0A] tracking-[-0.015em] mt-6">{title}</p>
       {description && (
         <p className="text-[13.5px] text-[#6B6B6B] mt-2 max-w-sm mx-auto leading-relaxed tracking-[-0.003em]">{description}</p>
       )}
@@ -463,6 +468,222 @@ export function ActionButton({ icon, label, onClick }) {
 // ─── Divider ──────────────────────────────────────────
 export function Divider({ className = '' }) {
   return <div className={`h-px bg-[rgba(10,10,10,0.08)] ${className}`} />;
+}
+
+// ─── PageHeader ───────────────────────────────────────
+// Editorial header — eyebrow + display title + description + trailing action
+// Used at the top of every page for consistency
+export function PageHeader({ eyebrow, title, accent, description, trailing, className = '' }) {
+  return (
+    <header className={`flex items-end justify-between gap-8 flex-wrap animate-slide-up ${className}`}>
+      <div className="max-w-2xl min-w-0">
+        {eyebrow && <p className="text-eyebrow">{eyebrow}</p>}
+        <h1 className="display-lg text-[#0A0A0A] mt-3">
+          {title}
+          {accent && (
+            <> <span className="font-display italic text-[#7C5E3C]">{accent}</span></>
+          )}
+        </h1>
+        {description && (
+          <p className="text-[15px] text-[#4A4A4A] mt-4 leading-relaxed max-w-xl tracking-[-0.006em]">
+            {description}
+          </p>
+        )}
+      </div>
+      {trailing && (
+        <div className="flex-shrink-0 animate-slide-up stagger-1">{trailing}</div>
+      )}
+    </header>
+  );
+}
+
+// ─── StatusDot ────────────────────────────────────────
+// Tiny pulsing indicator — "live sync", "connected"
+export function StatusDot({ tone = 'success', label, className = '' }) {
+  const tones = {
+    success: { color: '#16A34A', pulse: 'status-pulse', text: '#166534' },
+    bronze:  { color: '#7C5E3C', pulse: 'status-pulse-bronze', text: '#7C5E3C' },
+    warning: { color: '#CA8A04', pulse: '', text: '#92400E' },
+    error:   { color: '#DC2626', pulse: '', text: '#991B1B' },
+    neutral: { color: '#9B9B9B', pulse: '', text: '#6B6B6B' },
+  };
+  const t = tones[tone] || tones.success;
+  return (
+    <span className={`inline-flex items-center gap-2 ${className}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${t.pulse}`} style={{ background: t.color }} />
+      {label && (
+        <span className="text-[11px] font-medium tracking-[0.04em] uppercase" style={{ color: t.text }}>
+          {label}
+        </span>
+      )}
+    </span>
+  );
+}
+
+// ─── UnderlineTabs ────────────────────────────────────
+// Editorial underline tab navigation — matches the Layout pattern
+export function UnderlineTabs({ tabs, active, onChange, className = '' }) {
+  return (
+    <div className={`border-b border-[rgba(10,10,10,0.08)] ${className}`}>
+      <div className="flex items-center gap-0.5 overflow-x-auto">
+        {tabs.map(t => {
+          const isActive = active === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => onChange(t.id)}
+              className={`relative h-11 px-4 text-[13px] font-medium whitespace-nowrap transition-colors tracking-[-0.01em] ${
+                isActive ? 'text-[#0A0A0A]' : 'text-[#6B6B6B] hover:text-[#0A0A0A]'
+              }`}
+            >
+              <span className="inline-flex items-center gap-2">
+                {t.label}
+                {t.count != null && (
+                  <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10.5px] font-medium tabular-nums ${
+                    isActive
+                      ? 'bg-[#0A0A0A] text-white'
+                      : 'bg-[#F5F3EE] text-[#6B6B6B]'
+                  }`}>
+                    {t.count}
+                  </span>
+                )}
+              </span>
+              {isActive && (
+                <span className="absolute left-4 right-4 -bottom-px h-[2px] bg-[#0A0A0A] rounded-t-full" />
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Table (editorial, hairline) ──────────────────────
+export function Table({ headers, children, className = '' }) {
+  return (
+    <div className={`overflow-x-auto ${className}`}>
+      <table className="w-full text-sm text-left border-collapse">
+        <thead>
+          <tr className="border-b border-[rgba(10,10,10,0.08)]">
+            {headers.map((h, i) => {
+              const label = typeof h === 'string' ? h : h.label;
+              const right = typeof h === 'object' && h.right;
+              return (
+                <th
+                  key={i}
+                  className={`px-6 py-3.5 text-[10.5px] font-medium text-[#9B9B9B] tracking-[0.06em] uppercase ${right ? 'text-right' : ''}`}
+                >
+                  {label}
+                </th>
+              );
+            })}
+          </tr>
+        </thead>
+        <tbody>{children}</tbody>
+      </table>
+    </div>
+  );
+}
+export const tdCls = 'px-6 py-4 text-[13.5px] text-[#0A0A0A] tracking-[-0.006em]';
+export const tdMuted = 'px-6 py-4 text-[12.5px] text-[#6B6B6B] tracking-[-0.003em]';
+export const trCls = 'border-b border-[rgba(10,10,10,0.06)] hover:bg-[#FBFAF7] transition-colors';
+
+// ─── Illustrations — monochrome, editorial ───────────
+// Small refined SVGs for empty states & headers
+export function Illustration({ name, size = 88 }) {
+  const common = { width: size, height: size, viewBox: '0 0 88 88', fill: 'none', xmlns: 'http://www.w3.org/2000/svg' };
+  const ink = '#0A0A0A';
+  const bronze = '#7C5E3C';
+  const paper = '#F5F3EE';
+
+  switch (name) {
+    case 'vault':
+      return (
+        <svg {...common}>
+          <circle cx="44" cy="44" r="36" fill={paper} stroke="rgba(10,10,10,0.08)" />
+          <circle cx="44" cy="44" r="26" fill="#FFFFFF" stroke="rgba(10,10,10,0.12)" />
+          <circle cx="44" cy="44" r="18" fill="none" stroke={bronze} strokeWidth="1.2" strokeDasharray="2 3" />
+          <circle cx="44" cy="44" r="4" fill={ink} />
+          <line x1="44" y1="22" x2="44" y2="16" stroke={ink} strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="44" y1="66" x2="44" y2="72" stroke={ink} strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="22" y1="44" x2="16" y2="44" stroke={ink} strokeWidth="1.5" strokeLinecap="round" />
+          <line x1="66" y1="44" x2="72" y2="44" stroke={ink} strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      );
+    case 'wallet':
+      return (
+        <svg {...common}>
+          <rect x="14" y="22" width="60" height="44" rx="8" fill={paper} stroke="rgba(10,10,10,0.1)" />
+          <rect x="14" y="22" width="60" height="10" rx="8" fill="#FFFFFF" stroke="rgba(10,10,10,0.08)" />
+          <circle cx="58" cy="48" r="5" fill={bronze} />
+          <circle cx="58" cy="48" r="2" fill="#FFFFFF" />
+          <line x1="22" y1="42" x2="44" y2="42" stroke={ink} strokeWidth="1.2" strokeLinecap="round" opacity="0.35" />
+          <line x1="22" y1="48" x2="38" y2="48" stroke={ink} strokeWidth="1.2" strokeLinecap="round" opacity="0.25" />
+        </svg>
+      );
+    case 'shield':
+      return (
+        <svg {...common}>
+          <path d="M44 14 L68 22 L68 46 C68 58 58 68 44 74 C30 68 20 58 20 46 L20 22 Z" fill={paper} stroke="rgba(10,10,10,0.12)" />
+          <path d="M44 22 L60 28 L60 46 C60 55 52 63 44 66 C36 63 28 55 28 46 L28 28 Z" fill="#FFFFFF" stroke="rgba(10,10,10,0.08)" />
+          <path d="M36 44 L42 50 L54 38" stroke={bronze} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        </svg>
+      );
+    case 'ledger':
+      return (
+        <svg {...common}>
+          <rect x="16" y="16" width="56" height="56" rx="6" fill={paper} stroke="rgba(10,10,10,0.1)" />
+          <rect x="22" y="22" width="44" height="44" rx="3" fill="#FFFFFF" stroke="rgba(10,10,10,0.08)" />
+          <line x1="28" y1="32" x2="60" y2="32" stroke={ink} strokeWidth="1.2" strokeLinecap="round" opacity="0.5" />
+          <line x1="28" y1="40" x2="54" y2="40" stroke={ink} strokeWidth="1.2" strokeLinecap="round" opacity="0.3" />
+          <line x1="28" y1="48" x2="58" y2="48" stroke={ink} strokeWidth="1.2" strokeLinecap="round" opacity="0.3" />
+          <line x1="28" y1="56" x2="44" y2="56" stroke={ink} strokeWidth="1.2" strokeLinecap="round" opacity="0.2" />
+          <circle cx="58" cy="56" r="3" fill={bronze} />
+        </svg>
+      );
+    case 'empty':
+    default:
+      return (
+        <svg {...common}>
+          <circle cx="44" cy="44" r="32" fill={paper} stroke="rgba(10,10,10,0.08)" />
+          <circle cx="44" cy="44" r="22" fill="#FFFFFF" stroke="rgba(10,10,10,0.06)" />
+          <line x1="36" y1="44" x2="52" y2="44" stroke={ink} strokeWidth="1.5" strokeLinecap="round" opacity="0.35" />
+        </svg>
+      );
+  }
+}
+
+// ─── SectionCard ──────────────────────────────────────
+// Card with refined header — title + caption + optional action + slot content
+export function SectionCard({ title, caption, action, children, className = '', bodyClassName = '', noBodyPadding = false }) {
+  return (
+    <Card className={className}>
+      {(title || caption || action) && (
+        <div className="px-7 py-5 border-b border-[rgba(10,10,10,0.06)] flex items-center justify-between gap-4 flex-wrap">
+          <div className="min-w-0">
+            {title && <h3 className="text-[15px] font-medium text-[#0A0A0A] tracking-[-0.015em]">{title}</h3>}
+            {caption && <p className="text-[12.5px] text-[#6B6B6B] mt-0.5 tracking-[-0.003em]">{caption}</p>}
+          </div>
+          {action && <div className="flex-shrink-0">{action}</div>}
+        </div>
+      )}
+      <div className={`${noBodyPadding ? '' : 'px-7 py-6'} ${bodyClassName}`}>
+        {children}
+      </div>
+    </Card>
+  );
+}
+
+// ─── FooterDisclosure ─────────────────────────────────
+// Editorial footer with regulatory disclosures — reused across pages
+export function FooterDisclosure({ left = "SwissLife Banque Privée · Paris", right = "AMF · ACPR · Tracfin · MiCA Art. 60" }) {
+  return (
+    <footer className="pt-8 mt-14 border-t border-[rgba(10,10,10,0.06)] flex items-center justify-between text-[11px] text-[#9B9B9B] tracking-[0.02em] uppercase font-medium flex-wrap gap-4">
+      <span>{left}</span>
+      <span>{right}</span>
+    </footer>
+  );
 }
 
 // ─── Logo ─────────────────────────────────────────────

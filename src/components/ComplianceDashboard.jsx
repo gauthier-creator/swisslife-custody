@@ -1,6 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Badge, Modal, Spinner, EmptyState, useToast, ToastContainer, inputCls, selectCls, labelCls } from './shared';
+import {
+  Badge, Modal, Spinner, EmptyState, useToast, ToastContainer,
+  inputCls, selectCls, labelCls,
+  PageHeader, Metric, MetricRow, UnderlineTabs, Card, Button,
+  StatusDot, FooterDisclosure,
+} from './shared';
 import {
   fetchApprovals, approveTransfer, rejectTransfer, executeTransfer,
   fetchAlerts, fetchAlertStats, acknowledgeAlert, resolveAlert,
@@ -70,23 +75,26 @@ const priorityBadge = (p) => {
   return <Badge variant={map[p] || 'default'}>{p || '—'}</Badge>;
 };
 
-// ── Stat Card ────────────────────────────────────────────────────────
-function StatCard({ label, value, color, icon }) {
-  const colors = {
-    orange: 'bg-[#FFFBEB] text-[#D97706]',
-    red: 'bg-[#FEF2F2] text-[#DC2626]',
-    blue: 'bg-[#EEF2FF] text-[#6366F1]',
-    green: 'bg-[#ECFDF5] text-[#059669]',
+// ── Stat Card — refined Metric tile ────────────────────────────────
+function StatCard({ label, value, tone = 'default', hint }) {
+  const tones = {
+    orange: { dot: '#CA8A04', text: '#92400E' },
+    red:    { dot: '#DC2626', text: '#991B1B' },
+    blue:   { dot: '#0A0A0A', text: '#0A0A0A' },
+    green:  { dot: '#16A34A', text: '#166534' },
+    default:{ dot: '#9B9B9B', text: '#6B6B6B' },
   };
+  const t = tones[tone] || tones.default;
   return (
-    <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-5 flex items-center gap-4">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-[18px] ${colors[color] || colors.blue}`}>
-        {icon}
+    <div className="bg-white border border-[rgba(10,10,10,0.08)] rounded-[14px] p-5 shadow-crisp relative overflow-hidden">
+      <div className="flex items-center gap-2">
+        <span className="w-1.5 h-1.5 rounded-full" style={{ background: t.dot }} />
+        <span className="text-[10.5px] font-medium uppercase tracking-[0.06em]" style={{ color: t.text }}>{label}</span>
       </div>
-      <div>
-        <p className="text-[24px] font-semibold text-[#0F0F10] tabular-nums leading-none">{value ?? '—'}</p>
-        <p className="text-[12px] text-[#787881] mt-1">{label}</p>
-      </div>
+      <p className="mt-3 text-[30px] font-medium text-[#0A0A0A] tabular-nums leading-[1.05] tracking-[-0.03em]">
+        {value ?? '—'}
+      </p>
+      {hint && <p className="text-[11.5px] text-[#9B9B9B] mt-1 tracking-[-0.003em]">{hint}</p>}
     </div>
   );
 }
@@ -352,37 +360,42 @@ export default function ComplianceDashboard() {
     } catch (err) { toast(err.message, 'error'); }
   };
 
-  // ── Table wrapper ────────────────────────────────────────────────
+  // ── Table wrapper — hairline editorial style ───────────────────
   const Table = ({ headers, children }) => (
-    <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl overflow-hidden">
-      <table className="w-full text-sm text-left">
-        <thead>
-          <tr className="border-b border-[rgba(0,0,29,0.06)] bg-[rgba(0,0,23,0.02)]">
-            {headers.map((h, i) => (
-              <th key={i} className={`px-5 py-3 text-[12px] text-[#A8A29E] font-medium ${h.right ? 'text-right' : ''}`}>
-                {h.label || h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>{children}</tbody>
-      </table>
-    </div>
+    <Card className="overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm text-left border-collapse">
+          <thead>
+            <tr className="border-b border-[rgba(10,10,10,0.08)]">
+              {headers.map((h, i) => (
+                <th
+                  key={i}
+                  className={`px-6 py-3.5 text-[10.5px] text-[#9B9B9B] font-medium tracking-[0.06em] uppercase ${h.right ? 'text-right' : ''}`}
+                >
+                  {h.label || h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>{children}</tbody>
+        </table>
+      </div>
+    </Card>
   );
 
-  const tdCls = 'px-5 py-3.5 text-[13px] text-[#0F0F10]';
-  const tdMuted = 'px-5 py-3.5 text-[12px] text-[#787881]';
-  const rowCls = 'border-b border-[rgba(0,0,29,0.04)] hover:bg-[rgba(0,0,23,0.02)] transition-colors';
+  const tdCls = 'px-6 py-4 text-[13.5px] text-[#0A0A0A] tracking-[-0.006em]';
+  const tdMuted = 'px-6 py-4 text-[12.5px] text-[#6B6B6B] tracking-[-0.003em]';
+  const rowCls = 'border-b border-[rgba(10,10,10,0.06)] last:border-0 hover:bg-[#FBFAF7] transition-colors';
 
   const actionBtn = (label, onClick, variant = 'default') => {
     const styles = {
-      default: 'text-[#787881] hover:text-[#0F0F10] hover:bg-[rgba(0,0,23,0.04)]',
-      success: 'text-[#059669] hover:bg-[#ECFDF5]',
-      error: 'text-[#DC2626] hover:bg-[#FEF2F2]',
-      info: 'text-[#6366F1] hover:bg-[#EEF2FF]',
+      default: 'text-[#6B6B6B] hover:text-[#0A0A0A] hover:bg-[#F5F3EE]',
+      success: 'text-[#0A0A0A] hover:bg-[#F5F3EE] border border-transparent hover:border-[rgba(10,10,10,0.1)]',
+      error: 'text-[#991B1B] hover:bg-white hover:border-[rgba(220,38,38,0.25)] border border-transparent',
+      info: 'text-[#0A0A0A] hover:bg-[#F5F3EE] border border-transparent hover:border-[rgba(10,10,10,0.1)]',
     };
     return (
-      <button onClick={onClick} className={`px-2.5 py-1 rounded-lg text-[12px] font-medium transition-all ${styles[variant]}`}>
+      <button onClick={onClick} className={`px-3 py-1 rounded-full text-[12px] font-medium transition-all tracking-[-0.01em] ${styles[variant]}`}>
         {label}
       </button>
     );
@@ -390,36 +403,37 @@ export default function ComplianceDashboard() {
 
   // ── Render ───────────────────────────────────────────────────────
   return (
-    <div className="page-slide-in">
-      {/* Header */}
-      <div className="mb-6">
-        <h2 className="text-[22px] font-semibold text-[#0F0F10] tracking-tight">Compliance</h2>
-        <p className="text-[13px] text-[#787881] mt-0.5">Supervision des transferts, alertes et journal d'audit</p>
+    <div className="space-y-10">
+      {/* ── Editorial header ─────────────────────────── */}
+      <PageHeader
+        eyebrow="Supervision · Compliance Cloud"
+        title="Compliance"
+        accent="cockpit"
+        description="Supervision temps-réel des approbations à quatre yeux, alertes AML, journal d'audit horodaté et déclarations Tracfin. Chaque action est cryptographiquement signée et auditable."
+        trailing={<StatusDot tone="success" label="Flux temps-réel" />}
+      />
+
+      {/* ── Stat tiles ───────────────────────────────── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-5 animate-slide-up stagger-2">
+        <StatCard label="Approbations" value={stats.pendingApprovals} tone="orange" hint="En attente · quatre yeux" />
+        <StatCard label="Alertes" value={stats.openAlerts} tone="red" hint="Ouvertes · AML screening" />
+        <StatCard label="Clients" value={stats.activeClients} tone="blue" hint="Actifs sous mandat" />
+        <StatCard label="Wallets" value={stats.totalWallets} tone="green" hint="Provisionnés DFNS" />
       </div>
 
-      {/* Stats row */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <StatCard label="Approbations en attente" value={stats.pendingApprovals} color="orange" icon="!" />
-        <StatCard label="Alertes ouvertes" value={stats.openAlerts} color="red" icon="!" />
-        <StatCard label="Clients actifs" value={stats.activeClients} color="blue" icon="U" />
-        <StatCard label="Wallets totaux" value={stats.totalWallets} color="green" icon="W" />
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-[rgba(0,0,23,0.03)] rounded-xl p-1 w-fit">
-        {TABS.map(t => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-all ${
-              tab === t.id
-                ? 'bg-white text-[#0F0F10] shadow-sm'
-                : 'text-[#787881] hover:text-[#0F0F10]'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
+      {/* ── Tabs ─────────────────────────────────────── */}
+      <div className="animate-slide-up stagger-3">
+        <UnderlineTabs
+          tabs={TABS.map(t => ({
+            ...t,
+            count: t.id === 'approvals' ? stats.pendingApprovals || undefined
+                 : t.id === 'alerts' ? stats.openAlerts || undefined
+                 : undefined,
+          }))}
+          active={tab}
+          onChange={setTab}
+          className="mb-8"
+        />
       </div>
 
       {/* Loading */}
@@ -462,7 +476,7 @@ export default function ComplianceDashboard() {
                   </td>
                   <td className={tdMuted}>
                     {a.risk_score != null ? (
-                      <span className={`font-medium ${a.risk_score >= 70 ? 'text-[#DC2626]' : a.risk_score >= 40 ? 'text-[#D97706]' : 'text-[#059669]'}`}>
+                      <span className={`font-medium ${a.risk_score >= 70 ? 'text-[#991B1B]' : a.risk_score >= 40 ? 'text-[#92400E]' : 'text-[#166534]'}`}>
                         {a.risk_score}
                       </span>
                     ) : '—'}
@@ -577,12 +591,12 @@ export default function ComplianceDashboard() {
                       {e.details ? (
                         <button
                           onClick={() => setExpandedAudit(expandedAudit === e.id ? null : e.id)}
-                          className="text-[12px] text-[#6366F1] hover:underline"
+                          className="text-[12px] text-[#0A0A0A] hover:underline"
                         >
                           {expandedAudit === e.id ? 'Masquer' : 'Voir'}
                         </button>
                       ) : (
-                        <span className="text-[12px] text-[#A8A29E]">—</span>
+                        <span className="text-[12px] text-[#9B9B9B]">—</span>
                       )}
                     </td>
                     <td className="px-5 py-3.5">{severityBadge(e.severity)}</td>
@@ -595,8 +609,8 @@ export default function ComplianceDashboard() {
                 const entry = auditEntries.find(e => e.id === expandedAudit);
                 if (!entry?.details) return null;
                 return (
-                  <div className="mt-2 bg-[rgba(0,0,23,0.02)] border border-[rgba(0,0,29,0.06)] rounded-xl p-4">
-                    <pre className="text-[12px] text-[#0F0F10] whitespace-pre-wrap font-mono leading-relaxed">
+                  <div className="mt-2 bg-[rgba(10,10,10,0.02)] border border-[rgba(10,10,10,0.06)] rounded-xl p-4">
+                    <pre className="text-[12px] text-[#0A0A0A] whitespace-pre-wrap font-mono leading-relaxed">
                       {typeof entry.details === 'string' ? entry.details : JSON.stringify(entry.details, null, 2)}
                     </pre>
                   </div>
@@ -606,21 +620,21 @@ export default function ComplianceDashboard() {
               {/* Pagination */}
               {auditTotal > AUDIT_LIMIT && (
                 <div className="flex items-center justify-between mt-4">
-                  <p className="text-[12px] text-[#787881]">
+                  <p className="text-[12px] text-[#6B6B6B]">
                     {auditOffset + 1}–{Math.min(auditOffset + AUDIT_LIMIT, auditTotal)} sur {auditTotal}
                   </p>
                   <div className="flex gap-2">
                     <button
                       disabled={auditOffset === 0}
                       onClick={() => setAuditOffset(Math.max(0, auditOffset - AUDIT_LIMIT))}
-                      className="px-3 py-1.5 text-[12px] font-medium rounded-lg border border-[rgba(0,0,29,0.1)] text-[#787881] hover:text-[#0F0F10] disabled:opacity-40 transition-all"
+                      className="px-3 py-1.5 text-[12px] font-medium rounded-lg border border-[rgba(10,10,10,0.1)] text-[#6B6B6B] hover:text-[#0A0A0A] disabled:opacity-40 transition-all"
                     >
                       Precedent
                     </button>
                     <button
                       disabled={auditOffset + AUDIT_LIMIT >= auditTotal}
                       onClick={() => setAuditOffset(auditOffset + AUDIT_LIMIT)}
-                      className="px-3 py-1.5 text-[12px] font-medium rounded-lg border border-[rgba(0,0,29,0.1)] text-[#787881] hover:text-[#0F0F10] disabled:opacity-40 transition-all"
+                      className="px-3 py-1.5 text-[12px] font-medium rounded-lg border border-[rgba(10,10,10,0.1)] text-[#6B6B6B] hover:text-[#0A0A0A] disabled:opacity-40 transition-all"
                     >
                       Suivant
                     </button>
@@ -671,10 +685,10 @@ export default function ComplianceDashboard() {
         <>
           {/* Stats bar */}
           <div className="grid grid-cols-4 gap-4 mb-5">
-            <StatCard label="Brouillons" value={sarStats.draft || 0} color="blue" icon="D" />
-            <StatCard label="Soumises" value={sarStats.submitted || 0} color="orange" icon="S" />
-            <StatCard label="En revue" value={(sarStats.under_review || 0)} color="red" icon="R" />
-            <StatCard label="Deposees MROS" value={sarStats.filed_with_mros || 0} color="green" icon="M" />
+            <StatCard label="Brouillons" value={sarStats.draft || 0} tone="blue" hint="À compléter" />
+            <StatCard label="Soumises" value={sarStats.submitted || 0} tone="orange" hint="File d'attente" />
+            <StatCard label="En revue" value={sarStats.under_review || 0} tone="red" hint="Analyse RCSI" />
+            <StatCard label="Déposées" value={sarStats.filed_with_mros || 0} tone="green" hint="Tracfin / MROS" />
           </div>
 
           <div className="flex items-center justify-between mb-4">
@@ -694,17 +708,19 @@ export default function ComplianceDashboard() {
               </select>
             </div>
             {isAdmin && (
-              <button
-                onClick={() => setSarCreateModal(true)}
-                className="px-4 py-2 text-[13px] font-medium text-white bg-[#6366F1] hover:bg-[#4F46E5] rounded-xl transition-colors"
-              >
-                Nouvelle declaration
-              </button>
+              <Button variant="primary" onClick={() => setSarCreateModal(true)}>
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                Nouvelle déclaration
+              </Button>
             )}
           </div>
 
           {sars.length === 0 ? (
-            <EmptyState title="Aucune declaration" description="Aucun rapport d'activite suspecte" />
+            <Card>
+              <EmptyState illustration="ledger" title="Aucune déclaration" description="Aucun rapport d'activité suspecte à déclarer à Tracfin pour le moment." />
+            </Card>
           ) : (
             <Table headers={['Reference', 'Client', 'Type', 'Suspicion', 'Priorite', 'Statut', 'Date', 'Actions']}>
               {sars.map(s => (
@@ -847,20 +863,15 @@ export default function ComplianceDashboard() {
               placeholder="Decrivez l'activite suspecte..."
             />
           </div>
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={() => setSarCreateModal(false)}
-              className="px-4 py-2 text-[13px] font-medium text-[#787881] hover:text-[#0F0F10] rounded-xl transition-colors"
-            >
-              Annuler
-            </button>
-            <button
+          <div className="flex justify-end gap-2 pt-5 border-t border-[rgba(10,10,10,0.06)]">
+            <Button variant="ghost" onClick={() => setSarCreateModal(false)}>Annuler</Button>
+            <Button
+              variant="primary"
               onClick={handleCreateSAR}
               disabled={!sarForm.description.trim() || !sarForm.salesforceAccountId.trim()}
-              className="px-4 py-2 text-[13px] font-medium text-white bg-[#6366F1] hover:bg-[#4F46E5] rounded-xl transition-colors disabled:opacity-40"
             >
-              Creer la declaration
-            </button>
+              Créer la déclaration
+            </Button>
           </div>
         </div>
       </Modal>
@@ -880,15 +891,15 @@ export default function ComplianceDashboard() {
                   onClick={() => setSarFilingAuthority(opt.value)}
                   className={`flex-1 flex items-center gap-2 p-3 rounded-xl border cursor-pointer transition-all text-[13px] ${
                     sarFilingAuthority === opt.value
-                      ? 'border-[#6366F1] bg-[#EEF2FF] font-medium'
-                      : 'border-[rgba(0,0,29,0.08)]'
+                      ? 'border-[#0A0A0A] bg-[#F5F3EE] font-medium'
+                      : 'border-[rgba(10,10,10,0.08)]'
                   }`}
                 >
                   <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                    sarFilingAuthority === opt.value ? 'border-[#6366F1]' : 'border-[#A8A29E]'
+                    sarFilingAuthority === opt.value ? 'border-[#0A0A0A]' : 'border-[#9B9B9B]'
                   }`}>
                     {sarFilingAuthority === opt.value && (
-                      <div className="w-2 h-2 rounded-full bg-[#6366F1]" />
+                      <div className="w-2 h-2 rounded-full bg-[#0A0A0A]" />
                     )}
                   </div>
                   {opt.label}
@@ -905,19 +916,11 @@ export default function ComplianceDashboard() {
               placeholder={sarFilingAuthority === 'mros' ? 'Reference MROS...' : 'Reference Tracfin...'}
             />
           </div>
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={() => setSarFileModal(null)}
-              className="px-4 py-2 text-[13px] font-medium text-[#787881] hover:text-[#0F0F10] rounded-xl transition-colors"
-            >
-              Annuler
-            </button>
-            <button
-              onClick={handleFileSAR}
-              className="px-4 py-2 text-[13px] font-medium text-white bg-[#DC2626] hover:bg-[#B91C1C] rounded-xl transition-colors"
-            >
-              Confirmer le depot {sarFilingAuthority === 'mros' ? 'MROS' : 'Tracfin'}
-            </button>
+          <div className="flex justify-end gap-2 pt-5 border-t border-[rgba(10,10,10,0.06)]">
+            <Button variant="ghost" onClick={() => setSarFileModal(null)}>Annuler</Button>
+            <Button variant="primary" onClick={handleFileSAR}>
+              Confirmer le dépôt {sarFilingAuthority === 'mros' ? 'MROS' : 'Tracfin'}
+            </Button>
           </div>
         </div>
       </Modal>
@@ -947,19 +950,9 @@ export default function ComplianceDashboard() {
               placeholder="Raison de la cloture..."
             />
           </div>
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={() => setSarCloseModal(null)}
-              className="px-4 py-2 text-[13px] font-medium text-[#787881] hover:text-[#0F0F10] rounded-xl transition-colors"
-            >
-              Annuler
-            </button>
-            <button
-              onClick={handleCloseSAR}
-              className="px-4 py-2 text-[13px] font-medium text-white bg-[#059669] hover:bg-[#047857] rounded-xl transition-colors"
-            >
-              Confirmer la cloture
-            </button>
+          <div className="flex justify-end gap-2 pt-5 border-t border-[rgba(10,10,10,0.06)]">
+            <Button variant="ghost" onClick={() => setSarCloseModal(null)}>Annuler</Button>
+            <Button variant="primary" onClick={handleCloseSAR}>Confirmer la clôture</Button>
           </div>
         </div>
       </Modal>
@@ -977,20 +970,11 @@ export default function ComplianceDashboard() {
               placeholder="Indiquez la raison du rejet..."
             />
           </div>
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={() => setRejectModal(null)}
-              className="px-4 py-2 text-[13px] font-medium text-[#787881] hover:text-[#0F0F10] rounded-xl transition-colors"
-            >
-              Annuler
-            </button>
-            <button
-              onClick={handleReject}
-              disabled={!rejectReason.trim()}
-              className="px-4 py-2 text-[13px] font-medium text-white bg-[#DC2626] hover:bg-[#B91C1C] rounded-xl transition-colors disabled:opacity-40"
-            >
+          <div className="flex justify-end gap-2 pt-5 border-t border-[rgba(10,10,10,0.06)]">
+            <Button variant="ghost" onClick={() => setRejectModal(null)}>Annuler</Button>
+            <Button variant="primary" onClick={handleReject} disabled={!rejectReason.trim()}>
               Confirmer le rejet
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>
@@ -1008,23 +992,14 @@ export default function ComplianceDashboard() {
               placeholder="Decrivez les actions entreprises..."
             />
           </div>
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={() => setResolveModal(null)}
-              className="px-4 py-2 text-[13px] font-medium text-[#787881] hover:text-[#0F0F10] rounded-xl transition-colors"
-            >
-              Annuler
-            </button>
-            <button
-              onClick={handleResolve}
-              className="px-4 py-2 text-[13px] font-medium text-white bg-[#059669] hover:bg-[#047857] rounded-xl transition-colors"
-            >
-              Confirmer
-            </button>
+          <div className="flex justify-end gap-2 pt-5 border-t border-[rgba(10,10,10,0.06)]">
+            <Button variant="ghost" onClick={() => setResolveModal(null)}>Annuler</Button>
+            <Button variant="primary" onClick={handleResolve}>Confirmer</Button>
           </div>
         </div>
       </Modal>
 
+      <FooterDisclosure right="Tracfin · AMF · ACPR · MiCA Art. 66" />
       <ToastContainer toasts={toasts} />
     </div>
   );
