@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Badge, Card, Modal, Spinner, Button, textareaCls, labelCls } from './shared';
 import { getSalesforceStatus } from '../services/salesforceApi';
-import { runSanctionsScreening } from '../services/dfnsApi';
+import { runAmlScreening } from '../services/kycService';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE } from '../config/constants';
 import { supabase } from '../lib/supabase';
@@ -103,18 +103,18 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
     });
   };
 
-  // Run DFNS sanctions / PEP / adverse-media screening
+  // Run ComplyCube AML screening (sanctions · PEP · adverse media)
   const runScreening = async () => {
     setScreening(true);
     setScreeningError(null);
     setScreeningResult(null);
     try {
-      const result = await runSanctionsScreening({
+      const check = await runAmlScreening({
         salesforceAccountId: client.id,
         clientName: client.name,
         initiatedByEmail: currentEmail,
       });
-      setScreeningResult(result);
+      setScreeningResult(check);
       // Salesforce is patched server-side — refresh the parent so badges update
       if (onUpdate) await onUpdate();
     } catch (err) {
@@ -193,8 +193,8 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
     {
       key: 'sanctions',
       idx: 2,
-      title: 'Screening sanctions',
-      caption: 'Listes OFAC, EU, ONU · PEP · adverse media — automatisé via DFNS Risk Engine',
+      title: 'Screening AML',
+      caption: 'Listes OFAC, EU, ONU, UK HMT · PEP · adverse media — via ComplyCube',
       done: client.Custody_Sanctions_Clear__c === true,
       action: (
         <div className="flex items-center gap-2 flex-wrap justify-end">
@@ -202,13 +202,13 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
             variant={
               screening ? 'warning' :
               client.Custody_Sanctions_Clear__c ? 'success' :
-              screeningResult && !screeningResult.clear ? 'error' : 'default'
+              screeningResult && screeningResult.status === 'failed' ? 'error' : 'default'
             }
             dot
           >
             {screening ? 'Analyse…' :
               client.Custody_Sanctions_Clear__c ? 'Clear' :
-              screeningResult && !screeningResult.clear ? 'Alerte' : 'Non vérifié'}
+              screeningResult && screeningResult.status === 'failed' ? 'Alerte' : 'Non vérifié'}
           </Badge>
           {isAdmin && (
             <Button
@@ -224,7 +224,7 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
         </div>
       ),
       meta: (screeningResult || screeningError) && (
-        <ScreeningReport result={screeningResult} error={screeningError} />
+        <ScreeningReport check={screeningResult} error={screeningError} />
       ),
     },
     {
@@ -513,20 +513,33 @@ function SigningLinkCard({ title, caption, link, copied, onCopy }) {
   );
 }
 
-/* ─── Sub · DFNS screening report ─── */
-function ScreeningReport({ result, error }) {
+/* ─── Sub · ComplyCube AML screening report ─── */
+function ScreeningReport({ check, error }) {
   if (error) {
     return (
       <div className="px-4 py-3 bg-white border border-[rgba(220,38,38,0.2)] rounded-[10px]">
         <p className="text-[12px] text-[#991B1B] tracking-[-0.003em]">
-          <span className="font-medium">Erreur DFNS · </span>{error}
+          <span className="font-medium">Erreur ComplyCube · </span>{error}
         </p>
       </div>
     );
   }
-  if (!result) return null;
+  if (!check) return null;
 
-  const clear = result.clear;
+  const clear = check.status === 'complete';
+  const screening = check.result?.screening || {};
+  const sanctions = screening.sanctions || { matches: 0, lists: [] };
+  const pep = screening.pep || { matches: 0 };
+  const adverseMedia = screening.adverse_media || { matches: 0 };
+
+  const categories = [
+    { key: 'sanctions', label: 'Sanctions', n: sanctions.matches || 0, detail: sanctions.lists?.join(' · ') || 'OFAC · EU · UN · UK HMT' },
+    { key: 'pep',       label: 'PEP',       n: pep.matches || 0,       detail: 'Personne politiquement exposée' },
+    { key: 'media',     label: 'Adverse media', n: adverseMedia.matches || 0, detail: 'Presse · base Dow Jones' },
+  ];
+
+  const providerLabel = check.provider === 'demo' ? 'ComplyCube · mode sandbox' : 'ComplyCube · Screening API';
+
   return (
     <div
       className={`rounded-[12px] border overflow-hidden ${
@@ -552,58 +565,55 @@ function ScreeningReport({ result, error }) {
             )}
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#9B9B9B]">DFNS Risk Engine · rapport</p>
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#9B9B9B]">{providerLabel}</p>
             <p className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em] mt-0.5">
-              {clear ? 'Aucune correspondance · dossier blanchi' : `${result.matches.length} correspondance${result.matches.length > 1 ? 's' : ''} détectée${result.matches.length > 1 ? 's' : ''}`}
+              {clear
+                ? 'Aucune correspondance · dossier blanchi'
+                : `${(sanctions.matches || 0) + (pep.matches || 0) + (adverseMedia.matches || 0)} correspondance(s) détectée(s)`}
             </p>
           </div>
         </div>
         <span className="text-[10.5px] font-medium uppercase tracking-[0.08em] text-[#9B9B9B] tabular-nums whitespace-nowrap hidden sm:block">
-          {new Date(result.screenedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+          {check.created_at && new Date(check.created_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
         </span>
       </div>
 
-      <div className="px-5 py-4 space-y-3">
+      <div className="px-5 py-4 space-y-4">
         <div>
-          <p className="text-[10.5px] font-medium uppercase tracking-[0.08em] text-[#9B9B9B] mb-2">Listes consultées</p>
-          <div className="flex flex-wrap gap-1.5">
-            {(result.listsConsulted || []).map(l => (
-              <span
-                key={l}
-                className="inline-flex items-center gap-1.5 px-2.5 h-6 rounded-full bg-[#FBFAF7] border border-[rgba(10,10,10,0.06)] text-[11px] font-medium text-[#4A4A4A] tracking-[-0.003em]"
+          <p className="text-[10.5px] font-medium uppercase tracking-[0.08em] text-[#9B9B9B] mb-2.5">Décomposition du screening</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {categories.map(c => (
+              <div
+                key={c.key}
+                className={`px-3.5 py-3 rounded-[10px] border ${
+                  c.n > 0
+                    ? 'bg-[rgba(220,38,38,0.04)] border-[rgba(220,38,38,0.15)]'
+                    : 'bg-[#FBFAF7] border-[rgba(10,10,10,0.06)]'
+                }`}
               >
-                <span className="w-1 h-1 rounded-full bg-[#7C5E3C]" />
-                {l}
-              </span>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#6B6B6B]">{c.label}</p>
+                  <span className={`text-[13px] font-medium tabular-nums ${c.n > 0 ? 'text-[#991B1B]' : 'text-[#0A0A0A]'}`}>
+                    {c.n}
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#9B9B9B] tracking-[-0.003em] mt-1 leading-snug">{c.detail}</p>
+              </div>
             ))}
           </div>
         </div>
 
-        {!clear && result.matches?.length > 0 && (
-          <div>
-            <p className="text-[10.5px] font-medium uppercase tracking-[0.08em] text-[#991B1B] mb-2">Alertes Tracfin</p>
-            <ul className="space-y-1.5">
-              {result.matches.map((m, i) => (
-                <li
-                  key={i}
-                  className="flex items-center justify-between gap-4 px-3 py-2 rounded-[8px] bg-[rgba(220,38,38,0.04)] border border-[rgba(220,38,38,0.15)]"
-                >
-                  <div className="min-w-0">
-                    <p className="text-[12.5px] font-medium text-[#0A0A0A] tracking-[-0.003em] truncate">{m.list}</p>
-                    <p className="text-[11px] text-[#6B6B6B] tracking-[-0.003em] mt-0.5">
-                      terme déclencheur : <span className="font-mono text-[#991B1B]">{m.matchedTerm}</span>
-                    </p>
-                  </div>
-                  <span className="text-[11px] font-medium tabular-nums text-[#991B1B] whitespace-nowrap">
-                    score {(m.score * 100).toFixed(0)}%
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <p className="text-[11px] text-[#6B6B6B] leading-relaxed mt-3 tracking-[-0.003em]">
-              Une alerte de conformité a été créée dans le dashboard Tracfin. Revue manuelle requise avant ouverture du dossier.
-            </p>
+        {check.complycube_check_id && (
+          <div className="flex items-center justify-between pt-3 border-t border-[rgba(10,10,10,0.06)]">
+            <span className="text-[10.5px] font-medium uppercase tracking-[0.08em] text-[#9B9B9B]">Référence ComplyCube</span>
+            <span className="text-[11px] font-mono text-[#4A4A4A] truncate ml-4">{check.complycube_check_id}</span>
           </div>
+        )}
+
+        {!clear && (
+          <p className="text-[11px] text-[#6B6B6B] leading-relaxed tracking-[-0.003em] pt-1">
+            Une alerte de conformité a été créée dans le dashboard Tracfin. Revue manuelle requise avant ouverture du dossier.
+          </p>
         )}
       </div>
     </div>

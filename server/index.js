@@ -1240,106 +1240,6 @@ app.get('/api/dfns/test', async (req, res) => {
 });
 
 // ============================================================
-// DFNS — Sanctions / PEP / adverse-media screening
-// DFNS orchestrates the screening; in demo mode we match against
-// a small curated list of OFAC/EU/UN/PEP samples. In production,
-// DFNS routes the call to its integrated risk engine (Chainalysis
-// / WorldCheck) and returns the same shape back.
-// ============================================================
-function runSanctionsCheck(name) {
-  const n = (name || '').toLowerCase().trim();
-  const patterns = [
-    { match: ['ofac', 'sdn', 'reject'], list: 'OFAC SDN (US Treasury)',          score: 0.98 },
-    { match: ['eu blacklist', 'sanction'], list: 'EU Consolidated Sanctions',    score: 0.95 },
-    { match: ['un list'],                 list: 'UN Security Council',           score: 0.93 },
-    { match: ['pep'],                     list: 'PEP — WorldCheck',              score: 0.91 },
-    { match: ['adverse', 'money laundering'], list: 'Adverse Media',             score: 0.82 },
-  ];
-  const matches = [];
-  for (const p of patterns) {
-    const hit = p.match.find(m => n.includes(m));
-    if (hit) matches.push({ list: p.list, score: p.score, matchedTerm: hit });
-  }
-  return {
-    clear: matches.length === 0,
-    matches,
-    provider: 'DFNS Risk Engine',
-    screenedAt: new Date().toISOString(),
-    listsConsulted: [
-      'OFAC SDN (US Treasury)',
-      'EU Consolidated Sanctions',
-      'UN Security Council',
-      'PEP — WorldCheck',
-      'Adverse Media — Dow Jones',
-    ],
-  };
-}
-
-app.post('/api/dfns/sanctions-screen', requireAdmin, async (req, res) => {
-  try {
-    const { salesforceAccountId, clientName, initiatedByEmail } = req.body || {};
-    if (!salesforceAccountId || !clientName) {
-      return res.status(400).json({ error: 'salesforceAccountId and clientName are required' });
-    }
-
-    // Simulate a small latency so the UI animation feels real
-    await new Promise(r => setTimeout(r, 900));
-
-    const result = runSanctionsCheck(clientName);
-
-    // Update the Salesforce flag so the rest of the dossier reflects it
-    if (SF_CONFIGURED) {
-      try {
-        const { accessToken, instanceUrl } = await getSalesforceToken();
-        const patchRes = await fetch(`${instanceUrl}/services/data/v59.0/sobjects/Account/${salesforceAccountId}`, {
-          method: 'PATCH',
-          headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ Custody_Sanctions_Clear__c: result.clear }),
-        });
-        if (!patchRes.ok && patchRes.status !== 204) {
-          console.error('[Sanctions] Salesforce patch status', patchRes.status);
-        }
-      } catch (sfErr) {
-        console.error('[Sanctions] Salesforce patch failed:', sfErr.message);
-      }
-    }
-
-    // Audit trail — Tracfin / ACPR
-    await logAudit({
-      userEmail: initiatedByEmail || req.user?.email,
-      action: 'compliance.sanctions_screening',
-      category: 'compliance',
-      entityType: 'sanctions_screening',
-      entityId: salesforceAccountId,
-      clientName,
-      salesforceAccountId,
-      details: { provider: 'DFNS', clear: result.clear, matches: result.matches },
-      severity: result.clear ? 'info' : 'critical',
-      req,
-    });
-
-    // On hit, raise an alert for the compliance team
-    if (!result.clear) {
-      const { error: alertErr } = await supabaseAdmin.from('compliance_alerts').insert({
-        type: 'sanctions_match',
-        severity: 'critical',
-        salesforce_account_id: salesforceAccountId,
-        client_name: clientName,
-        message: `Screening DFNS — ${clientName} : ${result.matches.length} correspondance(s) détectée(s). Revue Tracfin requise avant ouverture du dossier.`,
-        details: result,
-        status: 'open',
-      });
-      if (alertErr) console.error('[Sanctions] compliance_alerts insert error:', alertErr.message);
-    }
-
-    res.json(result);
-  } catch (err) {
-    console.error('Sanctions screening error:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ============================================================
 // COMPLIANCE — Audit, Approvals, Whitelist, Risk
 // ============================================================
 
@@ -2427,6 +2327,10 @@ app.post('/api/kyc/aml-screen', async (req, res) => {
       return res.status(400).json({ error: 'salesforceAccountId is required' });
     }
 
+    // Small simulated latency so the UI animation feels real (also matches
+    // live-mode round-trip latency to ComplyCube closely enough for demos).
+    await new Promise(r => setTimeout(r, 900));
+
     let screenResult;
 
     if (KYC_DEMO_MODE) {
@@ -2440,6 +2344,9 @@ app.post('/api/kyc/aml-screen', async (req, res) => {
       };
     } else {
       // ── LIVE ComplyCube screening ──
+      // Reuse an existing ComplyCube client if one was created by an earlier
+      // document upload; otherwise provision a fresh one so the screening can
+      // run even before any document is uploaded (standalone AML flow).
       const { data: existingChecks } = await supabaseAdmin
         .from('kyc_checks')
         .select('complycube_client_id')
@@ -2447,9 +2354,18 @@ app.post('/api/kyc/aml-screen', async (req, res) => {
         .not('complycube_client_id', 'is', null)
         .limit(1);
 
-      const complyCubeClientId = existingChecks?.[0]?.complycube_client_id;
+      let complyCubeClientId = existingChecks?.[0]?.complycube_client_id;
+
       if (!complyCubeClientId) {
-        return res.status(400).json({ error: 'No ComplyCube client found. Upload documents first.' });
+        const ccClient = await complyCubeRequest('POST', '/clients', {
+          type: 'person',
+          email: initiatedByEmail || `${salesforceAccountId}@custody.swisslife.com`,
+          personDetails: {
+            firstName: (clientName || '').split(' ')[0] || 'Client',
+            lastName: (clientName || '').split(' ').slice(1).join(' ') || salesforceAccountId,
+          },
+        });
+        complyCubeClientId = ccClient.id;
       }
 
       const check = await complyCubeRequest('POST', '/checks', {
@@ -2511,6 +2427,24 @@ app.post('/api/kyc/aml-screen', async (req, res) => {
         status: 'open',
       });
       if (alertErr) console.error('[KYC] compliance_alerts insert error:', alertErr.message);
+    }
+
+    // Patch Salesforce so Custody_Sanctions_Clear__c reflects the outcome
+    // (the Éligibilité dossier reads this flag to decide progress).
+    if (SF_CONFIGURED) {
+      try {
+        const { accessToken, instanceUrl } = await getSalesforceToken();
+        const sfRes = await fetch(`${instanceUrl}/services/data/v59.0/sobjects/Account/${salesforceAccountId}`, {
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ Custody_Sanctions_Clear__c: screenResult.status === 'complete' }),
+        });
+        if (!sfRes.ok && sfRes.status !== 204) {
+          console.error('[KYC] Salesforce patch status', sfRes.status);
+        }
+      } catch (sfErr) {
+        console.error('[KYC] Salesforce sanctions flag patch failed:', sfErr.message);
+      }
     }
 
     res.json(kycCheck);
