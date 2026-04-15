@@ -163,7 +163,7 @@ export default function KYCReviewDashboard() {
                           <button
                             onClick={() => handleRescreening(client.salesforceAccountId)}
                             disabled={rescreeningId === client.salesforceAccountId}
-                            className="px-2.5 py-1 bg-[#EEF2FF] text-[#6366F1] text-[11px] font-medium rounded-md hover:bg-[#E0E7FF] transition-colors disabled:opacity-40"
+                            className="px-2.5 py-1 bg-[#FBF6EC] text-[#7C5E3C] text-[11px] font-medium rounded-md hover:bg-[#F5EEE0] transition-colors disabled:opacity-40"
                           >
                             {rescreeningId === client.salesforceAccountId ? '...' : 'Re-screening'}
                           </button>

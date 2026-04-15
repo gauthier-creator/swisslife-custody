@@ -242,7 +242,7 @@ export default function WhitelistPanel({ client }) {
             <button
               onClick={handleAdd}
               disabled={saving || !form.address.trim() || !form.label.trim()}
-              className="flex-1 py-2.5 bg-[#6366F1] text-white text-[14px] font-medium rounded-xl hover:bg-[#5558E6] transition-colors disabled:opacity-40"
+              className="flex-1 py-2.5 bg-[#7C5E3C] text-white text-[14px] font-medium rounded-xl hover:bg-[#6A4F30] transition-colors disabled:opacity-40"
             >
               {saving ? 'Ajout...' : 'Ajouter'}
             </button>

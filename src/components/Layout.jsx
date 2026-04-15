@@ -88,7 +88,11 @@ function NavButton({ item, active, onClick }) {
       <Icon className="w-[18px] h-[18px] flex-shrink-0" />
       <span className="flex-1 text-left">{label}</span>
       {id === 'compliance' && (
-        <span className="text-[9.5px] font-semibold uppercase tracking-[0.08em] px-1.5 py-0.5 rounded-[5px] bg-[#EFEAFE] text-[#5B4FD1]">
+        <span className="inline-flex items-center gap-1 text-[9.5px] font-semibold uppercase tracking-[0.08em] px-1.5 py-0.5 rounded-[5px] bg-[#FBF6EC] text-[#7C5E3C] border border-[rgba(124,94,60,0.2)]">
+          <span className="relative flex w-[5px] h-[5px]">
+            <span className="absolute inset-0 rounded-full bg-[#C8924B] opacity-60 animate-ping" />
+            <span className="relative inline-flex w-[5px] h-[5px] rounded-full bg-[#C8924B]" />
+          </span>
           Live
         </span>
       )}

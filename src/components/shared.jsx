@@ -324,7 +324,7 @@ export function DuoIcon({ name = 'sparkle', tone = 'bronze', size = 22, classNam
     ink:      { bg: '#F5F3EE', fg: '#0A0A0A', tint: '#4A4A4A' },
     sage:     { bg: '#EDF3EB', fg: '#3F6B4A', tint: '#7FA68A' },
     blue:     { bg: '#EEF2F8', fg: '#2A3F6B', tint: '#6B85B0' },
-    lavender: { bg: '#EFEAFE', fg: '#5B4FD1', tint: '#8A80E8' },
+    lavender: { bg: '#FBF6EC', fg: '#7C5E3C', tint: '#C8924B' },
     peach:    { bg: '#FDF0DC', fg: '#9A5A1A', tint: '#E8A878' },
   };
   const t = tones[tone] || tones.bronze;

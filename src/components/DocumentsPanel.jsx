@@ -88,8 +88,8 @@ export default function DocumentsPanel({ client }) {
       </div>
 
       {/* Info banner */}
-      <div className="bg-[#EEF2FF] border border-[rgba(99,102,241,0.15)] rounded-xl px-4 py-3 flex items-center gap-3">
-        <svg className="w-5 h-5 text-[#6366F1] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="bg-[#FBF6EC] border border-[rgba(99,102,241,0.15)] rounded-xl px-4 py-3 flex items-center gap-3">
+        <svg className="w-5 h-5 text-[#7C5E3C] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <p className="text-[12px] text-[#4338CA]">
@@ -304,7 +304,7 @@ function UploadModal({ isOpen, onClose, clientId, clientName, onUploaded }) {
           <label className={labelCls}>Fichier</label>
           <div
             className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
-              dragActive ? 'border-[#6366F1] bg-[#EEF2FF]' :
+              dragActive ? 'border-[#7C5E3C] bg-[#FBF6EC]' :
               file ? 'border-[#059669] bg-[#ECFDF5]' :
               'border-[rgba(0,0,29,0.12)] hover:border-[rgba(0,0,29,0.25)] bg-[rgba(0,0,23,0.015)]'
             }`}
@@ -334,7 +334,7 @@ function UploadModal({ isOpen, onClose, clientId, clientName, onUploaded }) {
                 <svg className="w-8 h-8 text-[#A8A29E] mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
-                <p className="text-[13px] text-[#787881]">Glissez un fichier ici ou <span className="text-[#6366F1] font-medium">parcourir</span></p>
+                <p className="text-[13px] text-[#787881]">Glissez un fichier ici ou <span className="text-[#7C5E3C] font-medium">parcourir</span></p>
                 <p className="text-[11px] text-[#A8A29E] mt-1">PDF, JPEG, PNG — Max 50 Mo</p>
               </>
             )}

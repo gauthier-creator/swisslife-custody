@@ -20,7 +20,7 @@ function getCurrentMonthDate() {
 // ── KPI Card ─────────────────────────────────────────────────────────
 function KPICard({ title, value, subtitle, color = 'indigo', children }) {
   const colorMap = {
-    indigo: { bg: 'bg-[#EEF2FF]', text: 'text-[#6366F1]', ring: 'ring-[#6366F1]/10' },
+    indigo: { bg: 'bg-[#FBF6EC]', text: 'text-[#7C5E3C]', ring: 'ring-[#7C5E3C]/10' },
     green: { bg: 'bg-[#ECFDF5]', text: 'text-[#059669]', ring: 'ring-[#059669]/10' },
     red: { bg: 'bg-[#FEF2F2]', text: 'text-[#EF4444]', ring: 'ring-[#EF4444]/10' },
     amber: { bg: 'bg-[#FFFBEB]', text: 'text-[#D97706]', ring: 'ring-[#D97706]/10' },
@@ -43,7 +43,7 @@ function KPICard({ title, value, subtitle, color = 'indigo', children }) {
 }
 
 // ── Progress Bar ─────────────────────────────────────────────────────
-function ProgressBar({ label, value, total, color = '#6366F1' }) {
+function ProgressBar({ label, value, total, color = '#7C5E3C' }) {
   const percent = pct(value, total);
   return (
     <div className="flex items-center gap-3">
@@ -208,7 +208,7 @@ export default function ACPRReportingDashboard() {
               type="month"
               value={date.slice(0, 7)}
               onChange={(e) => setDate(e.target.value + '-01')}
-              className="border border-[rgba(0,0,29,0.08)] rounded-xl px-3 py-1.5 text-[12px] text-[#0F0F10] bg-white focus:outline-none focus:ring-2 focus:ring-[#6366F1]/20"
+              className="border border-[rgba(0,0,29,0.08)] rounded-xl px-3 py-1.5 text-[12px] text-[#0F0F10] bg-white focus:outline-none focus:ring-2 focus:ring-[#7C5E3C]/20"
             />
 
             {/* Actions */}
@@ -224,7 +224,7 @@ export default function ACPRReportingDashboard() {
 
             <button
               onClick={handlePrint}
-              className="flex items-center gap-1.5 px-4 py-2 bg-[#6366F1] text-white rounded-xl text-[12px] font-medium hover:bg-[#5558E6] transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#7C5E3C] text-white rounded-xl text-[12px] font-medium hover:bg-[#6A4F30] transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2z" />
@@ -244,7 +244,7 @@ export default function ACPRReportingDashboard() {
       {/* ── Loading State ────────────────────────────────────────── */}
       {loading && (
         <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-16 flex flex-col items-center justify-center gap-3">
-          <div className="w-8 h-8 border-2 border-[#6366F1] border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-[#7C5E3C] border-t-transparent rounded-full animate-spin" />
           <p className="text-[13px] text-[#787881]">Chargement du rapport...</p>
         </div>
       )}
@@ -255,7 +255,7 @@ export default function ACPRReportingDashboard() {
           <p className="text-[14px] text-[#EF4444] font-medium">Erreur: {error}</p>
           <button
             onClick={loadReport}
-            className="mt-3 px-4 py-2 bg-[#6366F1] text-white rounded-xl text-[12px] font-medium hover:bg-[#5558E6] transition-colors"
+            className="mt-3 px-4 py-2 bg-[#7C5E3C] text-white rounded-xl text-[12px] font-medium hover:bg-[#6A4F30] transition-colors"
           >
             Reessayer
           </button>
@@ -376,9 +376,9 @@ export default function ACPRReportingDashboard() {
                 <div className="pt-3 border-t border-[rgba(0,0,29,0.06)]">
                   <p className="text-[11px] text-[#787881] mb-3 font-medium uppercase tracking-wider">Registre UBO</p>
                   <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-[#EEF2FF] rounded-xl p-3 text-center">
-                      <p className="text-[18px] font-bold text-[#6366F1] tabular-nums">{fmtNum(report.ubos.totalRegistered)}</p>
-                      <p className="text-[10px] text-[#6366F1]/70 mt-0.5">Total</p>
+                    <div className="bg-[#FBF6EC] rounded-xl p-3 text-center">
+                      <p className="text-[18px] font-bold text-[#7C5E3C] tabular-nums">{fmtNum(report.ubos.totalRegistered)}</p>
+                      <p className="text-[10px] text-[#7C5E3C]/70 mt-0.5">Total</p>
                     </div>
                     <div className="bg-[#ECFDF5] rounded-xl p-3 text-center">
                       <p className="text-[18px] font-bold text-[#059669] tabular-nums">{fmtNum(report.ubos.verified)}</p>
@@ -419,9 +419,9 @@ export default function ACPRReportingDashboard() {
           {/* Section 5 - Journal d'audit (full width) */}
           <Section title="Journal d'audit" icon="">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-              <div className="bg-[#EEF2FF] rounded-xl p-4 text-center">
-                <p className="text-[28px] font-bold text-[#6366F1] tabular-nums">{fmtNum(report.audit.totalActions)}</p>
-                <p className="text-[11px] text-[#6366F1]/70 font-medium mt-1">Actions totales</p>
+              <div className="bg-[#FBF6EC] rounded-xl p-4 text-center">
+                <p className="text-[28px] font-bold text-[#7C5E3C] tabular-nums">{fmtNum(report.audit.totalActions)}</p>
+                <p className="text-[11px] text-[#7C5E3C]/70 font-medium mt-1">Actions totales</p>
               </div>
               <div className="bg-[#FEF2F2] rounded-xl p-4 text-center">
                 <p className="text-[28px] font-bold text-[#EF4444] tabular-nums">{fmtNum(report.audit.highSeverity)}</p>

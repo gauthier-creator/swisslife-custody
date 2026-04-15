@@ -19,7 +19,7 @@ function StatCard({ label, value, sub, color, icon }) {
   const colors = {
     orange: 'bg-[#FFFBEB] text-[#D97706]',
     red: 'bg-[#FEF2F2] text-[#DC2626]',
-    blue: 'bg-[#EEF2FF] text-[#6366F1]',
+    blue: 'bg-[#FBF6EC] text-[#7C5E3C]',
     green: 'bg-[#ECFDF5] text-[#059669]',
   };
   return (
@@ -72,7 +72,7 @@ function HorizontalBar({ segments, labels }) {
   );
 }
 
-function VerticalBarChart({ data, barColor = '#6366F1' }) {
+function VerticalBarChart({ data, barColor = '#7C5E3C' }) {
   if (!data || data.length === 0) return <div className="text-[12px] text-[#A8A29E]">Aucune donnee</div>;
   const maxVal = Math.max(...data.map(d => d.value), 1);
   return (
@@ -191,18 +191,18 @@ export default function ComplianceReports() {
           type="date"
           value={startDate}
           onChange={e => setStartDate(e.target.value)}
-          className="px-3 py-1.5 text-[13px] border border-[rgba(0,0,29,0.12)] rounded-lg bg-white text-[#0F0F10] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/20 focus:border-[#6366F1]"
+          className="px-3 py-1.5 text-[13px] border border-[rgba(0,0,29,0.12)] rounded-lg bg-white text-[#0F0F10] focus:outline-none focus:ring-2 focus:ring-[#7C5E3C]/20 focus:border-[#7C5E3C]"
         />
         <span className="text-[12px] text-[#A8A29E]">au</span>
         <input
           type="date"
           value={endDate}
           onChange={e => setEndDate(e.target.value)}
-          className="px-3 py-1.5 text-[13px] border border-[rgba(0,0,29,0.12)] rounded-lg bg-white text-[#0F0F10] focus:outline-none focus:ring-2 focus:ring-[#6366F1]/20 focus:border-[#6366F1]"
+          className="px-3 py-1.5 text-[13px] border border-[rgba(0,0,29,0.12)] rounded-lg bg-white text-[#0F0F10] focus:outline-none focus:ring-2 focus:ring-[#7C5E3C]/20 focus:border-[#7C5E3C]"
         />
         <button
           onClick={loadSummary}
-          className="px-3 py-1.5 text-[12px] font-medium text-white bg-[#6366F1] hover:bg-[#4F46E5] rounded-lg transition-colors"
+          className="px-3 py-1.5 text-[12px] font-medium text-white bg-[#7C5E3C] hover:bg-[#4F46E5] rounded-lg transition-colors"
         >
           Actualiser
         </button>
@@ -251,7 +251,7 @@ export default function ComplianceReports() {
               { label: 'En attente', value: summary.approvalStats.pending, color: '#D97706' },
               { label: 'Approuve', value: summary.approvalStats.approved, color: '#059669' },
               { label: 'Rejete', value: summary.approvalStats.rejected, color: '#DC2626' },
-              { label: 'Execute', value: summary.approvalStats.executed, color: '#6366F1' },
+              { label: 'Execute', value: summary.approvalStats.executed, color: '#7C5E3C' },
             ]}
           />
         </div>
@@ -263,7 +263,7 @@ export default function ComplianceReports() {
             labels
             segments={[
               { label: 'Faible', value: summary.riskDistribution.low, color: '#059669' },
-              { label: 'Standard', value: summary.riskDistribution.standard, color: '#6366F1' },
+              { label: 'Standard', value: summary.riskDistribution.standard, color: '#7C5E3C' },
               { label: 'Eleve', value: summary.riskDistribution.high, color: '#D97706' },
               { label: 'Critique', value: summary.riskDistribution.critical, color: '#DC2626' },
             ]}
@@ -274,7 +274,7 @@ export default function ComplianceReports() {
         <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-5 col-span-2">
           <h3 className="text-[14px] font-semibold text-[#0F0F10] mb-1">Volume des transferts (30 derniers jours)</h3>
           <p className="text-[11px] text-[#A8A29E] mb-4">Montant total: {fmtNum(summary.totalVolume)} | Moyenne: {fmtNum(summary.averageTransferAmount)} par transfert</p>
-          <VerticalBarChart data={dailyVolumes} barColor="#6366F1" />
+          <VerticalBarChart data={dailyVolumes} barColor="#7C5E3C" />
         </div>
       </div>
 
@@ -291,7 +291,7 @@ export default function ComplianceReports() {
                   <span className="text-[13px] text-[#0F0F10] w-40 truncate">{c.clientName}</span>
                   <div className="flex-1 h-5 bg-[rgba(0,0,23,0.03)] rounded overflow-hidden">
                     <div
-                      className="h-full bg-[#6366F1]/20 rounded"
+                      className="h-full bg-[#7C5E3C]/20 rounded"
                       style={{ width: `${(c.volume / maxVol) * 100}%` }}
                     />
                   </div>
