@@ -580,29 +580,67 @@ export function Divider({ className = '' }) {
 }
 
 // ─── PageHeader ───────────────────────────────────────
-// Editorial header — eyebrow + display title + description + trailing action
-// Used at the top of every page for consistency
-export function PageHeader({ eyebrow, title, accent, description, trailing, className = '' }) {
+// Clean product header (Ramify-inspired): icon + title on one line
+// with optional trailing actions and an optional notification banner below.
+// Props: icon (SVG node) · title · trailing · banner ({ avatar, text, subtext, cta, onCtaClick })
+// Legacy props (eyebrow/accent/description) are accepted but ignored in favor
+// of the simpler Ramify aesthetic.
+export function PageHeader({ icon, title, trailing, banner, className = '' }) {
   return (
-    <header className={`flex items-end justify-between gap-8 flex-wrap animate-slide-up ${className}`}>
-      <div className="max-w-2xl min-w-0">
-        {eyebrow && <p className="text-eyebrow">{eyebrow}</p>}
-        <h1 className="display-lg text-[#0A0A0A] mt-3">
-          {title}
-          {accent && (
-            <> <span className="font-display italic text-[#7C5E3C]">{accent}</span></>
+    <header className={`space-y-5 animate-slide-up ${className}`}>
+      <div className="flex items-center justify-between gap-6 flex-wrap">
+        <div className="flex items-center gap-3 min-w-0">
+          {icon && (
+            <span className="flex-shrink-0 w-8 h-8 rounded-[8px] bg-[#0A0A0A] text-white flex items-center justify-center">
+              {icon}
+            </span>
           )}
-        </h1>
-        {description && (
-          <p className="text-[15px] text-[#4A4A4A] mt-4 leading-relaxed max-w-xl tracking-[-0.006em]">
-            {description}
-          </p>
+          <h1 className="text-[26px] font-semibold text-[#0A0A0A] tracking-[-0.02em] leading-none truncate">
+            {title}
+          </h1>
+        </div>
+        {trailing && (
+          <div className="flex-shrink-0 flex items-center gap-3">{trailing}</div>
         )}
       </div>
-      {trailing && (
-        <div className="flex-shrink-0 animate-slide-up stagger-1">{trailing}</div>
-      )}
+      {banner && <PageBanner {...banner} />}
     </header>
+  );
+}
+
+// ─── PageBanner ───────────────────────────────────────
+// Cream notification banner — avatar + text + CTA (Ramify style)
+export function PageBanner({ avatar, text, subtext, cta, onCtaClick, tone = 'cream' }) {
+  const palette = {
+    cream: 'bg-[#F5EEE0] border-[rgba(124,94,60,0.18)]',
+    paper: 'bg-[#FDFCFA] border-[rgba(10,10,10,0.08)]',
+    warn:  'bg-[#FEF5E7] border-[rgba(202,138,4,0.22)]',
+  }[tone] || 'bg-[#F5EEE0] border-[rgba(124,94,60,0.18)]';
+  return (
+    <div className={`flex items-center gap-4 px-5 py-3.5 rounded-[14px] border ${palette}`}>
+      {avatar && (
+        <span className="flex-shrink-0 w-9 h-9 rounded-full bg-white overflow-hidden flex items-center justify-center text-[13px] font-medium text-[#4A4A4A] border border-[rgba(10,10,10,0.06)]">
+          {avatar}
+        </span>
+      )}
+      <div className="flex-1 min-w-0">
+        <p className="text-[13.5px] font-semibold text-[#0A0A0A] tracking-[-0.006em] leading-snug">{text}</p>
+        {subtext && (
+          <p className="text-[12.5px] text-[#6B6B6B] mt-0.5 tracking-[-0.003em] leading-snug">{subtext}</p>
+        )}
+      </div>
+      {cta && (
+        <button
+          onClick={onCtaClick}
+          className="flex-shrink-0 inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[#0A0A0A] hover:gap-2 transition-all"
+        >
+          {cta}
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+          </svg>
+        </button>
+      )}
+    </div>
   );
 }
 

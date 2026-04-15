@@ -6,7 +6,7 @@ import {
   PageHeader, Metric, MetricRow, UnderlineTabs, Card, Button,
   FooterDisclosure, useCountUp, Skeleton, SkeletonRow,
 } from './shared';
-import { HeroMesh, VerifiedBadge, GradientRule, LiveIndicator } from './brand';
+import { LiveIndicator } from './brand';
 import {
   fetchApprovals, approveTransfer, rejectTransfer, executeTransfer,
   fetchAlerts, fetchAlertStats, acknowledgeAlert, resolveAlert,
@@ -409,32 +409,28 @@ export default function ComplianceDashboard() {
   // ── Render ───────────────────────────────────────────────────────
   return (
     <div className="space-y-10">
-      {/* ── Editorial header ─────────────────────────── */}
-      <div className="relative">
-        <HeroMesh
-          size={460}
-          className="absolute -right-16 -top-28 hidden md:block"
-        />
-        <PageHeader
-          eyebrow="Supervision · Compliance Cloud"
-          title="Compliance"
-          accent="cockpit"
-          description="Supervision temps-réel des approbations à quatre yeux, alertes AML, journal d'audit horodaté et déclarations Tracfin. Chaque action est cryptographiquement signée et auditable."
-          trailing={
-            <div className="flex items-center gap-5">
-              <LiveIndicator tone="success" label="Flux temps-réel" />
-              {stats.openAlerts === 0 && stats.pendingApprovals === 0 && (
-                <div className="hidden lg:block">
-                  <VerifiedBadge size={60} label="Cockpit clear" />
-                </div>
-              )}
-            </div>
-          }
-        />
-      </div>
-
-      {/* ── Gradient break ───────────────────────────── */}
-      <GradientRule className="max-w-[520px] mx-auto animate-fade" />
+      {/* ── Header ─────────────────────────────────────── */}
+      <PageHeader
+        icon={
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.306a11.95 11.95 0 015.814-5.518l2.74-1.22m0 0l-5.94-2.281m5.94 2.28l-2.28 5.941" />
+          </svg>
+        }
+        title="Compliance"
+        trailing={
+          <>
+            <LiveIndicator tone="success" label="Flux temps-réel" />
+            {stats.openAlerts === 0 && stats.pendingApprovals === 0 && (
+              <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#F0FDF4] border border-[rgba(22,163,74,0.22)]">
+                <svg className="w-3.5 h-3.5 text-[#16A34A]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="text-[11.5px] font-medium text-[#15803D] tracking-[-0.003em]">Cockpit clear</span>
+              </div>
+            )}
+          </>
+        }
+      />
 
       {/* ── Stat tiles ───────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-5 animate-slide-up stagger-2">

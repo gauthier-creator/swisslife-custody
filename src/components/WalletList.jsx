@@ -6,7 +6,6 @@ import {
   Metric, MetricRow, Table, tdCls, tdMuted, trCls, FooterDisclosure,
   Skeleton, SkeletonRow, CopyButton, useCountUp,
 } from './shared';
-import { HeroMesh } from './brand';
 
 function CountUpNumber({ value, format = (v) => v }) {
   const display = useCountUp(value);
@@ -59,24 +58,16 @@ export default function WalletList() {
 
   return (
     <div className="space-y-10">
-      {/* ── Editorial header ──────────────────────────── */}
-      <div className="relative">
-        <HeroMesh
-          size={420}
-          className="absolute -right-12 -top-20 hidden md:block"
-        />
+      {/* ── Header ─────────────────────────────────────── */}
       <PageHeader
-        eyebrow="Conservation · DFNS Custody"
-        title="Wallets"
-        accent="institutionnels"
-        description={
-          loading
-            ? "Synchronisation du registre DFNS…"
-            : `Registre consolidé de ${wallets.length} wallet${wallets.length > 1 ? 's' : ''} sous gestion, segmentés par réseau blockchain et sécurisés par cryptographie à seuil (2/3 MPC).`
+        icon={
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9v3m13.5 3h.008v.008H16.5V15z" />
+          </svg>
         }
+        title="Wallets"
         trailing={
-          <div className="flex items-center gap-3">
-            <StatusDot tone="success" label="DFNS Synchronisé" />
+          <>
             <div className="relative">
               <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9B9B9B] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.2-5.2m2.2-5.3a7.5 7.5 0 11-15 0 7.5 7.5 0 0115 0z" />
@@ -86,16 +77,16 @@ export default function WalletList() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Rechercher un wallet…"
-                className="h-11 pl-10 pr-4 w-[280px] text-[14px] bg-white border border-[rgba(10,10,10,0.1)] rounded-full outline-none focus:border-[rgba(10,10,10,0.35)] focus:ring-4 focus:ring-[rgba(10,10,10,0.04)] placeholder:text-[#9B9B9B] tracking-[-0.006em] transition-all"
+                className="h-10 pl-10 pr-4 w-[280px] text-[13.5px] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none focus:border-[rgba(10,10,10,0.35)] focus:ring-4 focus:ring-[rgba(10,10,10,0.04)] placeholder:text-[#9B9B9B] tracking-[-0.006em] transition-all"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:inline-flex">
                 <span className="kbd">⌘K</span>
               </span>
             </div>
-          </div>
+            <StatusDot tone="success" label="DFNS sync" />
+          </>
         }
       />
-      </div>
 
       {/* ── Metric row ────────────────────────────────── */}
       {!loading && wallets.length > 0 && (
