@@ -307,8 +307,9 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
 
       {/* ══════════ PROFILE ══════════ */}
       {tab === 'profile' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6 animate-fade">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          <div className="lg:col-span-8 space-y-6">
             {parsed.text && (
               <SectionCard title="À propos">
                 <p className="text-[14px] text-[#4A4A4A] leading-[1.65] tracking-[-0.003em] max-w-2xl">{parsed.text}</p>
@@ -376,7 +377,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
             </Card>
           </div>
 
-          <aside className="space-y-6">
+          <aside className="lg:col-span-4 space-y-6">
             {/* Wealth breakdown */}
             <Card>
               <div className="px-6 pt-5 pb-4 border-b border-[rgba(10,10,10,0.06)]">
@@ -493,8 +494,6 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
               </div>
             </SectionCard>
 
-            <RiskConfigPanel client={client} />
-
             <SectionCard title="Métadonnées">
               <dl className="space-y-4">
                 <MetaRow label="ID Salesforce" value={client.id} mono />
@@ -503,6 +502,10 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
               </dl>
             </SectionCard>
           </aside>
+        </div>
+
+        {/* Risk config — full width so its 3-column limits grid breathes */}
+        <RiskConfigPanel client={client} />
         </div>
       )}
 
