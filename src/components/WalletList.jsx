@@ -4,8 +4,9 @@ import { SUPPORTED_NETWORKS } from '../config/constants';
 import {
   Badge, EmptyState, Card, SectionCard, PageHeader, StatusDot,
   Metric, MetricRow, Table, tdCls, tdMuted, trCls, FooterDisclosure,
-  Skeleton, SkeletonRow, CopyButton, useCountUp, MarbleCard,
+  Skeleton, SkeletonRow, CopyButton, useCountUp, MarbleCard, FleuronRule,
 } from './shared';
+import { MandatCard, MandatCarousel } from './ProductCards';
 
 function CountUpNumber({ value, format = (v) => v }) {
   const display = useCountUp(value);
@@ -120,6 +121,55 @@ export default function WalletList() {
           </MetricRow>
         </div>
       )}
+
+      {/* ── Custody tiers — marble portfolio tiles ──────── */}
+      {!loading && wallets.length > 0 && (
+        <div className="animate-slide-up stagger-3">
+          <MandatCarousel
+            eyebrow="Segmentation de conservation"
+            title="Les tiers de custody DFNS."
+            trailing={
+              <span className="hidden md:inline-flex items-center gap-1.5 h-9 px-3 mr-2 rounded-full bg-[#FBFAF7] border border-[rgba(10,10,10,0.08)] text-[11px] font-medium text-[#6B6B6B] tracking-[-0.003em]">
+                <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
+                4 tiers · MPC 2/3
+              </span>
+            }
+          >
+            <MandatCard
+              label="Froide"
+              marble="pearl"
+              seed={13}
+              assetClasses={['Multi-sig offline', 'Air-gap', 'Archive UHNWI']}
+              disabled={['Trading actif']}
+              cta="Configurer"
+            />
+            <MandatCard
+              label="Tiède"
+              marble="ivory"
+              seed={17}
+              assetClasses={['MPC 2/3', 'Whitelist stricte', 'Review T+1']}
+              disabled={['Instant settlement']}
+              cta="Configurer"
+            />
+            <MandatCard
+              label="Chaude"
+              marble="peach"
+              seed={21}
+              assetClasses={['Signature < 1s', 'Quorum auto', 'Real-time KYT']}
+              cta="Configurer"
+            />
+            <MandatCard
+              label="OTC desk"
+              marble="bronze"
+              seed={25}
+              assetClasses={['Travel Rule', 'Block trades', 'Counterparty KYC', 'Tracfin']}
+              cta="Configurer"
+            />
+          </MandatCarousel>
+        </div>
+      )}
+
+      {!loading && wallets.length > 0 && <FleuronRule className="max-w-md mx-auto opacity-90" />}
 
       {/* ── Content ───────────────────────────────────── */}
       {loading ? (

@@ -37,7 +37,7 @@ const typeVariant = (t) => {
   return 'default';
 };
 
-export default function ClientDetail({ client: initialClient, onBack }) {
+export default function ClientDetail({ client: initialClient, onBack, embedded = false }) {
   const [client, setClient] = useState(initialClient);
   const [tab, setTab] = useState('profile');
   const [wallets, setWallets] = useState([]);
@@ -203,16 +203,18 @@ export default function ClientDetail({ client: initialClient, onBack }) {
 
   return (
     <div className="space-y-8">
-      {/* ── Back link ──────────────────────────────────── */}
-      <button
-        onClick={onBack}
-        className="flex items-center gap-1.5 text-[13px] font-medium text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors group -mt-4"
-      >
-        <svg className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-        </svg>
-        Retour au registre
-      </button>
+      {/* ── Back link (hidden when embedded in drawer) ──── */}
+      {!embedded && (
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-[13px] font-medium text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors group -mt-4"
+        >
+          <svg className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+          Retour au registre
+        </button>
+      )}
 
       {/* ── Editorial header ───────────────────────────── */}
       <header className="flex items-start justify-between gap-10 flex-wrap animate-slide-up">

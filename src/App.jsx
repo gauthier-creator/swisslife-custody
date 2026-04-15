@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { ToastContainer, useToast } from './components/shared';
+import { ToastContainer, useToast, Drawer } from './components/shared';
 import { BrandMark, GradientRule } from './components/brand';
 import Layout from './components/Layout';
 import LoginPage from './components/LoginPage';
@@ -87,11 +87,8 @@ function AppInner() {
   return (
     <>
       <Layout section={section} onNavigate={handleNavigate}>
-        {section === 'clients' && !selectedClient && (
+        {section === 'clients' && (
           <ClientList onSelectClient={(c) => setSelectedClient(c)} />
-        )}
-        {section === 'clients' && selectedClient && (
-          <ClientDetail client={selectedClient} onBack={() => setSelectedClient(null)} />
         )}
         {section === 'wallets' && <WalletList />}
         {section === 'compliance' && <ComplianceDashboard />}
@@ -100,6 +97,22 @@ function AppInner() {
           <ConfigPage onConfigured={() => toast('Configuration sauvegardee', 'success')} />
         )}
       </Layout>
+
+      {/* ── Client dossier drawer — slides in over the list ── */}
+      <Drawer
+        isOpen={section === 'clients' && !!selectedClient}
+        onClose={() => setSelectedClient(null)}
+        size="xl"
+      >
+        {selectedClient && (
+          <ClientDetail
+            client={selectedClient}
+            onBack={() => setSelectedClient(null)}
+            embedded
+          />
+        )}
+      </Drawer>
+
       <ToastContainer toasts={toasts} />
     </>
   );

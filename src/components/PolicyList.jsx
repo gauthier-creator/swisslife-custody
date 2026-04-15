@@ -3,8 +3,9 @@ import { listPolicies, createPolicy } from '../services/dfnsApi';
 import {
   Badge, Modal, Spinner, EmptyState, inputCls, selectCls, labelCls,
   PageHeader, Metric, MetricRow, Card, Button, FooterDisclosure, StatusDot,
-  MarbleCard,
+  MarbleCard, FleuronRule,
 } from './shared';
+import { MandatCard, MandatCarousel } from './ProductCards';
 
 /* ─────────────────────────────────────────────────────────
    PolicyList — Governance rules · DFNS approval policies
@@ -104,6 +105,55 @@ export default function PolicyList() {
           </MetricRow>
         </div>
       )}
+
+      {/* ── Governance templates — marble portfolio tiles ── */}
+      {!loading && (
+        <div className="animate-slide-up stagger-3">
+          <MandatCarousel
+            eyebrow="Modèles de gouvernance"
+            title="Quatre templates, quatre niveaux d'exigence."
+            trailing={
+              <span className="hidden md:inline-flex items-center gap-1.5 h-9 px-3 mr-2 rounded-full bg-[#FBFAF7] border border-[rgba(10,10,10,0.08)] text-[11px] font-medium text-[#6B6B6B] tracking-[-0.003em]">
+                <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
+                4 niveaux
+              </span>
+            }
+          >
+            <MandatCard
+              label="Standard"
+              marble="pearl"
+              seed={31}
+              assetClasses={['Signature unique', 'Whitelist', 'Journal']}
+              disabled={['Quatre yeux', 'Hors-horaires']}
+              cta="Instancier"
+            />
+            <MandatCard
+              label="Renforcée"
+              marble="ivory"
+              seed={34}
+              assetClasses={['Quatre yeux', 'Seuil 10k €', 'Whitelist stricte', 'KYT']}
+              disabled={['Double escalade']}
+              cta="Instancier"
+            />
+            <MandatCard
+              label="Fiduciaire"
+              marble="peach"
+              seed={37}
+              assetClasses={['Quatre yeux', 'Seuil 100k €', 'PPE flag', 'Double escalade']}
+              cta="Instancier"
+            />
+            <MandatCard
+              label="Institutionnelle"
+              marble="bronze"
+              seed={40}
+              assetClasses={['Quorum 3/4', 'Block trades', 'Tracfin auto', 'ACPR report', 'Horodatage']}
+              cta="Instancier"
+            />
+          </MandatCarousel>
+        </div>
+      )}
+
+      {!loading && <FleuronRule className="max-w-md mx-auto opacity-90" />}
 
       {/* ── List ──────────────────────────────────────── */}
       {loading ? (

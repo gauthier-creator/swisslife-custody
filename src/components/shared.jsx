@@ -942,6 +942,98 @@ export function Modal({ isOpen, onClose, title, subtitle, children, maxWidth = '
   );
 }
 
+// ─── Drawer ───────────────────────────────────────────
+// Right-side slide-in panel (Ramify-style) — list stays visible behind it.
+// size: 'sm' (440) · 'md' (560) · 'lg' (720) · 'xl' (880) · 'half' (55vw)
+// ESC closes · backdrop click closes · body scroll locked while open.
+export function Drawer({
+  isOpen,
+  onClose,
+  title,
+  subtitle,
+  eyebrow,
+  trailing,
+  children,
+  size = 'lg',
+  padding = true,
+  className = '',
+}) {
+  useEffect(() => {
+    if (!isOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  const widthCls = {
+    sm:   'w-[440px]',
+    md:   'w-[560px]',
+    lg:   'w-[720px]',
+    xl:   'w-[880px]',
+    half: 'w-[min(55vw,1000px)]',
+  }[size] || 'w-[720px]';
+
+  return (
+    <>
+      {/* Backdrop — subtle tint + blur, list stays legible behind */}
+      <div
+        className="fixed inset-0 bg-[rgba(10,10,10,0.28)] backdrop-blur-[4px] z-40 animate-fade"
+        onClick={onClose}
+      />
+      {/* Panel */}
+      <aside
+        role="dialog"
+        aria-modal="true"
+        aria-label={typeof title === 'string' ? title : 'Panel'}
+        className={`fixed top-0 right-0 h-screen max-w-[calc(100vw-32px)] ${widthCls} bg-white z-50 flex flex-col animate-slide-right border-l border-[rgba(10,10,10,0.08)] ${className}`}
+        style={{ boxShadow: '-32px 0 64px -24px rgba(10,10,10,0.28), -8px 0 16px -8px rgba(10,10,10,0.08)' }}
+      >
+        {(title || subtitle || trailing || eyebrow) && (
+          <header className="px-8 pt-7 pb-5 flex items-start justify-between gap-6 border-b border-[rgba(10,10,10,0.06)] flex-shrink-0">
+            <div className="min-w-0 flex-1">
+              {eyebrow && (
+                <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-[#7C5E3C] mb-2 flex items-center gap-1.5">
+                  <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
+                  {eyebrow}
+                </p>
+              )}
+              {title && (
+                typeof title === 'string'
+                  ? <h2 className="font-display text-[26px] text-[#0A0A0A] leading-[1.1]" style={{ letterSpacing: '-0.022em' }}>{title}</h2>
+                  : title
+              )}
+              {subtitle && <p className="mt-2 text-[13px] text-[#6B6B6B] leading-relaxed tracking-[-0.003em]">{subtitle}</p>}
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {trailing}
+              <button
+                onClick={onClose}
+                className="w-9 h-9 flex items-center justify-center rounded-full text-[#6B6B6B] hover:text-[#0A0A0A] hover:bg-[#F5F3EE] transition-colors border border-transparent hover:border-[rgba(10,10,10,0.08)]"
+                aria-label="Fermer"
+                title="Fermer · Échap"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </header>
+        )}
+        <div className={`flex-1 min-h-0 overflow-y-auto ${padding ? 'px-8 py-7' : ''}`}>
+          {children}
+        </div>
+      </aside>
+    </>
+  );
+}
+
 // ─── Empty state ──────────────────────────────────────
 // Accepts either an illustration name (rendered via <Illustration />) or a custom icon
 export function EmptyState({ title, description, action, icon, illustration }) {
