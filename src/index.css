@@ -103,14 +103,19 @@ html, body {
 }
 ::-webkit-scrollbar-thumb:hover { background: rgba(10, 10, 10, 0.18); }
 
-/* Form elements inherit */
-input, select, textarea, button {
-  font-family: inherit;
-  font-size: 14px;
-  color: inherit;
-  letter-spacing: inherit;
+/* Form elements inherit — wrapped in @layer base so Tailwind utility
+   classes (text-white, text-[#XXX], etc.) can override via specificity.
+   Without the layer, unlayered CSS beats layered utilities and produces
+   bugs like "black text on black primary button". */
+@layer base {
+  input, select, textarea, button {
+    font-family: inherit;
+    font-size: 14px;
+    color: inherit;
+    letter-spacing: inherit;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; }
 }
-input:focus, select:focus, textarea:focus { outline: none; }
 
 /* ═════════════════════════════════════════════════════
    EDITORIAL UTILITIES

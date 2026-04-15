@@ -1,19 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { fetchDelegations, createDelegation, revokeDelegation } from '../services/complianceApi';
-import { Badge, Modal, Spinner, EmptyState, useToast, ToastContainer, inputCls, selectCls, labelCls } from './shared';
+import {
+  Badge, Modal, Spinner, EmptyState, useToast, ToastContainer,
+  inputCls, selectCls, labelCls, Button, Card, Metric, MetricRow,
+} from './shared';
 
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
 const permBadge = (level) => {
-  if (level === 'transfer') return <Badge variant="warning">Transfert</Badge>;
-  return <Badge variant="info">Consultation</Badge>;
+  if (level === 'transfer') return <Badge variant="warning" dot>Transfert</Badge>;
+  return <Badge variant="gold" dot>Consultation</Badge>;
 };
 
 const statusBadge = (s) => {
-  if (s === 'active') return <Badge variant="success">Actif</Badge>;
-  if (s === 'revoked') return <Badge variant="error">Revoque</Badge>;
-  if (s === 'expired') return <Badge variant="default">Expire</Badge>;
+  if (s === 'active')  return <Badge variant="success" dot>Actif</Badge>;
+  if (s === 'revoked') return <Badge variant="error"   dot>Révoqué</Badge>;
+  if (s === 'expired') return <Badge variant="default" dot>Expiré</Badge>;
   return <Badge variant="default">{s || '—'}</Badge>;
 };
 
@@ -29,7 +32,7 @@ export default function DelegationPanel({ client }) {
     delegateName: '',
     permissionLevel: 'view',
     transferLimit: '',
-    currency: 'CHF',
+    currency: 'EUR',
     expiresAt: '',
     notes: '',
   });
@@ -49,9 +52,7 @@ export default function DelegationPanel({ client }) {
     setLoading(false);
   }, [accountId]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
   const handleCreate = async () => {
     try {
@@ -67,9 +68,9 @@ export default function DelegationPanel({ client }) {
         notes: form.notes || null,
         grantedByEmail: profile?.email,
       });
-      toast('Delegation creee');
+      toast('Délégation créée');
       setShowModal(false);
-      setForm({ delegateEmail: '', delegateName: '', permissionLevel: 'view', transferLimit: '', currency: 'CHF', expiresAt: '', notes: '' });
+      setForm({ delegateEmail: '', delegateName: '', permissionLevel: 'view', transferLimit: '', currency: 'EUR', expiresAt: '', notes: '' });
       load();
     } catch (err) {
       toast(err.message, 'error');
@@ -79,7 +80,7 @@ export default function DelegationPanel({ client }) {
   const handleRevoke = async (id) => {
     try {
       await revokeDelegation(id, profile?.email);
-      toast('Delegation revoquee');
+      toast('Délégation révoquée');
       load();
     } catch (err) {
       toast(err.message, 'error');
@@ -88,153 +89,176 @@ export default function DelegationPanel({ client }) {
 
   const activeDelegations = delegations.filter(d => d.status === 'active');
   const inactiveDelegations = delegations.filter(d => d.status !== 'active');
+  const viewCount = activeDelegations.filter(d => d.permission_level === 'view').length;
+  const transferCount = activeDelegations.filter(d => d.permission_level === 'transfer').length;
 
   return (
-    <div>
+    <div className="space-y-7">
       <ToastContainer toasts={toasts} />
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h3 className="text-[16px] font-semibold text-[#0F0F10]">Delegations d'acces</h3>
-          <p className="text-[12px] text-[#787881] mt-0.5">
-            Gestion des acces famille et tiers autorises
+      {/* ── Header ─────────────────────────────────────── */}
+      <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div className="min-w-0">
+          <p className="text-[10.5px] font-medium text-[#7C5E3C] uppercase tracking-[0.14em] mb-2 flex items-center gap-2">
+            <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
+            Gouvernance · AMF
+          </p>
+          <h3 className="font-display text-[24px] text-[#0A0A0A] leading-[1.08]" style={{ letterSpacing: '-0.024em' }}>
+            Délégations d'accès
+          </h3>
+          <p className="text-[13px] text-[#6B6B6B] mt-1 tracking-[-0.003em] max-w-[56ch]">
+            Gestion des accès famille et tiers autorisés. Chaque délégation est horodatée et révocable à tout moment.
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="px-4 py-2 text-[13px] font-medium text-white bg-[#6366F1] hover:bg-[#4F46E5] rounded-xl transition-colors"
-        >
-          Nouvelle delegation
-        </button>
+        <Button variant="primary" onClick={() => setShowModal(true)}>
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          Nouvelle délégation
+        </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-5">
-        <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-4 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#ECFDF5] text-[#059669] flex items-center justify-center text-[14px] font-bold">
-            {activeDelegations.length}
-          </div>
-          <div>
-            <p className="text-[13px] font-medium text-[#0F0F10]">Actives</p>
-            <p className="text-[11px] text-[#787881]">Delegations en cours</p>
-          </div>
-        </div>
-        <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-4 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#EEF2FF] text-[#6366F1] flex items-center justify-center text-[14px] font-bold">
-            {activeDelegations.filter(d => d.permission_level === 'view').length}
-          </div>
-          <div>
-            <p className="text-[13px] font-medium text-[#0F0F10]">Consultation</p>
-            <p className="text-[11px] text-[#787881]">Acces lecture seule</p>
-          </div>
-        </div>
-        <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-4 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#FFFBEB] text-[#D97706] flex items-center justify-center text-[14px] font-bold">
-            {activeDelegations.filter(d => d.permission_level === 'transfer').length}
-          </div>
-          <div>
-            <p className="text-[13px] font-medium text-[#0F0F10]">Transfert</p>
-            <p className="text-[11px] text-[#787881]">Avec limites</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Loading */}
-      {loading ? (
-        <div className="flex items-center justify-center py-12"><Spinner /></div>
-      ) : delegations.length === 0 ? (
-        <EmptyState
-          title="Aucune delegation"
-          description="Aucun acces delegue pour ce client. Ajoutez une delegation famille ou tiers autorise."
+      {/* ── Stats strip ─────────────────────────────────── */}
+      <MetricRow>
+        <Metric
+          label="Actives"
+          value={activeDelegations.length}
+          caption="Délégations en cours"
+          progress={Math.min(100, activeDelegations.length * 25)}
         />
+        <Metric
+          label="Consultation"
+          value={viewCount}
+          caption="Lecture seule"
+          progress={Math.min(100, viewCount * 30)}
+        />
+        <Metric
+          label="Transfert"
+          value={transferCount}
+          caption="Avec limites définies"
+          progress={Math.min(100, transferCount * 30)}
+        />
+      </MetricRow>
+
+      {/* ── List ────────────────────────────────────────── */}
+      {loading ? (
+        <Card className="flex items-center justify-center py-14">
+          <Spinner size="w-5 h-5" />
+        </Card>
+      ) : delegations.length === 0 ? (
+        <Card>
+          <EmptyState
+            illustration="shield"
+            title="Aucune délégation"
+            description="Aucun accès délégué pour ce client. Ajoutez une délégation famille ou un tiers autorisé pour partager l'accès sous conditions."
+            action={
+              <Button variant="primary" onClick={() => setShowModal(true)}>
+                Créer la première délégation
+              </Button>
+            }
+          />
+        </Card>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {/* Active delegations */}
           {activeDelegations.length > 0 && (
-            <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl overflow-hidden">
-              <table className="w-full text-sm text-left">
-                <thead>
-                  <tr className="border-b border-[rgba(0,0,29,0.06)] bg-[rgba(0,0,23,0.02)]">
-                    <th className="px-5 py-3 text-[12px] text-[#A8A29E] font-medium">Delegataire</th>
-                    <th className="px-5 py-3 text-[12px] text-[#A8A29E] font-medium">Email</th>
-                    <th className="px-5 py-3 text-[12px] text-[#A8A29E] font-medium">Permission</th>
-                    <th className="px-5 py-3 text-[12px] text-[#A8A29E] font-medium text-right">Limite</th>
-                    <th className="px-5 py-3 text-[12px] text-[#A8A29E] font-medium">Expiration</th>
-                    <th className="px-5 py-3 text-[12px] text-[#A8A29E] font-medium">Statut</th>
-                    <th className="px-5 py-3 text-[12px] text-[#A8A29E] font-medium">Accorde par</th>
-                    <th className="px-5 py-3 text-[12px] text-[#A8A29E] font-medium w-24"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activeDelegations.map(d => (
-                    <tr key={d.id} className="border-b border-[rgba(0,0,29,0.04)] hover:bg-[rgba(0,0,23,0.02)] transition-colors">
-                      <td className="px-5 py-3.5 text-[13px] font-medium text-[#0F0F10]">{d.delegate_name || '—'}</td>
-                      <td className="px-5 py-3.5 text-[12px] text-[#787881]">{d.delegate_email}</td>
-                      <td className="px-5 py-3.5">{permBadge(d.permission_level)}</td>
-                      <td className="px-5 py-3.5 text-right text-[13px] font-medium text-[#0F0F10] tabular-nums">
-                        {d.permission_level === 'transfer' && d.transfer_limit
-                          ? `${Number(d.transfer_limit).toLocaleString('fr-FR')} ${d.currency || 'CHF'}`
-                          : d.permission_level === 'transfer' ? 'Illimite' : '—'}
-                      </td>
-                      <td className="px-5 py-3.5 text-[12px] text-[#787881]">
-                        {d.expires_at ? fmtDate(d.expires_at) : 'Permanent'}
-                      </td>
-                      <td className="px-5 py-3.5">{statusBadge(d.status)}</td>
-                      <td className="px-5 py-3.5 text-[12px] text-[#787881]">{d.granted_by_email || '—'}</td>
-                      <td className="px-5 py-3.5">
-                        <button
-                          onClick={() => handleRevoke(d.id)}
-                          className="px-2.5 py-1 rounded-lg text-[12px] font-medium text-[#DC2626] hover:bg-[#FEF2F2] transition-all"
-                        >
-                          Revoquer
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Revoked/expired */}
-          {inactiveDelegations.length > 0 && (
-            <details className="group">
-              <summary className="text-[13px] text-[#787881] cursor-pointer hover:text-[#0F0F10] transition-colors">
-                {inactiveDelegations.length} delegation{inactiveDelegations.length > 1 ? 's' : ''} revoquee{inactiveDelegations.length > 1 ? 's' : ''}/expiree{inactiveDelegations.length > 1 ? 's' : ''}
-              </summary>
-              <div className="mt-3 bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl overflow-hidden opacity-60">
-                <table className="w-full text-sm text-left">
+            <Card className="overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-[rgba(0,0,29,0.06)] bg-[rgba(0,0,23,0.02)]">
-                      <th className="px-5 py-3 text-[12px] text-[#A8A29E] font-medium">Delegataire</th>
-                      <th className="px-5 py-3 text-[12px] text-[#A8A29E] font-medium">Permission</th>
-                      <th className="px-5 py-3 text-[12px] text-[#A8A29E] font-medium">Statut</th>
-                      <th className="px-5 py-3 text-[12px] text-[#A8A29E] font-medium">Revoque le</th>
+                    <tr className="border-b border-[rgba(10,10,10,0.08)] bg-[#FBFAF7]/60">
+                      <th className="px-6 py-3.5 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase">Délégataire</th>
+                      <th className="px-6 py-3.5 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase">Email</th>
+                      <th className="px-6 py-3.5 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase">Permission</th>
+                      <th className="px-6 py-3.5 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase text-right">Limite</th>
+                      <th className="px-6 py-3.5 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase">Expiration</th>
+                      <th className="px-6 py-3.5 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase">Statut</th>
+                      <th className="px-6 py-3.5 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase">Accordé par</th>
+                      <th className="px-6 py-3.5 w-24"></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {inactiveDelegations.map(d => (
-                      <tr key={d.id} className="border-b border-[rgba(0,0,29,0.04)]">
-                        <td className="px-5 py-3 text-[13px] text-[#787881]">{d.delegate_name || d.delegate_email}</td>
-                        <td className="px-5 py-3">{permBadge(d.permission_level)}</td>
-                        <td className="px-5 py-3">{statusBadge(d.status)}</td>
-                        <td className="px-5 py-3 text-[12px] text-[#787881]">{fmtDate(d.revoked_at)}</td>
+                    {activeDelegations.map((d, i) => (
+                      <tr
+                        key={d.id}
+                        className="border-b border-[rgba(10,10,10,0.06)] transition-colors hover:bg-[#FBFAF7] hover:shadow-[inset_3px_0_0_0_rgba(200,146,75,0.55)] row-stagger"
+                        style={{ '--i': i }}
+                      >
+                        <td className="px-6 py-4 text-[13px] font-medium text-[#0A0A0A] tracking-[-0.006em]">{d.delegate_name || '—'}</td>
+                        <td className="px-6 py-4 text-[12px] text-[#6B6B6B] font-mono tracking-[-0.003em]">{d.delegate_email}</td>
+                        <td className="px-6 py-4">{permBadge(d.permission_level)}</td>
+                        <td className="px-6 py-4 text-right text-[13px] font-medium text-[#0A0A0A] tabular-nums">
+                          {d.permission_level === 'transfer' && d.transfer_limit
+                            ? `${Number(d.transfer_limit).toLocaleString('fr-FR')} ${d.currency || 'EUR'}`
+                            : d.permission_level === 'transfer' ? 'Illimité' : '—'}
+                        </td>
+                        <td className="px-6 py-4 text-[12px] text-[#6B6B6B] tabular-nums">
+                          {d.expires_at ? fmtDate(d.expires_at) : 'Permanent'}
+                        </td>
+                        <td className="px-6 py-4">{statusBadge(d.status)}</td>
+                        <td className="px-6 py-4 text-[12px] text-[#6B6B6B]">{d.granted_by_email || '—'}</td>
+                        <td className="px-6 py-4">
+                          <button
+                            onClick={() => handleRevoke(d.id)}
+                            className="inline-flex items-center h-7 px-2.5 rounded-full text-[11.5px] font-medium text-[#DC2626] border border-[rgba(220,38,38,0.22)] bg-white hover:bg-[#FEF2F2] hover:border-[rgba(220,38,38,0.4)] transition-colors tracking-[-0.003em]"
+                          >
+                            Révoquer
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+            </Card>
+          )}
+
+          {/* Revoked / expired */}
+          {inactiveDelegations.length > 0 && (
+            <details className="group">
+              <summary className="inline-flex items-center gap-2 text-[12px] text-[#6B6B6B] cursor-pointer hover:text-[#0A0A0A] transition-colors tracking-[-0.003em]">
+                <svg className="w-3 h-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+                {inactiveDelegations.length} délégation{inactiveDelegations.length > 1 ? 's' : ''} révoquée{inactiveDelegations.length > 1 ? 's' : ''} / expirée{inactiveDelegations.length > 1 ? 's' : ''}
+              </summary>
+              <Card className="mt-3 overflow-hidden opacity-75">
+                <table className="w-full text-sm text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-[rgba(10,10,10,0.08)] bg-[#FBFAF7]/60">
+                      <th className="px-6 py-3 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase">Délégataire</th>
+                      <th className="px-6 py-3 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase">Permission</th>
+                      <th className="px-6 py-3 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase">Statut</th>
+                      <th className="px-6 py-3 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase">Révoqué le</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inactiveDelegations.map(d => (
+                      <tr key={d.id} className="border-b border-[rgba(10,10,10,0.06)]">
+                        <td className="px-6 py-3 text-[13px] text-[#6B6B6B] tracking-[-0.003em]">{d.delegate_name || d.delegate_email}</td>
+                        <td className="px-6 py-3">{permBadge(d.permission_level)}</td>
+                        <td className="px-6 py-3">{statusBadge(d.status)}</td>
+                        <td className="px-6 py-3 text-[12px] text-[#6B6B6B] tabular-nums">{fmtDate(d.revoked_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </Card>
             </details>
           )}
         </div>
       )}
 
-      {/* Create Delegation Modal */}
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Nouvelle delegation d'acces">
-        <div className="space-y-4">
+      {/* ── Create Delegation Modal ─────────────────────── */}
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title="Nouvelle délégation d'accès"
+        subtitle="Partage d'accès conditionnel. Chaque délégation est horodatée dans le journal d'audit ACPR."
+      >
+        <div className="space-y-5">
           <div>
-            <label className={labelCls}>Email du delegataire *</label>
+            <label className={labelCls}>Email du délégataire *</label>
             <input
               value={form.delegateEmail}
               onChange={e => setForm(f => ({ ...f, delegateEmail: e.target.value }))}
@@ -244,12 +268,12 @@ export default function DelegationPanel({ client }) {
             />
           </div>
           <div>
-            <label className={labelCls}>Nom du delegataire</label>
+            <label className={labelCls}>Nom du délégataire</label>
             <input
               value={form.delegateName}
               onChange={e => setForm(f => ({ ...f, delegateName: e.target.value }))}
               className={inputCls}
-              placeholder="Prenom Nom"
+              placeholder="Prénom Nom"
             />
           </div>
           <div>
@@ -264,14 +288,14 @@ export default function DelegationPanel({ client }) {
             </select>
           </div>
           {form.permissionLevel === 'transfer' && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className={labelCls}>Limite par transfert</label>
                 <input
                   value={form.transferLimit}
                   onChange={e => setForm(f => ({ ...f, transferLimit: e.target.value }))}
                   className={inputCls}
-                  placeholder="Ex: 10000"
+                  placeholder="Ex. 10 000"
                   type="number"
                 />
               </div>
@@ -282,8 +306,8 @@ export default function DelegationPanel({ client }) {
                   onChange={e => setForm(f => ({ ...f, currency: e.target.value }))}
                   className={selectCls}
                 >
-                  <option value="CHF">CHF</option>
                   <option value="EUR">EUR</option>
+                  <option value="CHF">CHF</option>
                   <option value="USD">USD</option>
                 </select>
               </div>
@@ -297,32 +321,23 @@ export default function DelegationPanel({ client }) {
               className={inputCls}
               type="date"
             />
-            <p className="text-[11px] text-[#A8A29E] mt-1">Laisser vide pour une delegation permanente</p>
+            <p className="text-[11px] text-[#9B9B9B] mt-1.5 tracking-[-0.003em]">Laisser vide pour une délégation permanente</p>
           </div>
           <div>
             <label className={labelCls}>Notes</label>
             <textarea
               value={form.notes}
               onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-              className={`${inputCls} min-h-[80px] resize-none`}
-              placeholder="Relation familiale, contexte..."
+              className={`${inputCls} min-h-[84px] py-3 resize-none`}
+              placeholder="Relation familiale, contexte, conditions…"
               rows={3}
             />
           </div>
-          <div className="flex justify-end gap-3 pt-2">
-            <button
-              onClick={() => setShowModal(false)}
-              className="px-4 py-2 text-[13px] font-medium rounded-xl border border-[rgba(0,0,29,0.1)] text-[#787881] hover:text-[#0F0F10] transition-colors"
-            >
-              Annuler
-            </button>
-            <button
-              onClick={handleCreate}
-              disabled={!form.delegateEmail}
-              className="px-4 py-2 text-[13px] font-medium text-white bg-[#6366F1] hover:bg-[#4F46E5] rounded-xl transition-colors disabled:opacity-40"
-            >
-              Creer la delegation
-            </button>
+          <div className="flex justify-end gap-2 pt-5 border-t border-[rgba(10,10,10,0.06)]">
+            <Button variant="ghost" onClick={() => setShowModal(false)}>Annuler</Button>
+            <Button variant="primary" onClick={handleCreate} disabled={!form.delegateEmail}>
+              Créer la délégation
+            </Button>
           </div>
         </div>
       </Modal>

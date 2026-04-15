@@ -313,61 +313,64 @@ export function ProductCard({
     <article
       onClick={onClick}
       className={`
-        group relative flex-shrink-0 w-[340px] snap-start cursor-pointer
-        rounded-[22px] overflow-hidden
+        group relative flex-shrink-0 w-[296px] snap-start cursor-pointer
+        rounded-[18px] overflow-hidden
         bg-gradient-to-b from-[#FDFBF4] to-[#F7ECD0]
         border border-[rgba(124,94,60,0.14)]
-        shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_1px_2px_rgba(10,10,10,0.04),0_12px_28px_-14px_rgba(124,94,60,0.25)]
-        hover:-translate-y-[2px] hover:shadow-[0_1px_0_rgba(255,255,255,0.95)_inset,0_2px_4px_rgba(10,10,10,0.06),0_24px_48px_-20px_rgba(124,94,60,0.36)]
-        transition-all duration-300
+        shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_1px_2px_rgba(10,10,10,0.04),0_10px_22px_-14px_rgba(124,94,60,0.22)]
+        hover:-translate-y-[2px] hover:border-[rgba(124,94,60,0.28)]
+        hover:shadow-[0_1px_0_rgba(255,255,255,0.95)_inset,0_2px_4px_rgba(10,10,10,0.06),0_20px_40px_-20px_rgba(124,94,60,0.32)]
+        transition-[transform,border-color,box-shadow] duration-[260ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]
         ${className}
       `}
     >
-      {/* Illustration area */}
-      <div className="relative h-[220px] overflow-hidden">
+      {/* Illustration area — tighter, framed */}
+      <div className="relative h-[168px] overflow-hidden">
         {scene}
-        {/* subtle vignette */}
+        {/* hairline divider between illustration and body */}
+        <div className="absolute inset-x-0 bottom-0 h-px bg-[rgba(124,94,60,0.12)]" />
+        {/* subtle bottom fade into content */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
-            background: 'linear-gradient(180deg, transparent 60%, rgba(252,243,221,0.5) 100%)',
+            background: 'linear-gradient(180deg, transparent 62%, rgba(253,251,244,0.65) 100%)',
           }}
         />
       </div>
 
-      {/* Content */}
-      <div className="relative px-6 pt-5 pb-7 bg-[#FDFBF4]">
+      {/* Content — denser, no wasted vertical space */}
+      <div className="relative px-5 pt-4 pb-5 bg-[#FDFBF4]">
         {/* Category pill */}
-        <span className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full bg-white border border-[rgba(124,94,60,0.18)] shadow-[0_1px_2px_rgba(124,94,60,0.08)]">
+        <span className="inline-flex items-center gap-1.5 h-[22px] px-2.5 rounded-full bg-white border border-[rgba(124,94,60,0.18)] shadow-[0_1px_1px_rgba(124,94,60,0.06)]">
           {categoryIcon && (
             <span className="text-[#7C5E3C] flex items-center">{categoryIcon}</span>
           )}
-          <span className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-[#2A1F12]">
+          <span className="text-[9.5px] font-semibold uppercase tracking-[0.12em] text-[#2A1F12]">
             {category}
           </span>
         </span>
 
         {/* Title */}
         <h3
-          className="mt-4 font-display text-[21px] text-[#0A0A0A] leading-[1.15]"
-          style={{ letterSpacing: '-0.022em' }}
+          className="mt-3 font-display text-[17px] text-[#0A0A0A] leading-[1.2] line-clamp-2"
+          style={{ letterSpacing: '-0.02em' }}
         >
           {title}
         </h3>
 
         {/* Description */}
-        <p className="mt-2.5 text-[13px] text-[#6B6B6B] leading-[1.55] tracking-[-0.003em] line-clamp-2">
+        <p className="mt-1.5 text-[12px] text-[#6B6B6B] leading-[1.5] tracking-[-0.003em] line-clamp-2 pr-10">
           {description}
         </p>
 
         {/* Arrow that appears on hover */}
         <span
-          className="absolute right-6 bottom-7 w-8 h-8 rounded-full bg-[#0A0A0A] text-white
+          className="absolute right-5 bottom-5 w-7 h-7 rounded-full bg-[#0A0A0A] text-white
                      flex items-center justify-center
                      opacity-0 translate-x-2 group-hover:opacity-100 group-hover:translate-x-0
                      transition-all duration-300"
         >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.3}>
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.3}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
           </svg>
         </span>
@@ -402,7 +405,7 @@ export function ProductCarousel({ title, eyebrow, children, className = '' }) {
   }, []);
 
   const scroll = (dir) => {
-    scrollerRef.current?.scrollBy({ left: dir * 380, behavior: 'smooth' });
+    scrollerRef.current?.scrollBy({ left: dir * 320, behavior: 'smooth' });
   };
 
   return (
@@ -429,7 +432,7 @@ export function ProductCarousel({ title, eyebrow, children, className = '' }) {
 
       <div
         ref={scrollerRef}
-        className="flex gap-5 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 -mx-10 px-10"
+        className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 -mx-10 px-10"
         style={{ scrollbarWidth: 'none' }}
       >
         {children}
