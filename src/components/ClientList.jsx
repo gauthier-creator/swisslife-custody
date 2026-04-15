@@ -97,7 +97,7 @@ export default function ClientList({ onSelectClient }) {
       {!loading && clients.length > 0 && (
         <div className="animate-slide-up stagger-1">
           <MarbleCard
-            variant="cream"
+            variant="peach"
             eyebrow="Cockpit du banquier privé"
             title="Vos clients, vos mandats, en un seul coup d'œil."
             description="Le registre Salesforce est synchronisé en temps réel avec la chambre forte DFNS. Chaque mouvement est horodaté et signé par quorum MPC."

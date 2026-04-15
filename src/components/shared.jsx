@@ -263,6 +263,94 @@ export function Card({ children, className = '', variant = 'elevated', ...props 
   );
 }
 
+// ─── IconButton ───────────────────────────────────────
+// Ramify-style card button: white surface, hairline border, crisp shadow,
+// rounded square, icon centered. Used for top-bar actions, header accents,
+// any "pill-but-square" touch.
+// Sizes: sm (32), md (38), lg (44). Tones: white (default), cream, dark.
+export function IconButton({
+  children,
+  size = 'md',
+  tone = 'white',
+  active = false,
+  className = '',
+  ariaLabel,
+  onClick,
+  ...props
+}) {
+  const dims = {
+    sm: 'w-8 h-8 rounded-[9px]',
+    md: 'w-[38px] h-[38px] rounded-[11px]',
+    lg: 'w-11 h-11 rounded-[12px]',
+  }[size] || 'w-[38px] h-[38px] rounded-[11px]';
+
+  const tones = {
+    white: 'bg-white border-[rgba(10,10,10,0.08)] text-[#4A4A4A] hover:text-[#0A0A0A] hover:border-[rgba(10,10,10,0.18)]',
+    cream: 'bg-[#F5EEE0] border-[rgba(124,94,60,0.2)] text-[#6A4F30] hover:bg-[#EFE4CE] hover:text-[#4A3620]',
+    dark:  'bg-[#0A0A0A] border-[rgba(255,255,255,0.08)] text-white hover:bg-[#1A1A1A]',
+  }[tone] || 'bg-white border-[rgba(10,10,10,0.08)] text-[#4A4A4A] hover:text-[#0A0A0A] hover:border-[rgba(10,10,10,0.18)]';
+
+  return (
+    <button
+      onClick={onClick}
+      aria-label={ariaLabel}
+      className={`
+        inline-flex items-center justify-center flex-shrink-0 border
+        ${dims} ${tones}
+        shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_1px_2px_rgba(10,10,10,0.05),0_2px_6px_-2px_rgba(10,10,10,0.08)]
+        hover:shadow-[0_1px_0_rgba(255,255,255,0.95)_inset,0_2px_4px_rgba(10,10,10,0.06),0_6px_14px_-4px_rgba(10,10,10,0.14)]
+        active:scale-[0.97] transition-all duration-200
+        ${active ? 'ring-4 ring-[rgba(124,94,60,0.12)] border-[rgba(124,94,60,0.4)]' : ''}
+        ${className}
+      `}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ─── Fleuron ──────────────────────────────────────────
+// Editorial decorative glyph — small four-point star/cross for
+// section breaks, page dividers, luxury accents (à la Phosphor fleuron).
+export function Fleuron({ size = 14, className = '', tone = 'bronze' }) {
+  const color = {
+    bronze: '#9A7A51',
+    ink:    '#0A0A0A',
+    muted:  '#BFBFBF',
+  }[tone] || '#9A7A51';
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      aria-hidden="true"
+    >
+      {/* four-point star with soft curves */}
+      <path
+        d="M12 2 C 12 7.5, 12 7.5, 17.5 8.5 C 22 9.2, 22 9.2, 22 12 C 22 14.8, 22 14.8, 17.5 15.5 C 12 16.5, 12 16.5, 12 22 C 12 16.5, 12 16.5, 6.5 15.5 C 2 14.8, 2 14.8, 2 12 C 2 9.2, 2 9.2, 6.5 8.5 C 12 7.5, 12 7.5, 12 2 Z"
+        fill={color}
+        fillOpacity="0.9"
+      />
+    </svg>
+  );
+}
+
+// ─── FleuronRule ──────────────────────────────────────
+// Horizontal hairline with a centered fleuron — editorial section break.
+export function FleuronRule({ className = '', tone = 'bronze' }) {
+  const color = tone === 'bronze' ? '#9A7A51' : '#0A0A0A';
+  return (
+    <div className={`flex items-center gap-3 ${className}`} aria-hidden="true">
+      <span className="flex-1 h-px" style={{ background: `linear-gradient(90deg, transparent, ${color}33, transparent)` }} />
+      <Fleuron size={11} tone={tone} />
+      <span className="flex-1 h-px" style={{ background: `linear-gradient(90deg, transparent, ${color}33, transparent)` }} />
+    </div>
+  );
+}
+
 // ─── Avatar ───────────────────────────────────────────
 // Monochrome — warm paper bg, dark initials, hairline inner border. Private-bank refined.
 export function Avatar({ name = '', src, size = 40, ring = false, status, tone = 'default' }) {
@@ -385,14 +473,16 @@ export function Metric({ label, value, caption, delta, progress, align = 'left',
 }
 
 // ─── MarbleCard ───────────────────────────────────────
-// Ramify luxury marble surface — warm sand gradient, serif headline
+// Ramify luxury marble surface — layered peach/cream gradient, inner
+// highlight, soft shadow, grain overlay, decorative fleuron at top.
 // Use for hero sections, dashboard greetings, premium feature reveals.
 export function MarbleCard({
   eyebrow,
   title,
   description,
   children,
-  variant = 'cream', // cream | sand | mist
+  variant = 'cream', // cream | sand | mist | peach
+  fleuron = true,
   className = '',
   ...props
 }) {
@@ -400,25 +490,45 @@ export function MarbleCard({
     cream: 'marble-cream',
     sand:  'marble-sand',
     mist:  'marble-mist',
+    peach: 'marble-peach',
   }[variant] || 'marble-cream';
   return (
     <div
-      className={`relative overflow-hidden rounded-[20px] border border-[rgba(124,94,60,0.14)] ${surface} ${className}`}
+      className={`relative overflow-hidden rounded-[22px] border border-[rgba(124,94,60,0.16)] ${surface}
+        shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_1px_2px_rgba(10,10,10,0.04),0_24px_48px_-24px_rgba(124,94,60,0.3),0_12px_24px_-12px_rgba(10,10,10,0.08)]
+        ${className}`}
       {...props}
     >
+      {/* inner white vignette for softness */}
+      <div className="absolute inset-0 pointer-events-none rounded-[22px]"
+           style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,255,255,0.55), transparent 65%)' }} />
       {/* grain overlay for tactile feel */}
-      <div className="bg-grain absolute inset-0 rounded-[20px] pointer-events-none" />
-      <div className="relative px-8 py-8">
+      <div className="bg-grain absolute inset-0 rounded-[22px] pointer-events-none" />
+      {/* decorative corner fleurons */}
+      {fleuron && (
+        <>
+          <div className="absolute top-5 right-6 opacity-40 pointer-events-none">
+            <Fleuron size={16} tone="bronze" />
+          </div>
+          <div className="absolute bottom-5 left-6 opacity-25 pointer-events-none">
+            <Fleuron size={11} tone="bronze" />
+          </div>
+        </>
+      )}
+      <div className="relative px-9 py-9">
         {eyebrow && (
-          <p className="text-[11px] font-medium text-[#7C5E3C] uppercase tracking-[0.08em] mb-3">{eyebrow}</p>
+          <p className="text-[10.5px] font-medium text-[#7C5E3C] uppercase tracking-[0.14em] mb-4 flex items-center gap-2">
+            <Fleuron size={10} tone="bronze" />
+            {eyebrow}
+          </p>
         )}
         {title && (
-          <h2 className="font-display text-[30px] text-[#2A1F12] leading-[1.08] max-w-[28ch]" style={{ letterSpacing: '-0.025em' }}>
+          <h2 className="font-display text-[34px] text-[#2A1F12] leading-[1.05] max-w-[32ch]" style={{ letterSpacing: '-0.028em' }}>
             {title}
           </h2>
         )}
         {description && (
-          <p className="mt-3 text-[13.5px] text-[#5C4A34] max-w-[52ch] leading-relaxed tracking-[-0.003em]">
+          <p className="mt-4 text-[13.5px] text-[#5C4A34] max-w-[54ch] leading-[1.65] tracking-[-0.003em]">
             {description}
           </p>
         )}
@@ -632,22 +742,33 @@ export function Divider({ className = '' }) {
 // Props: icon (SVG node) · title · trailing · banner ({ avatar, text, subtext, cta, onCtaClick })
 // Legacy props (eyebrow/accent/description) are accepted but ignored in favor
 // of the simpler Ramify aesthetic.
-export function PageHeader({ icon, title, trailing, banner, className = '' }) {
+export function PageHeader({ icon, title, eyebrow, trailing, banner, className = '' }) {
   return (
     <header className={`space-y-6 animate-slide-up ${className}`}>
-      <div className="flex items-center justify-between gap-6 flex-wrap">
-        <div className="flex items-center gap-3 min-w-0">
+      <div className="flex items-end justify-between gap-6 flex-wrap">
+        <div className="flex items-center gap-4 min-w-0">
           {icon && (
-            <span className="flex-shrink-0 w-9 h-9 rounded-full bg-[#FAFAF8] border border-[rgba(10,10,10,0.06)] text-[#4A4A4A] flex items-center justify-center">
+            <span
+              className="flex-shrink-0 w-11 h-11 rounded-[12px] bg-white border border-[rgba(10,10,10,0.08)] text-[#2A2A2A] flex items-center justify-center
+                         shadow-[0_1px_0_rgba(255,255,255,0.95)_inset,0_1px_2px_rgba(10,10,10,0.05),0_6px_14px_-6px_rgba(10,10,10,0.12)]"
+            >
               {icon}
             </span>
           )}
-          <h1 className="font-display text-[34px] text-[#0A0A0A] leading-[1.02] truncate" style={{ letterSpacing: '-0.025em' }}>
-            {title}
-          </h1>
+          <div className="min-w-0">
+            {eyebrow && (
+              <p className="text-[10.5px] font-medium text-[#7C5E3C] uppercase tracking-[0.12em] mb-1.5 flex items-center gap-1.5">
+                <Fleuron size={9} tone="bronze" />
+                {eyebrow}
+              </p>
+            )}
+            <h1 className="font-display text-[34px] text-[#0A0A0A] leading-[1.02] truncate" style={{ letterSpacing: '-0.025em' }}>
+              {title}
+            </h1>
+          </div>
         </div>
         {trailing && (
-          <div className="flex-shrink-0 flex items-center gap-3">{trailing}</div>
+          <div className="flex-shrink-0 flex items-center gap-2.5">{trailing}</div>
         )}
       </div>
       {banner && <PageBanner {...banner} />}

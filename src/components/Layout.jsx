@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Avatar, Kbd } from './shared';
+import { Avatar, Kbd, IconButton } from './shared';
 import CommandPalette from './CommandPalette';
 
 /* ─────────────────────────────────────────────────────────
@@ -98,8 +98,8 @@ export default function Layout({ children, section, onNavigate }) {
             className="flex items-center gap-2.5 hover:opacity-80 transition-opacity"
             aria-label="Accueil"
           >
-            <span className="w-7 h-7 rounded-[7px] bg-[#0A0A0A] text-white flex items-center justify-center">
-              <span className="font-display text-[13px] leading-none" style={{ letterSpacing: '-0.04em' }}>Sℓ</span>
+            <span className="w-8 h-8 rounded-[9px] bg-[#0A0A0A] text-white flex items-center justify-center shadow-[0_1px_0_rgba(255,255,255,0.14)_inset,0_1px_2px_rgba(10,10,10,0.2),0_4px_10px_-4px_rgba(10,10,10,0.3)]">
+              <span className="font-display text-[14px] leading-none" style={{ letterSpacing: '-0.04em' }}>Sℓ</span>
             </span>
             <span className="font-display text-[19px] text-[#0A0A0A] leading-none" style={{ letterSpacing: '-0.02em' }}>
               swisslife
@@ -179,20 +179,17 @@ export default function Layout({ children, section, onNavigate }) {
 
       {/* ── Main ─────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 flex flex-col">
-        {/* Utility bar (top-right icons) */}
-        <header className="h-[72px] flex items-center justify-end gap-1 px-10 border-b border-[rgba(10,10,10,0.04)]">
-          <button
-            className="w-9 h-9 flex items-center justify-center rounded-full text-[#6B6B6B] hover:text-[#0A0A0A] hover:bg-[#FAFAF8] transition-colors"
-            aria-label="Support"
-          >
-            <IconChat className="w-[18px] h-[18px]" />
-          </button>
-          <button
-            className="w-9 h-9 flex items-center justify-center rounded-full text-[#6B6B6B] hover:text-[#0A0A0A] hover:bg-[#FAFAF8] transition-colors"
-            aria-label="Notifications"
-          >
-            <IconBell className="w-[18px] h-[18px]" />
-          </button>
+        {/* Utility bar (top-right icon card buttons) */}
+        <header className="h-[72px] flex items-center justify-end gap-2.5 px-10 border-b border-[rgba(10,10,10,0.04)]">
+          <IconButton ariaLabel="Support" size="md">
+            <IconChat className="w-[17px] h-[17px]" />
+          </IconButton>
+          <IconButton ariaLabel="Notifications" size="md">
+            <span className="relative">
+              <IconBell className="w-[17px] h-[17px]" />
+              <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#C8924B] border border-white" />
+            </span>
+          </IconButton>
         </header>
 
         <main className="flex-1 px-10 py-10 animate-fade">
