@@ -8,6 +8,7 @@ import {
 import {
   ProductCard, ProductCarousel,
   SceneVault, SceneArch, SceneWaves, SceneDocument, SceneKeys,
+  MandatCard, MandatCarousel,
 } from './ProductCards';
 
 // Thin wrapper to animate a numeric metric value on mount
@@ -152,6 +153,49 @@ export default function ClientList({ onSelectClient }) {
               progress={58}
             />
           </MetricRow>
+        </div>
+      )}
+
+      {/* ── Mandats — marble portfolio tiles (Ramify style) ─ */}
+      {!loading && clients.length > 0 && (
+        <div className="animate-slide-up stagger-3">
+          <MandatCarousel
+            eyebrow="Mandats de conservation"
+            title="Les portefeuilles SwissLife Custody."
+            trailing={
+              <span className="hidden md:inline-flex items-center gap-1.5 h-9 px-3 mr-2 rounded-full bg-[#FBFAF7] border border-[rgba(10,10,10,0.08)] text-[11px] font-medium text-[#6B6B6B] tracking-[-0.003em]">
+                <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
+                4 tiers
+              </span>
+            }
+          >
+            <MandatCard
+              label="Essential"
+              marble="pearl"
+              seed={2}
+              assetClasses={['Bitcoin', 'Ethereum', 'Stablecoins']}
+              disabled={['Private Assets', 'Staking']}
+            />
+            <MandatCard
+              label="Privilège"
+              marble="ivory"
+              seed={5}
+              assetClasses={['BTC', 'ETH', 'SOL', 'Stablecoins', 'Staking']}
+              disabled={['Private Assets']}
+            />
+            <MandatCard
+              label="Flagship"
+              marble="peach"
+              seed={8}
+              assetClasses={['BTC', 'ETH', 'Multi-chain', 'Staking', 'Private Assets']}
+            />
+            <MandatCard
+              label="Institutionnel"
+              marble="bronze"
+              seed={11}
+              assetClasses={['BTC', 'ETH', 'Multi-chain', 'OTC', 'Tracfin Reporting']}
+            />
+          </MandatCarousel>
         </div>
       )}
 
