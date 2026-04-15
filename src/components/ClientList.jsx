@@ -5,6 +5,10 @@ import {
   Metric, MetricRow, Delta, SkeletonCircle, Skeleton, useCountUp,
   PageHeader, StatusDot, MarbleCard,
 } from './shared';
+import {
+  ProductCard, ProductCarousel,
+  SceneVault, SceneArch, SceneWaves, SceneDocument, SceneKeys,
+} from './ProductCards';
 
 // Thin wrapper to animate a numeric metric value on mount
 function CountUpNumber({ value, format = (v) => v }) {
@@ -144,6 +148,73 @@ export default function ClientList({ onSelectClient }) {
               progress={58}
             />
           </MetricRow>
+        </div>
+      )}
+
+      {/* ── Product carousel — editorial product tiles ── */}
+      {!loading && clients.length > 0 && (
+        <div className="animate-slide-up stagger-3">
+          <ProductCarousel
+            eyebrow="Explorez les services"
+            title="Les rails institutionnels SwissLife Custody."
+          >
+            <ProductCard
+              category="Conservation"
+              categoryIcon={
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              }
+              title="Chambre forte DFNS, signée par quorum MPC."
+              description="Clés privées réparties en 3 shards · signature 2/3 · audit on-chain horodaté. Aucune clé en clair, jamais."
+              scene={<SceneVault />}
+              onClick={() => window.alert('Conservation — détails bientôt')}
+            />
+            <ProductCard
+              category="Gouvernance"
+              categoryIcon={
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                </svg>
+              }
+              title="Politiques quatre-yeux & audit ACPR."
+              description="Chaque mouvement déclenche une règle d'approbation versionnée et horodatée dans le journal d'audit réglementaire."
+              scene={<SceneArch />}
+            />
+            <ProductCard
+              category="Surveillance"
+              categoryIcon={
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.306a11.95 11.95 0 015.814-5.518l2.74-1.22m0 0l-5.94-2.281m5.94 2.28l-2.28 5.941" />
+                </svg>
+              }
+              title="Chainalysis KYT & screening temps réel."
+              description="Pré-filtrage AML à la milliseconde · sanctions OFAC/UE · PPE · Travel Rule Art. 7b — tout flux suspect est bloqué."
+              scene={<SceneWaves />}
+            />
+            <ProductCard
+              category="Reporting"
+              categoryIcon={
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              }
+              title="Mandats signés & reporting ACPR automatisé."
+              description="Génération des déclarations Tracfin, extraits pour commissaires aux comptes, sceau numérique Sℓ horodaté."
+              scene={<SceneDocument />}
+            />
+            <ProductCard
+              category="Multi-chain"
+              categoryIcon={
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                </svg>
+              }
+              title="Ethereum, Bitcoin, Solana — une seule interface."
+              description="Bitcoin natif, tous les EVM, Solana, Cosmos · provisionnement de wallet en un clic · reconciliation temps réel."
+              scene={<SceneKeys />}
+            />
+          </ProductCarousel>
         </div>
       )}
 

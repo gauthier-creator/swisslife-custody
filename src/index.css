@@ -656,6 +656,10 @@ input:focus, select:focus, textarea:focus { outline: none; }
     0 12px 24px -12px rgba(10, 10, 10, 0.08);
 }
 
+/* Hide scrollbar — for horizontal carousels */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
 /* Subtle inline serif title flourish — goes with IconPill */
 .title-serif {
   font-family: "Fraunces", ui-serif, Georgia, serif;
