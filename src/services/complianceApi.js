@@ -424,3 +424,20 @@ export async function deleteUBO(id) {
   if (!res.ok) throw new Error('Failed to delete UBO');
   return res.json();
 }
+
+// ============ ADDRESS SCREENING (DFNS × Chainalysis) ============
+// Calls the public Chainalysis Sanctions API via our server proxy.
+// Used to gate every outbound transfer before it's submitted to DFNS.
+export async function screenAddress({ address, chain, walletId, context }) {
+  const authHeaders = await getHeaders();
+  const res = await fetch(`${API_BASE}/api/compliance/address-screen`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ address, chain, walletId, context }),
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.error || 'Echec du screening d\'adresse');
+  }
+  return res.json();
+}
