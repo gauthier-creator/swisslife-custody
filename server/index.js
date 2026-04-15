@@ -2728,10 +2728,21 @@ app.post('/api/kyc/create-client', async (req, res) => {
   try {
     const { salesforceAccountId, clientName, email, personType } = req.body;
 
-    if (!COMPLYCUBE_KEY) {
-      return res.status(503).json({ error: 'ComplyCube API key not configured' });
+    // Demo mode — deterministic fake client id, consistent with upload-document / aml-screen
+    if (KYC_DEMO_MODE) {
+      return res.json({
+        id: demoClientId(salesforceAccountId),
+        type: personType || 'person',
+        email: email || `${salesforceAccountId}@custody.swisslife.com`,
+        personDetails: {
+          firstName: clientName?.split(' ')[0] || 'Client',
+          lastName: clientName?.split(' ').slice(1).join(' ') || salesforceAccountId,
+        },
+        provider: 'ComplyCube · mode sandbox',
+      });
     }
 
+    // LIVE ComplyCube
     const ccClient = await complyCubeRequest('POST', '/clients', {
       type: personType || 'person',
       email: email || `${salesforceAccountId}@custody.swisslife.com`,
@@ -3204,6 +3215,27 @@ app.get('/api/compliance/reports/summary', async (req, res) => {
       .sort((a, b) => b.volume - a.volume)
       .slice(0, 5);
 
+    // Daily volume breakdown — aggregated from transfer_approvals per calendar day
+    const dailyMap = {};
+    const startMs = new Date(startDate).getTime();
+    const endMs = new Date(endDate).getTime();
+    // Seed every day in the range with zero so the chart shows a continuous timeline
+    for (let ts = startMs; ts <= endMs; ts += 86400000) {
+      const key = new Date(ts).toISOString().slice(0, 10);
+      dailyMap[key] = { label: key, value: 0, count: 0 };
+    }
+    transfersArr.forEach(t => {
+      const key = (t.requested_at || '').slice(0, 10);
+      if (!key) return;
+      if (!dailyMap[key]) dailyMap[key] = { label: key, value: 0, count: 0 };
+      dailyMap[key].value += parseFloat(t.amount) || 0;
+      dailyMap[key].count += 1;
+    });
+    const dailyVolumes = Object.values(dailyMap)
+      .sort((a, b) => a.label.localeCompare(b.label))
+      .slice(-30)
+      .map(d => ({ label: d.label.slice(5), value: Math.round(d.value * 100) / 100, count: d.count }));
+
     res.json({
       period: { startDate, endDate },
       totalTransfers: transfersArr.length,
@@ -3215,6 +3247,7 @@ app.get('/api/compliance/reports/summary', async (req, res) => {
       whitelistStats,
       riskDistribution,
       topClientsByVolume,
+      dailyVolumes,
     });
   } catch (err) {
     console.error('Compliance summary error:', err.message);

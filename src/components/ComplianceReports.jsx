@@ -153,26 +153,9 @@ export default function ComplianceReports() {
     setExporting(null);
   };
 
-  // Build daily volume data for the bar chart
-  const dailyVolumes = summary ? (() => {
-    // Create a map of days in the period
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const days = [];
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      days.push(d.toISOString().slice(0, 10));
-    }
-    // We don't have per-day data from the summary endpoint, so show aggregate
-    // For a real implementation, you'd query daily breakdowns
-    // Here we show the period total as a single representation
-    if (days.length <= 1) return [{ label: days[0] || today(), value: summary.totalVolume }];
-    // Distribute evenly as placeholder visualization
-    const perDay = summary.totalTransfers > 0 ? summary.totalVolume / Math.min(days.length, 30) : 0;
-    return days.slice(-30).map(day => ({
-      label: day.slice(5),
-      value: Math.round(perDay * (0.5 + Math.random()) * 100) / 100,
-    }));
-  })() : [];
+  // Daily volume data — comes straight from the server aggregate (per-day
+  // sum of transfer_approvals over the selected period). No fabrication.
+  const dailyVolumes = summary?.dailyVolumes || [];
 
   if (loading) {
     return <div className="flex items-center justify-center py-20"><Spinner /></div>;

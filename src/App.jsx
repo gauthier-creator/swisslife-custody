@@ -88,7 +88,10 @@ function AppInner() {
     <>
       <Layout section={section} onNavigate={handleNavigate}>
         {section === 'clients' && (
-          <ClientList onSelectClient={(c) => setSelectedClient(c)} />
+          <ClientList
+            onSelectClient={(c) => setSelectedClient(c)}
+            onNavigate={handleNavigate}
+          />
         )}
         {section === 'wallets' && <WalletList />}
         {section === 'compliance' && <ComplianceDashboard />}

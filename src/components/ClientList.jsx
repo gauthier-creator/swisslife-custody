@@ -34,7 +34,7 @@ const typeVariant = (t) => {
   return 'default';
 };
 
-export default function ClientList({ onSelectClient }) {
+export default function ClientList({ onSelectClient, onNavigate }) {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -221,7 +221,7 @@ export default function ClientList({ onSelectClient }) {
               title="Chambre forte DFNS, signée par quorum MPC."
               description="Clés privées réparties en 3 shards · signature 2/3 · audit on-chain horodaté. Aucune clé en clair, jamais."
               scene={<SceneVault />}
-              onClick={() => window.alert('Conservation — détails bientôt')}
+              onClick={() => onNavigate?.('wallets')}
             />
             <ProductCard
               category="Gouvernance"
@@ -233,6 +233,7 @@ export default function ClientList({ onSelectClient }) {
               title="Politiques quatre-yeux & audit ACPR."
               description="Chaque mouvement déclenche une règle d'approbation versionnée et horodatée dans le journal d'audit réglementaire."
               scene={<SceneArch />}
+              onClick={() => onNavigate?.('policies')}
             />
             <ProductCard
               category="Surveillance"
@@ -244,6 +245,7 @@ export default function ClientList({ onSelectClient }) {
               title="Chainalysis KYT & screening temps réel."
               description="Pré-filtrage AML à la milliseconde · sanctions OFAC/UE · PPE · Travel Rule Art. 7b — tout flux suspect est bloqué."
               scene={<SceneWaves />}
+              onClick={() => onNavigate?.('compliance')}
             />
             <ProductCard
               category="Reporting"
@@ -255,6 +257,7 @@ export default function ClientList({ onSelectClient }) {
               title="Mandats signés & reporting ACPR automatisé."
               description="Génération des déclarations Tracfin, extraits pour commissaires aux comptes, sceau numérique Sℓ horodaté."
               scene={<SceneDocument />}
+              onClick={() => onNavigate?.('compliance')}
             />
             <ProductCard
               category="Multi-chain"
@@ -266,6 +269,7 @@ export default function ClientList({ onSelectClient }) {
               title="Ethereum, Bitcoin, Solana — une seule interface."
               description="Bitcoin natif, tous les EVM, Solana, Cosmos · provisionnement de wallet en un clic · reconciliation temps réel."
               scene={<SceneKeys />}
+              onClick={() => onNavigate?.('wallets')}
             />
           </ProductCarousel>
         </div>
