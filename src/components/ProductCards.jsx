@@ -654,9 +654,9 @@ export function MandatCard({
 }
 
 /* ═══════════════════════════════════════════════════════
-   MarbleHero — rich hero banner with marble bg + live KPIs
-   Real working surface: eyebrow · serif title · description
-   · CTA cluster on the left · KPI pills grid on the right
+   MarbleHero — editorial hero with marble identity
+   Left-aligned: eyebrow · serif title · description · CTAs
+   Right: Sℓ monogram seal watermark (identity cue)
    ═══════════════════════════════════════════════════════ */
 export function MarbleHero({
   eyebrow,
@@ -664,130 +664,146 @@ export function MarbleHero({
   description,
   marble = 'peach',
   seed = 7,
-  stats = [],        // [{ label, value, caption, delta, tone }]
   primaryCta,        // { label, icon, onClick }
   secondaryCta,      // { label, onClick }
+  meta,              // optional array of small caption strings shown under CTAs
   className = '',
 }) {
   return (
     <div
-      className={`relative overflow-hidden rounded-[22px] border border-[rgba(124,94,60,0.2)] ${className}`}
+      className={`relative overflow-hidden rounded-[22px] border border-[rgba(124,94,60,0.22)] ${className}`}
       style={{
         boxShadow:
           '0 1px 0 rgba(255,255,255,0.9) inset, 0 1px 2px rgba(10,10,10,0.04), 0 24px 56px -24px rgba(124,94,60,0.35), 0 12px 24px -14px rgba(10,10,10,0.1)',
       }}
     >
-      {/* Marble background — spans the full card */}
+      {/* Marble background */}
       <div className="absolute inset-0 rounded-[22px] overflow-hidden">
         <MarbleTexture variant={marble} seed={seed} />
       </div>
 
-      {/* Subtle inner highlight */}
+      {/* Inner specular highlight (top-left) */}
       <div
         className="absolute inset-0 pointer-events-none rounded-[22px]"
-        style={{ background: 'radial-gradient(ellipse 70% 50% at 30% 0%, rgba(255,255,255,0.5), transparent 60%)' }}
+        style={{ background: 'radial-gradient(ellipse 70% 50% at 28% 0%, rgba(255,255,255,0.55), transparent 62%)' }}
       />
 
-      {/* Corner fleurons */}
-      <svg viewBox="0 0 24 24" width="14" height="14" className="absolute top-5 right-6 opacity-35 pointer-events-none" fill="#9A7A51">
-        <path d="M12 2 C 12 7.5, 12 7.5, 17.5 8.5 C 22 9.2, 22 9.2, 22 12 C 22 14.8, 22 14.8, 17.5 15.5 C 12 16.5, 12 16.5, 12 22 C 12 16.5, 12 16.5, 6.5 15.5 C 2 14.8, 2 14.8, 2 12 C 2 9.2, 2 9.2, 6.5 8.5 C 12 7.5, 12 7.5, 12 2 Z" fillOpacity="0.85" />
-      </svg>
+      {/* Monogram seal watermark — right side, very subtle */}
+      <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none hidden md:block" style={{ width: 340, height: 340, marginRight: -40 }}>
+        <svg viewBox="0 0 340 340" className="w-full h-full">
+          <defs>
+            <linearGradient id="seal-ring" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#C8924B" stopOpacity="0.45" />
+              <stop offset="50%" stopColor="#9A7A51" stopOpacity="0.28" />
+              <stop offset="100%" stopColor="#C8924B" stopOpacity="0.45" />
+            </linearGradient>
+          </defs>
+          {/* Concentric rings */}
+          <circle cx="170" cy="170" r="148" fill="none" stroke="url(#seal-ring)" strokeWidth="0.8" />
+          <circle cx="170" cy="170" r="138" fill="none" stroke="#9A7A51" strokeOpacity="0.16" strokeWidth="0.6" />
+          <circle cx="170" cy="170" r="116" fill="none" stroke="#9A7A51" strokeOpacity="0.22" strokeWidth="0.6" strokeDasharray="1 6" />
+          {/* Ornamental ticks at cardinal points */}
+          {[0, 90, 180, 270].map((deg) => (
+            <line
+              key={deg}
+              x1="170"
+              y1="22"
+              x2="170"
+              y2="32"
+              stroke="#9A7A51"
+              strokeOpacity="0.4"
+              strokeWidth="0.8"
+              transform={`rotate(${deg} 170 170)`}
+            />
+          ))}
+          {/* Central monogram Sℓ */}
+          <text
+            x="170"
+            y="204"
+            textAnchor="middle"
+            fontSize="132"
+            fontFamily="var(--font-display, 'Fraunces'), serif"
+            fontStyle="italic"
+            fill="#2A1F12"
+            fillOpacity="0.08"
+            letterSpacing="-6"
+          >
+            Sℓ
+          </text>
+          {/* Fine bronze rule beneath monogram */}
+          <line x1="118" y1="224" x2="222" y2="224" stroke="#9A7A51" strokeOpacity="0.32" strokeWidth="0.7" />
+          <text
+            x="170"
+            y="244"
+            textAnchor="middle"
+            fontSize="9"
+            fontFamily="var(--font-display, 'Fraunces'), serif"
+            fontStyle="italic"
+            fill="#7C5E3C"
+            fillOpacity="0.7"
+            letterSpacing="2"
+          >
+            EST · MMXXVI
+          </text>
+        </svg>
+      </div>
 
       {/* Content */}
-      <div className="relative px-9 py-9 flex items-stretch gap-10 flex-wrap lg:flex-nowrap">
-        {/* ── Left: editorial block + CTAs ── */}
-        <div className="flex-1 min-w-0 max-w-[52ch]">
-          {eyebrow && (
-            <p className="text-[10.5px] font-medium text-[#7C5E3C] uppercase tracking-[0.14em] mb-4 flex items-center gap-2">
-              <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
-              {eyebrow}
-            </p>
-          )}
-          {title && (
-            <h2
-              className="font-display text-[32px] text-[#2A1F12] leading-[1.06]"
-              style={{ letterSpacing: '-0.026em', textShadow: '0 1px 0 rgba(255,255,255,0.35)' }}
-            >
-              {title}
-            </h2>
-          )}
-          {description && (
-            <p className="mt-3 text-[13.5px] text-[#5C4A34] leading-[1.6] tracking-[-0.003em]">
-              {description}
-            </p>
-          )}
+      <div className="relative px-10 py-11 max-w-[58ch]">
+        {eyebrow && (
+          <p className="text-[10.5px] font-medium text-[#7C5E3C] uppercase tracking-[0.16em] mb-5 flex items-center gap-2">
+            <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
+            {eyebrow}
+          </p>
+        )}
+        {title && (
+          <h2
+            className="font-display text-[36px] md:text-[38px] text-[#2A1F12] leading-[1.04]"
+            style={{ letterSpacing: '-0.028em', textShadow: '0 1px 0 rgba(255,255,255,0.4)' }}
+          >
+            {title}
+          </h2>
+        )}
+        {description && (
+          <p className="mt-4 text-[14px] text-[#5C4A34] leading-[1.62] tracking-[-0.003em] max-w-[48ch]">
+            {description}
+          </p>
+        )}
 
-          {(primaryCta || secondaryCta) && (
-            <div className="mt-6 flex items-center gap-2.5 flex-wrap">
-              {primaryCta && (
-                <button
-                  onClick={primaryCta.onClick}
-                  className="inline-flex items-center gap-2 h-10 px-4 rounded-full bg-[#0A0A0A] text-white text-[12.5px] font-medium tracking-[-0.003em] transition-all hover:bg-[#1F1F1F] active:scale-[0.98]"
-                  style={{ boxShadow: '0 1px 0 rgba(255,255,255,0.1) inset, 0 1px 2px rgba(10,10,10,0.2), 0 6px 16px -6px rgba(10,10,10,0.4)' }}
-                >
-                  {primaryCta.icon}
-                  {primaryCta.label}
-                </button>
-              )}
-              {secondaryCta && (
-                <button
-                  onClick={secondaryCta.onClick}
-                  className="inline-flex items-center gap-2 h-10 px-4 rounded-full bg-white/70 backdrop-blur border border-[rgba(124,94,60,0.22)] text-[#2A1F12] text-[12.5px] font-medium tracking-[-0.003em] transition-all hover:bg-white/90"
-                >
-                  {secondaryCta.label}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+        {(primaryCta || secondaryCta) && (
+          <div className="mt-7 flex items-center gap-2.5 flex-wrap">
+            {primaryCta && (
+              <button
+                onClick={primaryCta.onClick}
+                className="group/cta inline-flex items-center gap-2 h-10 px-[18px] rounded-full bg-[#0A0A0A] text-white text-[12.5px] font-medium tracking-[-0.003em] transition-all duration-200 hover:bg-[#1F1F1F] hover:-translate-y-px active:translate-y-0 active:scale-[0.98]"
+                style={{ boxShadow: '0 1px 0 rgba(255,255,255,0.12) inset, 0 1px 2px rgba(10,10,10,0.22), 0 8px 20px -8px rgba(10,10,10,0.45)' }}
+              >
+                {primaryCta.icon}
+                {primaryCta.label}
+              </button>
+            )}
+            {secondaryCta && (
+              <button
+                onClick={secondaryCta.onClick}
+                className="inline-flex items-center gap-2 h-10 px-[18px] rounded-full bg-white/75 backdrop-blur border border-[rgba(124,94,60,0.24)] text-[#2A1F12] text-[12.5px] font-medium tracking-[-0.003em] transition-all duration-200 hover:bg-white hover:border-[rgba(124,94,60,0.4)] hover:-translate-y-px active:translate-y-0"
+              >
+                {secondaryCta.label}
+              </button>
+            )}
+          </div>
+        )}
 
-        {/* ── Right: live KPI grid — a 2x2 tight editorial strip ── */}
-        {stats.length > 0 && (
-          <div className="flex-shrink-0 w-full lg:w-auto lg:max-w-[440px]">
-            <div
-              className="grid grid-cols-2 gap-px rounded-[14px] overflow-hidden bg-[rgba(124,94,60,0.16)]"
-              style={{ boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 1px 2px rgba(124,94,60,0.15), 0 8px 24px -12px rgba(124,94,60,0.25)' }}
-            >
-              {stats.slice(0, 4).map((s, i) => (
-                <div
-                  key={i}
-                  className="relative bg-white/85 backdrop-blur-sm p-4 min-w-[170px]"
-                >
-                  <p className="text-[9.5px] font-medium text-[#7C5E3C] uppercase tracking-[0.1em] flex items-center gap-1.5">
-                    <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
-                    {s.label}
-                  </p>
-                  <p
-                    className="mt-2 font-display text-[24px] text-[#2A1F12] leading-[1.05] tabular-nums"
-                    style={{ letterSpacing: '-0.024em' }}
-                  >
-                    {s.value}
-                  </p>
-                  {(s.caption || s.delta) && (
-                    <div className="mt-1.5 flex items-center gap-1.5">
-                      {s.delta && (
-                        <span
-                          className="inline-flex items-center gap-0.5 text-[10.5px] font-medium tabular-nums"
-                          style={{ color: s.delta.startsWith('-') ? '#DC2626' : '#16A34A' }}
-                        >
-                          <svg className="w-2 h-2" viewBox="0 0 10 10" fill="currentColor">
-                            {s.delta.startsWith('-')
-                              ? <path d="M5 8.5L1.5 3H8.5L5 8.5Z" />
-                              : <path d="M5 1.5L8.5 7H1.5L5 1.5Z" />}
-                          </svg>
-                          {s.delta}
-                        </span>
-                      )}
-                      {s.caption && (
-                        <span className="text-[10.5px] text-[#6B6B6B] tracking-[-0.003em] truncate">
-                          {s.caption}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+        {meta && meta.length > 0 && (
+          <div className="mt-5 flex items-center gap-3 flex-wrap">
+            {meta.map((m, i) => (
+              <span
+                key={i}
+                className="inline-flex items-center gap-1.5 text-[10.5px] font-medium text-[#7C5E3C] tracking-[0.06em] uppercase"
+              >
+                {i > 0 && <span className="w-[3px] h-[3px] rounded-full bg-[#C8924B]" />}
+                {m}
+              </span>
+            ))}
           </div>
         )}
       </div>

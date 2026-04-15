@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { listPolicies, createPolicy } from '../services/dfnsApi';
 import {
   Badge, Modal, Spinner, EmptyState, inputCls, selectCls, labelCls,
-  PageHeader, Card, Button, FooterDisclosure, StatusDot,
+  PageHeader, Metric, MetricRow, Card, Button, FooterDisclosure, StatusDot,
 } from './shared';
 import { MarbleHero } from './ProductCards';
 
@@ -99,31 +99,21 @@ export default function PolicyList() {
               ),
               onClick: () => setShowCreate(true),
             }}
-            secondaryCta={{ label: 'Journal d’audit · ACPR' }}
-            stats={[
-              {
-                label: 'Politiques actives',
-                value: activeCount,
-                caption: 'En production',
-              },
-              {
-                label: 'En attente',
-                value: pendingCount,
-                caption: 'Approbation admin',
-                delta: pendingCount > 0 ? `+${pendingCount}` : null,
-              },
-              {
-                label: 'Couverture',
-                value: policies.length,
-                caption: 'Règles définies',
-              },
-              {
-                label: 'Quorum MPC',
-                value: '2 / 3',
-                caption: 'Threshold actif',
-              },
-            ]}
+            secondaryCta={{ label: "Journal d’audit · ACPR" }}
+            meta={['ACPR', 'AMF', 'Quatre yeux', 'DFNS MPC 2/3']}
           />
+        </div>
+      )}
+
+      {/* ── Metrics ───────────────────────────────────── */}
+      {!loading && (
+        <div className="animate-slide-up stagger-2">
+          <MetricRow>
+            <Metric label="Politiques actives" value={activeCount} caption="Appliquées en temps réel" progress={Math.min(100, activeCount * 25)} />
+            <Metric label="En attente" value={pendingCount} caption="Approbation admin requise" progress={Math.min(100, pendingCount * 20)} />
+            <Metric label="Couverture" value={policies.length} caption="Règles définies" progress={Math.min(100, policies.length * 15)} />
+            <Metric label="Signataires" value="2 / 3" caption="Quorum MPC threshold" progress={66} />
+          </MetricRow>
         </div>
       )}
 

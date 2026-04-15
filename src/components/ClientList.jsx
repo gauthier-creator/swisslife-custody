@@ -4,6 +4,7 @@ import {
   fmtEUR, fmtCompactEUR, Badge, Card, EmptyState, Avatar,
   SkeletonCircle, Skeleton, useCountUp,
   PageHeader, StatusDot, Timestamp, SignatureMark, FleuronRule,
+  Metric, MetricRow,
 } from './shared';
 import {
   ProductCard, ProductCarousel,
@@ -87,7 +88,7 @@ export default function ClientList({ onSelectClient }) {
                 value={search}
                 onChange={handleSearch}
                 placeholder="Rechercher un client…"
-                className="h-10 pl-10 pr-4 w-[300px] text-[13.5px] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none focus:border-[rgba(10,10,10,0.35)] focus:ring-4 focus:ring-[rgba(10,10,10,0.04)] placeholder:text-[#9B9B9B] tracking-[-0.006em] transition-all"
+                className="h-10 pl-10 pr-4 w-[300px] text-[13px] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none focus:border-[rgba(124,94,60,0.4)] focus:ring-4 focus:ring-[rgba(124,94,60,0.1)] placeholder:text-[#9B9B9B] tracking-[-0.006em] transition-[border-color,box-shadow] duration-200"
               />
             </div>
             <div className="flex items-center gap-3">
@@ -117,30 +118,41 @@ export default function ClientList({ onSelectClient }) {
               ),
             }}
             secondaryCta={{ label: 'Guide AMF · Onboarding' }}
-            stats={[
-              {
-                label: 'Actifs sous gestion',
-                value: <CountUpNumber value={totalAum} format={fmtCompactEUR} />,
-                delta: '+2.4%',
-                caption: '12 mois',
-              },
-              {
-                label: 'Clients actifs',
-                value: <CountUpNumber value={clients.length} />,
-                caption: 'Registre Salesforce',
-              },
-              {
-                label: 'UHNWI',
-                value: <CountUpNumber value={uhnwiCount} />,
-                caption: clients.length ? `${Math.round((uhnwiCount / clients.length) * 100)}% du livre` : '—',
-              },
-              {
-                label: 'Ticket moyen',
-                value: <CountUpNumber value={avgAum} format={fmtCompactEUR} />,
-                caption: 'Par mandat',
-              },
-            ]}
+            meta={['Salesforce sync', 'ACPR registre', 'Tracfin ready']}
           />
+        </div>
+      )}
+
+      {/* ── Metric row — Mercury-style strip ─────────────── */}
+      {!loading && clients.length > 0 && (
+        <div className="animate-slide-up stagger-2">
+          <MetricRow>
+            <Metric
+              label="Actifs sous gestion"
+              value={<CountUpNumber value={totalAum} format={fmtCompactEUR} />}
+              delta="+2.4%"
+              caption="12 mois"
+              progress={Math.min(100, (totalAum / 100_000_000) * 100)}
+            />
+            <Metric
+              label="Clients actifs"
+              value={<CountUpNumber value={clients.length} />}
+              caption="Registre Salesforce"
+              progress={Math.min(100, clients.length * 8)}
+            />
+            <Metric
+              label="UHNWI"
+              value={<CountUpNumber value={uhnwiCount} />}
+              caption={clients.length ? `${Math.round((uhnwiCount / clients.length) * 100)}% du livre` : '—'}
+              progress={clients.length ? (uhnwiCount / clients.length) * 100 : 0}
+            />
+            <Metric
+              label="Ticket moyen"
+              value={<CountUpNumber value={avgAum} format={fmtCompactEUR} />}
+              caption="Par mandat"
+              progress={Math.min(100, (avgAum / 20_000_000) * 100)}
+            />
+          </MetricRow>
         </div>
       )}
 

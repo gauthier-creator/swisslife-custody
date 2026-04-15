@@ -3,10 +3,15 @@ import { listWallets } from '../services/dfnsApi';
 import { SUPPORTED_NETWORKS } from '../config/constants';
 import {
   Badge, EmptyState, Card, SectionCard, PageHeader, StatusDot,
-  Table, tdCls, tdMuted, trCls, FooterDisclosure,
-  Skeleton, SkeletonRow, CopyButton,
+  Metric, MetricRow, Table, tdCls, tdMuted, trCls, FooterDisclosure,
+  Skeleton, SkeletonRow, CopyButton, useCountUp,
 } from './shared';
 import { MarbleHero } from './ProductCards';
+
+function CountUpNumber({ value, format = (v) => v }) {
+  const display = useCountUp(value);
+  return <>{format(display)}</>;
+}
 
 /* ─────────────────────────────────────────────────────────
    WalletList — Editorial DFNS custody registry
@@ -70,7 +75,7 @@ export default function WalletList() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Rechercher un wallet…"
-                className="h-10 pl-10 pr-4 w-[280px] text-[13.5px] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none focus:border-[rgba(10,10,10,0.35)] focus:ring-4 focus:ring-[rgba(10,10,10,0.04)] placeholder:text-[#9B9B9B] tracking-[-0.006em] transition-all"
+                className="h-10 pl-10 pr-16 w-[280px] text-[13px] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none focus:border-[rgba(124,94,60,0.4)] focus:ring-4 focus:ring-[rgba(124,94,60,0.1)] placeholder:text-[#9B9B9B] tracking-[-0.006em] transition-[border-color,box-shadow] duration-200"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:inline-flex">
                 <span className="kbd">⌘K</span>
@@ -99,29 +104,20 @@ export default function WalletList() {
               ),
             }}
             secondaryCta={{ label: 'Travel Rule · Art. 7b' }}
-            stats={[
-              {
-                label: 'Wallets provisionnés',
-                value: wallets.length,
-                caption: `${activeCount} actifs`,
-              },
-              {
-                label: 'Réseaux actifs',
-                value: networkCount,
-                caption: 'Multi-chain DFNS',
-              },
-              {
-                label: 'Clients liés',
-                value: clientCount,
-                caption: 'Mandats',
-              },
-              {
-                label: 'Signatures MPC',
-                value: '2 / 3',
-                caption: 'Threshold actif',
-              },
-            ]}
+            meta={['DFNS', 'MPC 2/3', 'Chainalysis KYT', 'MiCA Art. 60']}
           />
+        </div>
+      )}
+
+      {/* ── Metric row ────────────────────────────────── */}
+      {!loading && wallets.length > 0 && (
+        <div className="animate-slide-up stagger-2">
+          <MetricRow>
+            <Metric label="Wallets totaux" value={<CountUpNumber value={wallets.length} />} caption={`${activeCount} actifs`} progress={Math.min(100, wallets.length * 12)} />
+            <Metric label="Réseaux actifs" value={<CountUpNumber value={networkCount} />} caption="Multi-chain" progress={Math.min(100, networkCount * 16)} />
+            <Metric label="Clients liés" value={<CountUpNumber value={clientCount} />} caption="Mandats de conservation" progress={Math.min(100, clientCount * 10)} />
+            <Metric label="Signatures MPC" value="2 / 3" caption="Threshold cryptography" progress={66} />
+          </MetricRow>
         </div>
       )}
 

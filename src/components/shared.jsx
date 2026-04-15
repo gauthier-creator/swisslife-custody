@@ -32,17 +32,18 @@ export function ToastContainer({ toasts }) {
 }
 
 // ─── Form primitives ──────────────────────────────────
+// Focus ring uses bronze tint so inputs carry the identity
 export const inputCls =
-  "w-full h-11 px-4 text-[14px] text-[#0A0A0A] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none transition-all focus:border-[rgba(10,10,10,0.35)] focus:ring-4 focus:ring-[rgba(10,10,10,0.04)] placeholder:text-[#9B9B9B] tracking-[-0.006em]";
+  "w-full h-11 px-4 text-[14px] text-[#0A0A0A] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none transition-[border-color,box-shadow] duration-200 focus:border-[rgba(124,94,60,0.4)] focus:ring-4 focus:ring-[rgba(124,94,60,0.1)] placeholder:text-[#9B9B9B] tracking-[-0.006em]";
 
 export const selectCls =
-  "w-full h-11 px-4 pr-9 text-[14px] text-[#0A0A0A] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none transition-all focus:border-[rgba(10,10,10,0.35)] focus:ring-4 focus:ring-[rgba(10,10,10,0.04)] appearance-none cursor-pointer tracking-[-0.006em]";
+  "w-full h-11 px-4 pr-9 text-[14px] text-[#0A0A0A] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none transition-[border-color,box-shadow] duration-200 focus:border-[rgba(124,94,60,0.4)] focus:ring-4 focus:ring-[rgba(124,94,60,0.1)] appearance-none cursor-pointer tracking-[-0.006em]";
 
 export const textareaCls =
-  "w-full px-4 py-3 text-[14px] text-[#0A0A0A] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none transition-all focus:border-[rgba(10,10,10,0.35)] focus:ring-4 focus:ring-[rgba(10,10,10,0.04)] placeholder:text-[#9B9B9B] resize-none tracking-[-0.006em]";
+  "w-full px-4 py-3 text-[14px] text-[#0A0A0A] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none transition-[border-color,box-shadow] duration-200 focus:border-[rgba(124,94,60,0.4)] focus:ring-4 focus:ring-[rgba(124,94,60,0.1)] placeholder:text-[#9B9B9B] resize-none tracking-[-0.006em]";
 
 export const labelCls =
-  "block text-[12px] font-medium text-[#4A4A4A] mb-2 tracking-[-0.003em]";
+  "block text-[11.5px] font-medium text-[#4A4A4A] mb-2 tracking-[0.01em]";
 
 // ─── Format helpers ───────────────────────────────────
 export const fmtEUR = (n) =>
@@ -76,11 +77,11 @@ export const avatarColor = () => ({ bg: '#F5F3EE', fg: '#0A0A0A' });
 export function Button({ variant = 'primary', size = 'md', children, className = '', ...props }) {
   const variants = {
     primary:
-      'bg-[#0A0A0A] text-white border border-[#0A0A0A] hover:bg-[#2A2A2A] shadow-[0_1px_2px_rgba(10,10,10,0.06)]',
+      'bg-[#0A0A0A] text-white border border-[#0A0A0A] hover:bg-[#1F1F1F] shadow-[0_1px_0_rgba(255,255,255,0.1)_inset,0_1px_2px_rgba(10,10,10,0.2),0_8px_20px_-8px_rgba(10,10,10,0.4)] hover:shadow-[0_1px_0_rgba(255,255,255,0.12)_inset,0_2px_3px_rgba(10,10,10,0.22),0_14px_28px_-10px_rgba(10,10,10,0.45)]',
     accent:
-      'bg-[#7C5E3C] text-white border border-[#7C5E3C] hover:bg-[#6A4F30] shadow-[0_1px_2px_rgba(124,94,60,0.12)]',
+      'bg-[#7C5E3C] text-white border border-[#7C5E3C] hover:bg-[#6A4F30] shadow-[0_1px_0_rgba(255,255,255,0.12)_inset,0_1px_2px_rgba(124,94,60,0.2),0_8px_20px_-8px_rgba(124,94,60,0.4)]',
     secondary:
-      'bg-white text-[#0A0A0A] border border-[rgba(10,10,10,0.12)] hover:bg-[#FBFAF7] hover:border-[rgba(10,10,10,0.2)]',
+      'bg-white text-[#0A0A0A] border border-[rgba(10,10,10,0.12)] hover:bg-[#FBFAF7] hover:border-[rgba(124,94,60,0.28)]',
     soft:
       'bg-[#F5F3EE] text-[#0A0A0A] border border-transparent hover:bg-[#EFECE4]',
     ghost:
@@ -92,14 +93,15 @@ export function Button({ variant = 'primary', size = 'md', children, className =
   };
   const sizes = {
     sm: 'h-8 px-3.5 text-[13px] rounded-full',
-    md: 'h-10 px-5 text-[13.5px] rounded-full',
+    md: 'h-10 px-[18px] text-[13px] rounded-full',
     lg: 'h-12 px-6 text-[14px] rounded-full',
-    pill: 'h-10 px-5 text-[13.5px] rounded-full',
+    pill: 'h-10 px-[18px] text-[13px] rounded-full',
   };
+  const liftable = variant !== 'link' && variant !== 'ghost';
   return (
     <button
       {...props}
-      className={`inline-flex items-center justify-center gap-2 font-medium transition-[background,border-color,color,box-shadow,transform] duration-[220ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] disabled:opacity-40 disabled:cursor-not-allowed tracking-[-0.01em] whitespace-nowrap outline-none focus-visible:ring-[3px] focus-visible:ring-[rgba(124,94,60,0.22)] active:scale-[0.97] will-change-transform ${variants[variant]} ${variant !== 'link' ? sizes[size] : ''} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 font-medium transition-[background,border-color,color,box-shadow,transform] duration-[220ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] disabled:opacity-40 disabled:cursor-not-allowed tracking-[-0.01em] whitespace-nowrap outline-none focus-visible:ring-[3px] focus-visible:ring-[rgba(124,94,60,0.22)] active:scale-[0.97] will-change-transform ${liftable ? 'hover:-translate-y-[1px] active:translate-y-0' : ''} ${variants[variant]} ${variant !== 'link' ? sizes[size] : ''} ${className}`}
     >
       {children}
     </button>
@@ -219,26 +221,26 @@ export function CopyButton({ value, label = 'Copier', className = '' }) {
 // Outline style — no loud backgrounds. Dot conveys semantic color.
 export function Badge({ children, variant = 'default', dot = false, size = 'md' }) {
   const tone = {
-    default: { text: '#4A4A4A', dot: '#9B9B9B' },
-    success: { text: '#166534', dot: '#16A34A' },
-    warning: { text: '#92400E', dot: '#CA8A04' },
-    error:   { text: '#991B1B', dot: '#DC2626' },
-    info:    { text: '#1E40AF', dot: '#2563EB' },
-    gold:    { text: '#7C5E3C', dot: '#7C5E3C' },
-    pink:    { text: '#4A4A4A', dot: '#9B9B9B' },
-    purple:  { text: '#4A4A4A', dot: '#9B9B9B' },
+    default: { text: '#4A4A4A', dot: '#9B9B9B', border: 'rgba(10,10,10,0.1)', bg: '#FFFFFF' },
+    success: { text: '#166534', dot: '#16A34A', border: 'rgba(22,101,52,0.18)', bg: '#F0FDF4' },
+    warning: { text: '#92400E', dot: '#CA8A04', border: 'rgba(146,64,14,0.2)',  bg: '#FEFCE8' },
+    error:   { text: '#991B1B', dot: '#DC2626', border: 'rgba(153,27,27,0.2)',  bg: '#FEF2F2' },
+    info:    { text: '#1E40AF', dot: '#2563EB', border: 'rgba(30,64,175,0.18)', bg: '#EFF6FF' },
+    gold:    { text: '#7C5E3C', dot: '#C8924B', border: 'rgba(124,94,60,0.22)', bg: '#FBF6EC' },
+    pink:    { text: '#4A4A4A', dot: '#9B9B9B', border: 'rgba(10,10,10,0.1)',   bg: '#FFFFFF' },
+    purple:  { text: '#4A4A4A', dot: '#9B9B9B', border: 'rgba(10,10,10,0.1)',   bg: '#FFFFFF' },
   };
   const sizes = {
-    sm: 'h-5 px-2 text-[11px]',
-    md: 'h-6 px-2.5 text-[12px]',
+    sm: 'h-[22px] px-2 text-[10.5px]',
+    md: 'h-[26px] px-2.5 text-[11.5px]',
   };
   const t = tone[variant] || tone.default;
   return (
     <span
-      className={`inline-flex items-center gap-1.5 font-medium rounded-full border border-[rgba(10,10,10,0.1)] bg-white tracking-[-0.003em] ${sizes[size]}`}
-      style={{ color: t.text }}
+      className={`inline-flex items-center gap-1.5 font-medium rounded-full border tracking-[-0.003em] tabular-nums ${sizes[size]}`}
+      style={{ color: t.text, borderColor: t.border, backgroundColor: t.bg }}
     >
-      {dot && <span className="w-1.5 h-1.5 rounded-full" style={{ background: t.dot }} />}
+      {dot && <span className="w-1.5 h-1.5 rounded-full" style={{ background: t.dot, boxShadow: `0 0 0 2px ${t.bg}, 0 0 0 3px ${t.border}` }} />}
       {children}
     </span>
   );
@@ -248,9 +250,9 @@ export function Badge({ children, variant = 'default', dot = false, size = 'md' 
 // Hairline border, warm white, barely-there shadow. Apple restraint.
 export function Card({ children, className = '', variant = 'elevated', ...props }) {
   const variants = {
-    elevated: 'bg-white rounded-[14px] border border-[rgba(10,10,10,0.08)] shadow-[0_1px_2px_rgba(10,10,10,0.03)]',
+    elevated: 'bg-white rounded-[14px] border border-[rgba(10,10,10,0.08)] shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_1px_2px_rgba(10,10,10,0.03),0_10px_24px_-18px_rgba(10,10,10,0.18)]',
     flat:     'bg-white rounded-[14px] border border-[rgba(10,10,10,0.08)]',
-    soft:     'bg-[#F5F3EE] rounded-[14px] border border-[rgba(10,10,10,0.04)]',
+    soft:     'bg-[#FBFAF7] rounded-[14px] border border-[rgba(124,94,60,0.08)]',
     dark:     'bg-[#0A0A0A] text-white rounded-[14px] shadow-[0_12px_32px_-12px_rgba(10,10,10,0.3)]',
   };
   return (
@@ -723,8 +725,14 @@ export function Metric({ label, value, caption, delta, progress, align = 'left',
   const alignCls = align === 'right' ? 'text-right items-end' : 'text-left items-start';
   return (
     <div className={`flex flex-col ${alignCls} ${className}`}>
-      <span className="text-[11px] font-medium text-[#6B6B6B] uppercase tracking-[0.06em]">{label}</span>
-      <span className="mt-3 font-display text-[32px] text-[#0A0A0A] tabular-nums leading-[1.05]" style={{ letterSpacing: '-0.028em' }}>
+      <span className="inline-flex items-center gap-1.5 text-[10.5px] font-medium text-[#7C5E3C] uppercase tracking-[0.12em]">
+        <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
+        {label}
+      </span>
+      <span
+        className="mt-3 font-display text-[30px] text-[#0A0A0A] tabular-nums leading-[1.04]"
+        style={{ letterSpacing: '-0.03em' }}
+      >
         {value}
       </span>
       {(caption || delta) && (
@@ -814,9 +822,23 @@ export function MetricRow({ children, className = '' }) {
   // expects an array of <Metric /> children; splits them with hairline dividers
   const items = Array.isArray(children) ? children : [children];
   return (
-    <Card className={`flex divide-x divide-[rgba(10,10,10,0.08)] ${className}`}>
+    <Card
+      className={`relative flex divide-x divide-[rgba(10,10,10,0.08)] overflow-hidden ${className}`}
+    >
+      {/* Bronze hairline along the top edge — editorial signature */}
+      <span
+        className="absolute inset-x-6 top-0 h-px pointer-events-none"
+        style={{
+          background:
+            'linear-gradient(90deg, rgba(200,146,75,0) 0%, rgba(200,146,75,0.55) 22%, rgba(200,146,75,0.75) 50%, rgba(200,146,75,0.55) 78%, rgba(200,146,75,0) 100%)',
+        }}
+      />
       {items.map((child, i) => (
-        <div key={i} className="flex-1 px-6 py-6 animate-slide-up" style={{ animationDelay: `${i * 40}ms` }}>
+        <div
+          key={i}
+          className="flex-1 px-7 py-6 animate-slide-up"
+          style={{ animationDelay: `${i * 40}ms` }}
+        >
           {child}
         </div>
       ))}
@@ -1127,12 +1149,15 @@ export function PageHeader({ icon, duoIcon, title, eyebrow, trailing, banner, cl
           {iconNode}
           <div className="min-w-0">
             {eyebrow && (
-              <p className="text-[10.5px] font-medium text-[#7C5E3C] uppercase tracking-[0.12em] mb-1.5 flex items-center gap-1.5">
-                <Fleuron size={9} tone="bronze" />
+              <p className="text-[10.5px] font-medium text-[#7C5E3C] uppercase tracking-[0.14em] mb-2 flex items-center gap-2">
+                <Fleuron size={10} tone="bronze" />
                 {eyebrow}
               </p>
             )}
-            <h1 className="font-display text-[34px] text-[#0A0A0A] leading-[1.02] truncate" style={{ letterSpacing: '-0.025em' }}>
+            <h1
+              className="font-display text-[36px] text-[#0A0A0A] leading-[1.02] truncate"
+              style={{ letterSpacing: '-0.028em' }}
+            >
               {title}
             </h1>
           </div>
@@ -1250,14 +1275,14 @@ export function Table({ headers, children, className = '' }) {
     <div className={`overflow-x-auto ${className}`}>
       <table className="w-full text-sm text-left border-collapse">
         <thead>
-          <tr className="border-b border-[rgba(10,10,10,0.08)]">
+          <tr className="border-b border-[rgba(10,10,10,0.08)] bg-[#FBFAF7]/60">
             {headers.map((h, i) => {
               const label = typeof h === 'string' ? h : h.label;
               const right = typeof h === 'object' && h.right;
               return (
                 <th
                   key={i}
-                  className={`px-6 py-3.5 text-[10.5px] font-medium text-[#9B9B9B] tracking-[0.06em] uppercase ${right ? 'text-right' : ''}`}
+                  className={`px-6 py-3.5 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase ${right ? 'text-right' : ''}`}
                 >
                   {label}
                 </th>
@@ -1272,7 +1297,7 @@ export function Table({ headers, children, className = '' }) {
 }
 export const tdCls = 'px-6 py-4 text-[13.5px] text-[#0A0A0A] tracking-[-0.006em]';
 export const tdMuted = 'px-6 py-4 text-[12.5px] text-[#6B6B6B] tracking-[-0.003em]';
-export const trCls = 'border-b border-[rgba(10,10,10,0.06)] hover:bg-[#FBFAF7] transition-colors';
+export const trCls = 'group/row relative border-b border-[rgba(10,10,10,0.06)] transition-colors hover:bg-[#FBFAF7] hover:shadow-[inset_3px_0_0_0_rgba(200,146,75,0.55)]';
 
 // ─── Illustrations — monochrome, editorial ───────────
 // Small refined SVGs for empty states & headers

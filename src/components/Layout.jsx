@@ -173,7 +173,7 @@ export default function Layout({ children, section, onNavigate }) {
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto px-4 py-5">
           {/* Section label · Produit */}
-          <p className="px-3 mb-2 text-[9.5px] font-medium uppercase tracking-[0.14em] text-[#9B9B9B] flex items-center gap-2">
+          <p className="px-3 mb-2.5 text-[9.5px] font-medium uppercase tracking-[0.16em] text-[#7C5E3C] flex items-center gap-2">
             <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
             Produit
           </p>
@@ -191,9 +191,9 @@ export default function Layout({ children, section, onNavigate }) {
           {adminItems.length > 0 && (
             <>
               {/* Hairline separator */}
-              <div className="mx-3 my-5 h-px bg-gradient-to-r from-transparent via-[rgba(10,10,10,0.08)] to-transparent" />
-              <p className="px-3 mb-2 text-[9.5px] font-medium uppercase tracking-[0.14em] text-[#9B9B9B] flex items-center gap-2">
-                <span className="w-1 h-1 rounded-full bg-[#7C5E3C]" />
+              <div className="mx-3 my-5 h-px bg-gradient-to-r from-transparent via-[rgba(124,94,60,0.18)] to-transparent" />
+              <p className="px-3 mb-2.5 text-[9.5px] font-medium uppercase tracking-[0.16em] text-[#7C5E3C] flex items-center gap-2">
+                <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
                 Administration
               </p>
               <div className="space-y-0.5">
