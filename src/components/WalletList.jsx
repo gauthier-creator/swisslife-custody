@@ -2,9 +2,15 @@ import { useState, useEffect } from 'react';
 import { listWallets } from '../services/dfnsApi';
 import { SUPPORTED_NETWORKS } from '../config/constants';
 import {
-  Badge, Spinner, EmptyState, Card, SectionCard, PageHeader, StatusDot,
+  Badge, EmptyState, Card, SectionCard, PageHeader, StatusDot,
   Metric, MetricRow, Table, tdCls, tdMuted, trCls, FooterDisclosure,
+  Skeleton, SkeletonRow, CopyButton, useCountUp,
 } from './shared';
+
+function CountUpNumber({ value, format = (v) => v }) {
+  const display = useCountUp(value);
+  return <>{format(display)}</>;
+}
 
 /* ─────────────────────────────────────────────────────────
    WalletList — Editorial DFNS custody registry
@@ -88,9 +94,9 @@ export default function WalletList() {
       {!loading && wallets.length > 0 && (
         <div className="animate-slide-up stagger-2">
           <MetricRow>
-            <Metric label="Wallets totaux" value={wallets.length} caption={`${activeCount} actifs`} />
-            <Metric label="Réseaux actifs" value={networkCount} caption="Multi-chain" />
-            <Metric label="Clients liés" value={clientCount} caption="Mandats de conservation" />
+            <Metric label="Wallets totaux" value={<CountUpNumber value={wallets.length} />} caption={`${activeCount} actifs`} />
+            <Metric label="Réseaux actifs" value={<CountUpNumber value={networkCount} />} caption="Multi-chain" />
+            <Metric label="Clients liés"   value={<CountUpNumber value={clientCount} />} caption="Mandats de conservation" />
             <Metric label="Signatures MPC" value="2 / 3" caption="Threshold cryptography" />
           </MetricRow>
         </div>
@@ -98,7 +104,24 @@ export default function WalletList() {
 
       {/* ── Content ───────────────────────────────────── */}
       {loading ? (
-        <div className="flex items-center justify-center py-24"><Spinner size="w-6 h-6" /></div>
+        <div className="space-y-8 animate-slide-up stagger-2">
+          {Array.from({ length: 2 }).map((_, g) => (
+            <Card key={g}>
+              <div className="px-6 py-4 border-b border-[rgba(10,10,10,0.06)] flex items-center gap-3">
+                <Skeleton className="h-7 w-7 rounded-[8px]" />
+                <Skeleton className="h-[14px]" style={{ width: 140 }} />
+                <Skeleton className="h-[11px]" style={{ width: 60 }} />
+              </div>
+              <table className="w-full">
+                <tbody>
+                  {Array.from({ length: 3 }).map((_, r) => (
+                    <SkeletonRow key={r} cols={5} className="row-stagger" />
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          ))}
+        </div>
       ) : filtered.length === 0 ? (
         <Card>
           <EmptyState
@@ -134,15 +157,24 @@ export default function WalletList() {
                 action={<Badge variant="default">Threshold 2/3 MPC</Badge>}
               >
                 <Table headers={['Nom', 'Adresse', 'Client', 'Statut', { label: 'Créé le', right: true }]}>
-                  {nws.map(w => (
-                    <tr key={w.id} className={trCls}>
+                  {nws.map((w, i) => (
+                    <tr key={w.id} className={`${trCls} row-stagger`} style={{ '--i': i }}>
                       <td className={tdCls + ' font-medium'}>
                         <div className="flex items-center gap-3">
                           <span className="w-1.5 h-1.5 rounded-full" style={{ background: w.status === 'Active' ? '#16A34A' : '#CA8A04' }} />
                           {w.name || '—'}
                         </div>
                       </td>
-                      <td className={tdMuted + ' font-mono text-[12px]'}>{truncAddr(w.address, 10)}</td>
+                      <td className={tdMuted + ' font-mono text-[12px]'}>
+                        <span className="inline-flex items-center gap-1 group/addr">
+                          <span>{truncAddr(w.address, 10)}</span>
+                          {w.address && (
+                            <span className="opacity-0 group-hover/addr:opacity-100 transition-opacity">
+                              <CopyButton value={w.address} label="" />
+                            </span>
+                          )}
+                        </span>
+                      </td>
                       <td className={tdMuted + ' font-mono text-[11px] tracking-[0.02em]'}>{w.externalId || '—'}</td>
                       <td className="px-6 py-4">
                         <Badge variant={w.status === 'Active' ? 'success' : 'warning'} dot>

@@ -1,9 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchClients } from '../services/salesforceApi';
 import {
-  fmtEUR, fmtCompactEUR, Badge, Card, EmptyState, Spinner, Avatar,
-  Metric, MetricRow, Delta,
+  fmtEUR, fmtCompactEUR, Badge, Card, EmptyState, Avatar,
+  Metric, MetricRow, Delta, SkeletonRow, SkeletonCircle, Skeleton, useCountUp,
 } from './shared';
+
+// Thin wrapper to animate a numeric metric value on mount
+function CountUpNumber({ value, format = (v) => v }) {
+  const display = useCountUp(value);
+  return <>{format(display)}</>;
+}
 
 /* ─────────────────────────────────────────────────────────
    ClientList — Editorial private banking cockpit
@@ -94,23 +100,23 @@ export default function ClientList({ onSelectClient }) {
           <MetricRow>
             <Metric
               label="Actifs sous gestion"
-              value={fmtCompactEUR(totalAum)}
+              value={<CountUpNumber value={totalAum} format={fmtCompactEUR} />}
               delta={<Delta value="2.4%" positive prefix="+" />}
               caption="12 derniers mois"
             />
             <Metric
               label="Clients actifs"
-              value={clients.length}
+              value={<CountUpNumber value={clients.length} />}
               caption="Registre Salesforce"
             />
             <Metric
               label="UHNWI"
-              value={uhnwiCount}
+              value={<CountUpNumber value={uhnwiCount} />}
               caption="Ultra High Net Worth"
             />
             <Metric
               label="AUM moyen"
-              value={fmtCompactEUR(avgAum)}
+              value={<CountUpNumber value={avgAum} format={fmtCompactEUR} />}
               caption="Par mandat"
             />
           </MetricRow>
@@ -126,7 +132,31 @@ export default function ClientList({ onSelectClient }) {
 
       {/* ── Clients list ───────────────────────────────── */}
       {loading ? (
-        <div className="flex items-center justify-center py-24"><Spinner size="w-6 h-6" /></div>
+        <Card className="animate-slide-up stagger-2">
+          <div className="px-6 py-4 flex items-center justify-between border-b border-[rgba(10,10,10,0.06)]">
+            <Skeleton className="h-[14px]" style={{ width: 180 }} />
+            <Skeleton className="h-[12px]" style={{ width: 90 }} />
+          </div>
+          <ul>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <li
+                key={i}
+                className="flex items-center gap-5 px-6 py-5 border-b border-[rgba(10,10,10,0.06)] last:border-0 row-stagger"
+                style={{ '--i': i }}
+              >
+                <SkeletonCircle size={44} />
+                <div className="flex-1 min-w-0 space-y-2">
+                  <Skeleton className="h-[14px]" style={{ width: `${55 + ((i * 11) % 25)}%` }} />
+                  <Skeleton className="h-[11px]" style={{ width: `${32 + ((i * 7) % 20)}%` }} />
+                </div>
+                <div className="hidden md:flex flex-col items-end gap-2 w-40">
+                  <Skeleton className="h-[14px]" style={{ width: 110 }} />
+                  <Skeleton className="h-[10px]" style={{ width: 70 }} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Card>
       ) : clients.length === 0 ? (
         <Card className="py-4">
           <EmptyState
@@ -159,7 +189,8 @@ export default function ClientList({ onSelectClient }) {
                 <li
                   key={client.id}
                   onClick={() => onSelectClient(client)}
-                  className={`flex items-center gap-5 px-6 py-5 cursor-pointer hover:bg-[#FBFAF7] transition-colors group ${i < clients.length - 1 ? 'border-b border-[rgba(10,10,10,0.06)]' : ''}`}
+                  style={{ '--i': i }}
+                  className={`row-stagger flex items-center gap-5 px-6 py-5 cursor-pointer hover:bg-[#FBFAF7] transition-colors group ${i < clients.length - 1 ? 'border-b border-[rgba(10,10,10,0.06)]' : ''}`}
                 >
                   <Avatar name={client.name} size={44} />
                   <div className="flex-1 min-w-0">

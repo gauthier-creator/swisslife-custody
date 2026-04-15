@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 /* ═══════════════════════════════════════════════════════
    Shared primitives — Apple-grade private banking
@@ -99,9 +99,118 @@ export function Button({ variant = 'primary', size = 'md', children, className =
   return (
     <button
       {...props}
-      className={`inline-flex items-center justify-center gap-2 font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed tracking-[-0.01em] whitespace-nowrap ${variants[variant]} ${variant !== 'link' ? sizes[size] : ''} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 font-medium transition-[background,border-color,color,box-shadow,transform] duration-[220ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] disabled:opacity-40 disabled:cursor-not-allowed tracking-[-0.01em] whitespace-nowrap outline-none focus-visible:ring-[3px] focus-visible:ring-[rgba(124,94,60,0.22)] active:scale-[0.97] will-change-transform ${variants[variant]} ${variant !== 'link' ? sizes[size] : ''} ${className}`}
     >
       {children}
+    </button>
+  );
+}
+
+// ─── Kbd ──────────────────────────────────────────────
+// Keyboard shortcut pill — matches the .kbd CSS utility
+export function Kbd({ children, className = '' }) {
+  return <kbd className={`kbd ${className}`}>{children}</kbd>;
+}
+
+// ─── Skeleton primitives ──────────────────────────────
+// Used for async loading in tables & lists — shimmer, not spinner
+export function Skeleton({ className = '', style = {} }) {
+  return (
+    <span
+      className={`inline-block align-middle rounded-[6px] skeleton-shimmer ${className}`}
+      style={style}
+    />
+  );
+}
+
+export function SkeletonCircle({ size = 36, className = '' }) {
+  return (
+    <span
+      className={`inline-block rounded-full skeleton-shimmer ${className}`}
+      style={{ width: size, height: size }}
+    />
+  );
+}
+
+export function SkeletonRow({ cols = 4, className = '' }) {
+  // Editorial table skeleton row — matches our tdCls padding
+  return (
+    <tr className={`border-b border-[rgba(10,10,10,0.06)] ${className}`}>
+      {Array.from({ length: cols }).map((_, i) => (
+        <td key={i} className="px-6 py-4">
+          <Skeleton
+            className="h-[14px]"
+            style={{ width: `${60 + ((i * 13) % 35)}%`, opacity: 1 - i * 0.08 }}
+          />
+        </td>
+      ))}
+    </tr>
+  );
+}
+
+// ─── useCountUp ───────────────────────────────────────
+// Animate a number from 0 to `value` on mount. Respects prefers-reduced-motion.
+export function useCountUp(value, { duration = 900, decimals = 0, start = 0 } = {}) {
+  const [display, setDisplay] = useState(start);
+  const frameRef = useRef();
+  useEffect(() => {
+    if (typeof value !== 'number' || !isFinite(value)) {
+      setDisplay(value);
+      return;
+    }
+    const reduced = typeof window !== 'undefined'
+      && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (reduced || duration <= 0) {
+      setDisplay(value);
+      return;
+    }
+    const startTs = performance.now();
+    const from = 0;
+    const to = value;
+    const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+    const tick = (now) => {
+      const t = Math.min(1, (now - startTs) / duration);
+      const next = from + (to - from) * easeOut(t);
+      setDisplay(decimals ? Number(next.toFixed(decimals)) : Math.round(next));
+      if (t < 1) frameRef.current = requestAnimationFrame(tick);
+    };
+    frameRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frameRef.current);
+  }, [value, duration, decimals]);
+  return display;
+}
+
+// ─── CopyButton ───────────────────────────────────────
+// One-click copy pill with bounce-check confirmation
+export function CopyButton({ value, label = 'Copier', className = '' }) {
+  const [copied, setCopied] = useState(false);
+  const onClick = async (e) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(String(value ?? ''));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {}
+  };
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 h-6 px-2 rounded-full text-[11px] font-medium text-[#6B6B6B] hover:text-[#0A0A0A] hover:bg-[#F5F3EE] transition-colors tracking-[-0.003em] ${className}`}
+      aria-label="Copier"
+    >
+      <span className="relative flex items-center justify-center w-[11px] h-[11px]">
+        {copied ? (
+          <svg className="w-[11px] h-[11px] animate-check-bounce" viewBox="0 0 12 12" fill="none" stroke="#7C5E3C" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2.5 6.2 L5 8.5 L9.5 3.5" />
+          </svg>
+        ) : (
+          <svg className="w-[11px] h-[11px]" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3.2" y="3.2" width="6.2" height="6.2" rx="1.2" />
+            <path d="M2 7.4 V2.4 a0.8 0.8 0 0 1 0.8 -0.8 H7.6" />
+          </svg>
+        )}
+      </span>
+      <span>{copied ? 'Copié' : label}</span>
     </button>
   );
 }

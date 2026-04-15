@@ -366,6 +366,94 @@ input:focus, select:focus, textarea:focus { outline: none; }
 .stagger-4 { animation-delay: 160ms; }
 .stagger-5 { animation-delay: 200ms; }
 
+/* ═════════════════════════════════════════════════════
+   REFINED DETAILS — shimmer, row stagger, check bounce
+   ═════════════════════════════════════════════════════ */
+
+/* Skeleton shimmer — warm-paper, hairline border, directional sheen */
+@keyframes skeletonShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skeleton-shimmer {
+  background-color: rgba(10, 10, 10, 0.04);
+  background-image: linear-gradient(
+    100deg,
+    rgba(10, 10, 10, 0) 0%,
+    rgba(10, 10, 10, 0) 35%,
+    rgba(255, 255, 255, 0.65) 50%,
+    rgba(10, 10, 10, 0) 65%,
+    rgba(10, 10, 10, 0) 100%
+  );
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  animation: skeletonShimmer 1.8s linear infinite;
+}
+
+/* Copy-confirmation check bounce */
+@keyframes checkBounce {
+  0%   { transform: scale(0.4) rotate(-8deg); opacity: 0; }
+  60%  { transform: scale(1.18) rotate(0deg);  opacity: 1; }
+  100% { transform: scale(1) rotate(0deg);     opacity: 1; }
+}
+.animate-check-bounce {
+  animation: checkBounce 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Row stagger — use with inline style="--i:{index}" on tr / li */
+@keyframes rowSlideIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.row-stagger {
+  opacity: 0;
+  animation: rowSlideIn 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--i, 0) * 34ms);
+}
+
+/* Hairline ring used on focus — bronze */
+.focus-ring-bronze:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(124, 94, 60, 0.22);
+}
+
+/* Command palette dim overlay — warmer than plain black */
+.cmdk-overlay {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 30%, rgba(124, 94, 60, 0.14), transparent 60%),
+    rgba(10, 10, 10, 0.42);
+  backdrop-filter: blur(10px) saturate(1.1);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+}
+
+/* Command palette surface — paper-white with layered shadow */
+.cmdk-surface {
+  background: #FFFFFF;
+  border: 1px solid rgba(10, 10, 10, 0.08);
+  border-radius: 18px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 1) inset,
+    0 32px 64px -24px rgba(10, 10, 10, 0.35),
+    0 12px 24px -12px rgba(10, 10, 10, 0.18);
+}
+
+@keyframes cmdkRise {
+  from { opacity: 0; transform: translateY(-8px) scale(0.99); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+.animate-cmdk-rise {
+  animation: cmdkRise 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Count-up number fade — used to mask pre-animation snap */
+@keyframes numberFade {
+  from { opacity: 0.4; }
+  to   { opacity: 1; }
+}
+.num-fade {
+  animation: numberFade 0.9s ease-out both;
+}
+
 /* Print */
 @media print {
   body { background: white; }

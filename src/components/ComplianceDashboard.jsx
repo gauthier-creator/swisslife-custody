@@ -4,7 +4,7 @@ import {
   Badge, Modal, Spinner, EmptyState, useToast, ToastContainer,
   inputCls, selectCls, labelCls,
   PageHeader, Metric, MetricRow, UnderlineTabs, Card, Button,
-  StatusDot, FooterDisclosure,
+  StatusDot, FooterDisclosure, useCountUp, Skeleton, SkeletonRow,
 } from './shared';
 import {
   fetchApprovals, approveTransfer, rejectTransfer, executeTransfer,
@@ -85,14 +85,18 @@ function StatCard({ label, value, tone = 'default', hint }) {
     default:{ dot: '#9B9B9B', text: '#6B6B6B' },
   };
   const t = tones[tone] || tones.default;
+  const numericValue = typeof value === 'number' ? value : null;
+  const animated = useCountUp(numericValue ?? 0);
+  const displayValue = numericValue != null ? animated : (value ?? '—');
   return (
-    <div className="bg-white border border-[rgba(10,10,10,0.08)] rounded-[14px] p-5 shadow-crisp relative overflow-hidden">
+    <div className="group bg-white border border-[rgba(10,10,10,0.08)] rounded-[14px] p-5 shadow-crisp relative overflow-hidden transition-[border-color,box-shadow] duration-200 hover:border-[rgba(10,10,10,0.14)] hover:shadow-[0_4px_16px_-8px_rgba(10,10,10,0.12)]">
+      <div className="absolute inset-x-5 top-0 h-[2px] opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: `linear-gradient(90deg, transparent, ${t.dot}, transparent)` }} />
       <div className="flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-full" style={{ background: t.dot }} />
         <span className="text-[10.5px] font-medium uppercase tracking-[0.06em]" style={{ color: t.text }}>{label}</span>
       </div>
       <p className="mt-3 text-[30px] font-medium text-[#0A0A0A] tabular-nums leading-[1.05] tracking-[-0.03em]">
-        {value ?? '—'}
+        {displayValue}
       </p>
       {hint && <p className="text-[11.5px] text-[#9B9B9B] mt-1 tracking-[-0.003em]">{hint}</p>}
     </div>
@@ -438,7 +442,25 @@ export default function ComplianceDashboard() {
 
       {/* Loading */}
       {loading && (
-        <div className="flex items-center justify-center py-20"><Spinner /></div>
+        <Card className="animate-slide-up stagger-4">
+          <div className="px-6 py-4 border-b border-[rgba(10,10,10,0.06)] flex items-center justify-between">
+            <Skeleton className="h-[14px]" style={{ width: 160 }} />
+            <Skeleton className="h-[11px]" style={{ width: 90 }} />
+          </div>
+          <table className="w-full">
+            <tbody>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i} className="border-b border-[rgba(10,10,10,0.06)] row-stagger" style={{ '--i': i }}>
+                  {Array.from({ length: 6 }).map((__, j) => (
+                    <td key={j} className="px-6 py-4">
+                      <Skeleton className="h-[13px]" style={{ width: `${55 + ((i * 11 + j * 7) % 35)}%` }} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
       )}
 
       {/* ── Approbations Tab ──────────────────────────────────────── */}
