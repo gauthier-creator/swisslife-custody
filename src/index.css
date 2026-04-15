@@ -56,7 +56,7 @@
    ═════════════════════════════════════════════════════ */
 html, body {
   margin: 0;
-  background: #FBFAF7;
+  background: #FFFFFF;
   color: #0A0A0A;
   font-family: "Inter Tight", -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 400;
@@ -99,7 +99,7 @@ html, body {
 ::-webkit-scrollbar-thumb {
   background: rgba(10, 10, 10, 0.1);
   border-radius: 999px;
-  border: 3px solid #FBFAF7;
+  border: 3px solid #FFFFFF;
 }
 ::-webkit-scrollbar-thumb:hover { background: rgba(10, 10, 10, 0.18); }
 
@@ -559,6 +559,76 @@ input:focus, select:focus, textarea:focus { outline: none; }
   -webkit-mask-composite: xor;
           mask-composite: exclude;
   pointer-events: none;
+}
+
+/* ═════════════════════════════════════════════════════
+   RAMIFY LANGUAGE — cream accents, marble surfaces
+   ═════════════════════════════════════════════════════ */
+
+/* Cream notification banner (Ramify "Votre sélection d'investissements") */
+.bg-cream-1  { background-color: #F5EEE0; }
+.bg-cream-2  { background-color: #FAF5EA; }
+.bg-cream-3  { background-color: #FDFBF4; }
+
+/* Cream active pill — sidebar item background */
+.pill-cream {
+  background: #F5EEE0;
+  color: #0A0A0A;
+}
+
+/* Marble card surface — warm layered gradient for hero cards */
+.marble-cream {
+  background:
+    radial-gradient(ellipse 60% 50% at 18% 12%, rgba(255, 255, 255, 0.9), transparent 65%),
+    radial-gradient(ellipse 70% 55% at 78% 88%, rgba(212, 188, 143, 0.35), transparent 60%),
+    radial-gradient(ellipse 55% 45% at 85% 10%, rgba(230, 208, 170, 0.42), transparent 60%),
+    linear-gradient(135deg, #FBF3DF 0%, #F3E6C5 55%, #E8D5A8 100%);
+}
+.marble-sand {
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 10%, rgba(255, 255, 255, 0.82), transparent 65%),
+    radial-gradient(ellipse 80% 60% at 75% 90%, rgba(214, 180, 128, 0.38), transparent 60%),
+    linear-gradient(160deg, #FAF1DB 0%, #EFDCB0 60%, #E0C58A 100%);
+}
+.marble-mist {
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 10%, rgba(255, 255, 255, 0.92), transparent 65%),
+    radial-gradient(ellipse 80% 60% at 80% 90%, rgba(200, 210, 220, 0.45), transparent 60%),
+    linear-gradient(150deg, #F4F2EE 0%, #E7E3DA 100%);
+}
+
+/* Ramify bronze progress bar — sits at bottom of metric cards */
+.progress-bronze {
+  position: relative;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(10, 10, 10, 0.06);
+  overflow: hidden;
+}
+.progress-bronze::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: var(--value, 50%);
+  border-radius: inherit;
+  background: linear-gradient(90deg, #D4A574 0%, #9A7A51 60%, #7C5E3C 100%);
+  box-shadow: 0 0 10px -2px rgba(124, 94, 60, 0.35);
+}
+
+/* Ramify notification banner strip */
+.banner-cream {
+  background: linear-gradient(135deg, #F5EEE0 0%, #EFE4CE 100%);
+  border: 1px solid rgba(124, 94, 60, 0.1);
+  border-radius: 14px;
+}
+
+/* Subtle inline serif title flourish — goes with IconPill */
+.title-serif {
+  font-family: "Fraunces", ui-serif, Georgia, serif;
+  font-optical-sizing: auto;
+  font-variation-settings: "opsz" 144;
+  letter-spacing: -0.025em;
+  font-weight: 500;
 }
 
 /* Respect reduced motion */

@@ -361,22 +361,69 @@ export function Delta({ value, positive, tone, prefix = '' }) {
 // ─── Metric ───────────────────────────────────────────
 // The core editorial metric: small label, big display number, muted caption.
 // Used individually, or in a MetricRow (inside a Card with dividers).
-export function Metric({ label, value, caption, delta, align = 'left', className = '' }) {
+export function Metric({ label, value, caption, delta, progress, align = 'left', className = '' }) {
   const alignCls = align === 'right' ? 'text-right items-end' : 'text-left items-start';
   return (
     <div className={`flex flex-col ${alignCls} ${className}`}>
-      <span className="text-[12px] font-medium text-[#6B6B6B] tracking-[-0.003em]">{label}</span>
-      <span className="mt-2 text-[30px] font-medium text-[#0A0A0A] tabular-nums tracking-[-0.03em] leading-[1.1]">
+      <span className="text-[11px] font-medium text-[#6B6B6B] uppercase tracking-[0.06em]">{label}</span>
+      <span className="mt-3 font-display text-[32px] text-[#0A0A0A] tabular-nums leading-[1.05]" style={{ letterSpacing: '-0.028em' }}>
         {value}
       </span>
       {(caption || delta) && (
-        <div className="mt-1.5 flex items-center gap-2">
+        <div className="mt-2 flex items-center gap-2">
           {delta && (typeof delta === 'string' || typeof delta === 'number'
             ? <Delta value={delta} positive prefix={typeof delta === 'string' && delta.startsWith('-') ? '' : '+'} />
             : delta)}
           {caption && <span className="text-[12px] text-[#6B6B6B] tracking-[-0.003em]">{caption}</span>}
         </div>
       )}
+      {typeof progress === 'number' && (
+        <div className="progress-bronze mt-4 w-full" style={{ '--value': `${Math.max(0, Math.min(100, progress))}%` }} />
+      )}
+    </div>
+  );
+}
+
+// ─── MarbleCard ───────────────────────────────────────
+// Ramify luxury marble surface — warm sand gradient, serif headline
+// Use for hero sections, dashboard greetings, premium feature reveals.
+export function MarbleCard({
+  eyebrow,
+  title,
+  description,
+  children,
+  variant = 'cream', // cream | sand | mist
+  className = '',
+  ...props
+}) {
+  const surface = {
+    cream: 'marble-cream',
+    sand:  'marble-sand',
+    mist:  'marble-mist',
+  }[variant] || 'marble-cream';
+  return (
+    <div
+      className={`relative overflow-hidden rounded-[20px] border border-[rgba(124,94,60,0.14)] ${surface} ${className}`}
+      {...props}
+    >
+      {/* grain overlay for tactile feel */}
+      <div className="bg-grain absolute inset-0 rounded-[20px] pointer-events-none" />
+      <div className="relative px-8 py-8">
+        {eyebrow && (
+          <p className="text-[11px] font-medium text-[#7C5E3C] uppercase tracking-[0.08em] mb-3">{eyebrow}</p>
+        )}
+        {title && (
+          <h2 className="font-display text-[30px] text-[#2A1F12] leading-[1.08] max-w-[28ch]" style={{ letterSpacing: '-0.025em' }}>
+            {title}
+          </h2>
+        )}
+        {description && (
+          <p className="mt-3 text-[13.5px] text-[#5C4A34] max-w-[52ch] leading-relaxed tracking-[-0.003em]">
+            {description}
+          </p>
+        )}
+        {children}
+      </div>
     </div>
   );
 }
@@ -587,15 +634,15 @@ export function Divider({ className = '' }) {
 // of the simpler Ramify aesthetic.
 export function PageHeader({ icon, title, trailing, banner, className = '' }) {
   return (
-    <header className={`space-y-5 animate-slide-up ${className}`}>
+    <header className={`space-y-6 animate-slide-up ${className}`}>
       <div className="flex items-center justify-between gap-6 flex-wrap">
         <div className="flex items-center gap-3 min-w-0">
           {icon && (
-            <span className="flex-shrink-0 w-8 h-8 rounded-[8px] bg-[#0A0A0A] text-white flex items-center justify-center">
+            <span className="flex-shrink-0 w-9 h-9 rounded-full bg-[#FAFAF8] border border-[rgba(10,10,10,0.06)] text-[#4A4A4A] flex items-center justify-center">
               {icon}
             </span>
           )}
-          <h1 className="text-[26px] font-semibold text-[#0A0A0A] tracking-[-0.02em] leading-none truncate">
+          <h1 className="font-display text-[34px] text-[#0A0A0A] leading-[1.02] truncate" style={{ letterSpacing: '-0.025em' }}>
             {title}
           </h1>
         </div>

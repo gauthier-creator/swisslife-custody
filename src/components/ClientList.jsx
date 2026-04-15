@@ -3,7 +3,7 @@ import { fetchClients } from '../services/salesforceApi';
 import {
   fmtEUR, fmtCompactEUR, Badge, Card, EmptyState, Avatar,
   Metric, MetricRow, Delta, SkeletonCircle, Skeleton, useCountUp,
-  PageHeader, StatusDot,
+  PageHeader, StatusDot, MarbleCard,
 } from './shared';
 
 // Thin wrapper to animate a numeric metric value on mount
@@ -93,7 +93,31 @@ export default function ClientList({ onSelectClient }) {
         }
       />
 
-      {/* ── Metric row — Mercury style ─────────────────── */}
+      {/* ── Marble hero card — Ramify signature ───────── */}
+      {!loading && clients.length > 0 && (
+        <div className="animate-slide-up stagger-1">
+          <MarbleCard
+            variant="cream"
+            eyebrow="Cockpit du banquier privé"
+            title="Vos clients, vos mandats, en un seul coup d'œil."
+            description="Le registre Salesforce est synchronisé en temps réel avec la chambre forte DFNS. Chaque mouvement est horodaté et signé par quorum MPC."
+          >
+            <div className="mt-6 flex items-center gap-3 flex-wrap">
+              <span className="inline-flex items-center gap-2 h-9 px-4 rounded-full bg-[#0A0A0A] text-white text-[12.5px] font-medium tracking-[-0.003em]">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                Nouveau mandat
+              </span>
+              <span className="inline-flex items-center gap-2 h-9 px-4 rounded-full bg-white/70 backdrop-blur border border-[rgba(10,10,10,0.1)] text-[#2A1F12] text-[12.5px] font-medium tracking-[-0.003em]">
+                Parcourir le guide AMF
+              </span>
+            </div>
+          </MarbleCard>
+        </div>
+      )}
+
+      {/* ── Metric row — Ramify progress tiles ────────── */}
       {!loading && clients.length > 0 && (
         <div className="animate-slide-up stagger-2">
           <MetricRow>
@@ -102,21 +126,25 @@ export default function ClientList({ onSelectClient }) {
               value={<CountUpNumber value={totalAum} format={fmtCompactEUR} />}
               delta={<Delta value="2.4%" positive prefix="+" />}
               caption="12 derniers mois"
+              progress={72}
             />
             <Metric
               label="Clients actifs"
               value={<CountUpNumber value={clients.length} />}
               caption="Registre Salesforce"
+              progress={Math.min(100, clients.length * 8)}
             />
             <Metric
               label="UHNWI"
               value={<CountUpNumber value={uhnwiCount} />}
               caption="Ultra High Net Worth"
+              progress={clients.length ? Math.round((uhnwiCount / clients.length) * 100) : 0}
             />
             <Metric
               label="AUM moyen"
               value={<CountUpNumber value={avgAum} format={fmtCompactEUR} />}
               caption="Par mandat"
+              progress={58}
             />
           </MetricRow>
         </div>
