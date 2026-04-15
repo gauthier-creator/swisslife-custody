@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Badge, Card, Modal, Spinner, Button, inputCls, textareaCls, labelCls, selectCls } from './shared';
+import { Badge, Card, Modal, Spinner, Button, IconPill, inputCls, textareaCls, labelCls, selectCls } from './shared';
 import { updateAccountFields } from '../services/salesforceApi';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE } from '../config/constants';
@@ -151,7 +151,7 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
           </Badge>
           {isAdmin && (
             <select
-              className="h-7 text-[12px] bg-white border border-[rgba(9,9,11,0.1)] rounded-md px-2 outline-none focus:border-[rgba(9,9,11,0.3)] focus:ring-2 focus:ring-[rgba(9,9,11,0.06)] cursor-pointer"
+              className="h-8 text-[13px] font-medium bg-white border border-[rgba(25,28,31,0.1)] rounded-lg px-2.5 outline-none focus:border-[#0666EB] focus:ring-4 focus:ring-[rgba(6,102,235,0.1)] cursor-pointer"
               value={client.Custody_KYC_Status__c || ''}
               onChange={(e) => changeKycStatus(e.target.value)}
               disabled={updating === 'Custody_KYC_Status__c'}
@@ -243,32 +243,50 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
   const completedCount = items.filter(i => i.done).length;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* ── Header card ─────────────────────────────────── */}
-      <Card className="p-5">
-        <div className="flex items-start justify-between gap-6">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-[15px] font-semibold text-[#09090B] tracking-tight">Éligibilité conservation</h2>
-              <Badge variant={isEligible ? 'success' : 'default'} dot>
-                {isEligible ? 'Éligible' : 'En attente'}
-              </Badge>
+      <Card className="p-6">
+        <div className="flex items-start justify-between gap-6 flex-wrap">
+          <div className="min-w-0 flex items-start gap-4">
+            <IconPill tone={isEligible ? 'green' : 'amber'} size={48}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </IconPill>
+            <div>
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <h2 className="text-[20px] font-semibold text-[#191C1F] tracking-[-0.3px]">Éligibilité conservation</h2>
+                <Badge variant={isEligible ? 'success' : 'default'} dot>
+                  {isEligible ? 'Éligible' : 'En attente'}
+                </Badge>
+              </div>
+              <p className="text-[13px] text-[#75808A] max-w-xl leading-relaxed">
+                Conformité MiCA Art. 60 · quatre conditions doivent être satisfaites avant l'ouverture d'un portefeuille de conservation.
+              </p>
             </div>
-            <p className="text-[12px] text-[#71717A]">
-              Conformité MiCA Art. 60 · quatre conditions doivent être satisfaites avant l'ouverture d'un portefeuille de conservation.
-            </p>
           </div>
           <div className="text-right flex-shrink-0">
-            <p className="text-[11px] font-medium text-[#71717A] uppercase tracking-wider">Progression</p>
-            <p className="text-[22px] font-semibold text-[#09090B] tabular-nums leading-none mt-1">
-              {completedCount}<span className="text-[#A1A1AA]">/{items.length}</span>
+            <p className="text-[12px] font-medium text-[#75808A] uppercase tracking-wider">Progression</p>
+            <p className="text-[32px] font-semibold text-[#191C1F] tabular-nums leading-none mt-1 tracking-[-0.6px]">
+              {completedCount}<span className="text-[#A5ADB6]">/{items.length}</span>
             </p>
           </div>
         </div>
 
+        {/* Progress bar */}
+        <div className="mt-5 h-2 bg-[#F1F3F6] rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all"
+            style={{
+              width: `${(completedCount / items.length) * 100}%`,
+              background: isEligible ? '#00BE90' : 'linear-gradient(90deg, #0666EB 0%, #4F56F1 100%)',
+            }}
+          />
+        </div>
+
         {client.Custody_Risk_Level__c && (
-          <div className="mt-4 pt-4 border-t border-[rgba(9,9,11,0.06)] flex items-center gap-2">
-            <p className="text-[11px] font-medium text-[#71717A] uppercase tracking-wider">Niveau de risque</p>
+          <div className="mt-5 pt-5 border-t border-[rgba(25,28,31,0.06)] flex items-center gap-2">
+            <p className="text-[11px] font-semibold text-[#75808A] uppercase tracking-wider">Niveau de risque</p>
             <Badge variant={
               client.Custody_Risk_Level__c === 'Faible' ? 'success' :
               client.Custody_Risk_Level__c === 'Moyen' ? 'warning' : 'error'
@@ -281,38 +299,35 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
 
       {/* ── Checklist card ──────────────────────────────── */}
       <Card>
-        <div className="px-5 py-3 border-b border-[rgba(9,9,11,0.06)] bg-[#FAFAFA]">
-          <p className="text-[11px] font-semibold text-[#71717A] uppercase tracking-wider">
-            Conditions
-          </p>
+        <div className="px-5 py-4 border-b border-[rgba(25,28,31,0.06)]">
+          <h3 className="text-[15px] font-semibold text-[#191C1F] tracking-[-0.15px]">Conditions</h3>
+          <p className="text-[13px] text-[#75808A] mt-0.5">Checklist MiCA Art. 60 — chaque étape est auditée</p>
         </div>
         <ul>
           {items.map((item, i) => (
             <li
               key={item.key}
-              className={`px-5 py-4 flex items-start justify-between gap-4 ${i < items.length - 1 ? 'border-b border-[rgba(9,9,11,0.06)]' : ''}`}
+              className={`px-5 py-4 flex items-start justify-between gap-4 ${i < items.length - 1 ? 'border-b border-[rgba(25,28,31,0.06)]' : ''}`}
             >
-              <div className="flex items-start gap-3 min-w-0 flex-1">
+              <div className="flex items-start gap-4 min-w-0 flex-1">
                 {/* Check indicator */}
-                <div className="flex-shrink-0 mt-0.5">
-                  {item.done ? (
-                    <div className="w-5 h-5 rounded-full bg-[#10B981] flex items-center justify-center">
-                      <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                  ) : (
-                    <div className="w-5 h-5 rounded-full border border-[rgba(9,9,11,0.15)] bg-white flex items-center justify-center">
-                      <span className="text-[10px] font-semibold text-[#A1A1AA] tabular-nums">{item.idx}</span>
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="text-[13px] font-medium text-[#09090B]">{item.title}</h3>
-                  <p className="text-[12px] text-[#71717A] mt-0.5">{item.caption}</p>
+                {item.done ? (
+                  <IconPill tone="green" size={36}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </IconPill>
+                ) : (
+                  <IconPill tone="gray" size={36}>
+                    <span className="text-[13px] font-bold tabular-nums">{item.idx}</span>
+                  </IconPill>
+                )}
+                <div className="min-w-0 flex-1 pt-1">
+                  <h4 className="text-[14px] font-semibold text-[#191C1F] tracking-[-0.1px]">{item.title}</h4>
+                  <p className="text-[13px] text-[#75808A] mt-0.5">{item.caption}</p>
                 </div>
               </div>
-              <div className="flex-shrink-0">{item.action}</div>
+              <div className="flex-shrink-0 pt-1">{item.action}</div>
             </li>
           ))}
         </ul>
@@ -385,17 +400,17 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
           </div>
 
           {!allAdequacyOui && adequacy.q1 !== null && (
-            <div className="px-3 py-2.5 bg-[#FEF2F2] border border-[rgba(239,68,68,0.2)] rounded-md">
-              <p className="text-[12px] text-[#B91C1C] leading-relaxed">
+            <div className="px-4 py-3 bg-[#FDECEE] border border-[rgba(236,76,90,0.2)] rounded-xl">
+              <p className="text-[13px] text-[#C93545] leading-relaxed">
                 Toutes les réponses doivent être « Oui » pour proposer la conservation. Si le client ne remplit pas les conditions, le service ne peut pas lui être offert.
               </p>
             </div>
           )}
 
-          <div className="flex justify-end gap-2 pt-2 border-t border-[rgba(9,9,11,0.06)]">
+          <div className="flex justify-end gap-2 pt-4 border-t border-[rgba(25,28,31,0.06)]">
             <Button variant="ghost" onClick={() => setShowAdequacy(false)}>Annuler</Button>
             <Button
-              variant="primary"
+              variant="accent"
               onClick={submitAdequacy}
               disabled={!allAdequacyOui || submittingAdequacy}
             >
@@ -420,19 +435,26 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
 /* ─── Sub · signing link card ─── */
 function SigningLinkCard({ title, caption, link, copied, onCopy }) {
   return (
-    <Card className="p-5">
-      <div className="flex items-start justify-between gap-4 mb-3">
-        <div>
-          <h3 className="text-[13px] font-semibold text-[#09090B]">{title}</h3>
-          <p className="text-[12px] text-[#71717A] mt-1 max-w-xl leading-relaxed">{caption}</p>
+    <Card className="p-6">
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <div className="flex items-start gap-3">
+          <IconPill tone="green" size={40}>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+          </IconPill>
+          <div>
+            <h3 className="text-[15px] font-semibold text-[#191C1F] tracking-[-0.15px]">{title}</h3>
+            <p className="text-[13px] text-[#75808A] mt-1 max-w-xl leading-relaxed">{caption}</p>
+          </div>
         </div>
         <Badge variant="success" dot>Prêt</Badge>
       </div>
-      <div className="flex items-center gap-2 mt-3 p-2 bg-[#FAFAFA] border border-[rgba(9,9,11,0.06)] rounded-md">
-        <div className="flex-1 min-w-0 text-[12px] text-[#09090B] font-mono truncate px-2">
+      <div className="flex items-center gap-2 mt-3 p-2 bg-[#F7F8FA] border border-[rgba(25,28,31,0.06)] rounded-xl">
+        <div className="flex-1 min-w-0 text-[12px] text-[#191C1F] font-mono truncate px-3">
           {link}
         </div>
-        <Button size="sm" variant={copied ? 'primary' : 'secondary'} onClick={onCopy}>
+        <Button size="sm" variant={copied ? 'accent' : 'secondary'} onClick={onCopy}>
           {copied ? 'Copié ✓' : 'Copier'}
         </Button>
       </div>
@@ -444,13 +466,13 @@ function SigningLinkCard({ title, caption, link, copied, onCopy }) {
 function AdequacyQuestion({ n, question, value, onChange }) {
   return (
     <div>
-      <div className="flex items-start gap-3 mb-2">
-        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#F4F4F5] text-[11px] font-semibold text-[#52525B] flex items-center justify-center tabular-nums mt-0.5">
+      <div className="flex items-start gap-3 mb-3">
+        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#F1F3F6] text-[12px] font-bold text-[#52585F] flex items-center justify-center tabular-nums mt-0.5">
           {n}
         </span>
-        <p className="flex-1 text-[13px] text-[#09090B] leading-relaxed">{question}</p>
+        <p className="flex-1 text-[14px] text-[#191C1F] leading-relaxed">{question}</p>
       </div>
-      <div className="ml-8 flex gap-2">
+      <div className="ml-9 flex gap-2">
         {['Oui', 'Non'].map(opt => {
           const active = value === opt;
           const isOui = opt === 'Oui';
@@ -459,12 +481,12 @@ function AdequacyQuestion({ n, question, value, onChange }) {
               key={opt}
               type="button"
               onClick={() => onChange(opt)}
-              className={`h-7 px-3 text-[12px] font-medium rounded-md border transition-colors ${
+              className={`h-9 px-4 text-[13px] font-semibold rounded-xl border transition-all tracking-[-0.1px] ${
                 active
                   ? isOui
-                    ? 'bg-[#ECFDF5] text-[#047857] border-[rgba(16,185,129,0.3)]'
-                    : 'bg-[#FEF2F2] text-[#B91C1C] border-[rgba(239,68,68,0.3)]'
-                  : 'bg-white text-[#52525B] border-[rgba(9,9,11,0.1)] hover:bg-[#FAFAFA]'
+                    ? 'bg-[#E6F9F2] text-[#008266] border-[rgba(0,190,144,0.3)]'
+                    : 'bg-[#FDECEE] text-[#C93545] border-[rgba(236,76,90,0.3)]'
+                  : 'bg-white text-[#75808A] border-[rgba(25,28,31,0.1)] hover:bg-[#F7F8FA] hover:text-[#191C1F]'
               }`}
             >
               {opt}

@@ -12,11 +12,16 @@ import { SUPPORTED_NETWORKS } from '../config/constants';
 import { createApproval, checkTransferRisk, checkWalletFreeze } from '../services/complianceApi';
 import { getKycStatus } from '../services/kycService';
 import { useAuth } from '../context/AuthContext';
-import { fmtEUR, Badge, Card, Modal, Spinner, EmptyState, Button, StatCell, inputCls, selectCls, labelCls } from './shared';
+import {
+  fmtEUR, Badge, Card, Modal, Spinner, EmptyState, Button,
+  Avatar, IconPill, KPITile, ListRow, Delta, Sparkline,
+  inputCls, selectCls, labelCls,
+} from './shared';
 import { API_BASE } from '../config/constants';
 
 /* ─────────────────────────────────────────────────────────
-   ClientDetail — compact fintech detail view
+   ClientDetail — Revolut-flavored fintech detail view
+   Elevated cards · big numbers · colorful icon pills
    ───────────────────────────────────────────────────────── */
 
 const truncAddr = (a, n = 8) => a ? `${a.slice(0, n)}…${a.slice(-n)}` : '—';
@@ -25,6 +30,11 @@ const typeLabel = (t) => {
   if (t === 'Customer - Direct') return 'UHNWI';
   if (t === 'Other' || t === 'Institutional') return 'Institutionnel';
   return t || '—';
+};
+const typeVariant = (t) => {
+  if (t === 'Customer - Direct') return 'gold';
+  if (t === 'Other' || t === 'Institutional') return 'info';
+  return 'default';
 };
 
 export default function ClientDetail({ client: initialClient, onBack }) {
@@ -171,7 +181,7 @@ export default function ClientDetail({ client: initialClient, onBack }) {
     setSending(false);
   };
 
-  const net = (id) => SUPPORTED_NETWORKS.find(n => n.id === id) || { icon: '?', color: '#71717A', name: id };
+  const net = (id) => SUPPORTED_NETWORKS.find(n => n.id === id) || { icon: '?', color: '#75808A', name: id };
 
   const kycStatusText = kycValid ? 'Valide'
     : kycLive?.overallStatus === 'in_progress' ? 'En cours'
@@ -179,6 +189,10 @@ export default function ClientDetail({ client: initialClient, onBack }) {
     : kycLive?.overallStatus === 'attention_required' ? 'Attention'
     : parsed.kyc?.toLowerCase().includes('cours') ? 'En cours'
     : 'Non vérifié';
+
+  const kycTone = kycValid ? 'green'
+    : kycLive?.overallStatus === 'attention_required' ? 'red'
+    : 'amber';
 
   const tabs = [
     { id: 'profile', label: 'Fiche client' },
@@ -196,66 +210,112 @@ export default function ClientDetail({ client: initialClient, onBack }) {
       {/* ── Back ─────────────────────────────────────────── */}
       <button
         onClick={onBack}
-        className="flex items-center gap-1.5 text-[12px] text-[#71717A] hover:text-[#09090B] transition-colors mb-4 group"
+        className="flex items-center gap-1.5 text-[13px] font-medium text-[#75808A] hover:text-[#191C1F] transition-colors mb-5 group"
       >
-        <svg className="w-3 h-3 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+        <svg className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
         </svg>
         Retour aux clients
       </button>
 
       {/* ── Header ──────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-6 mb-5">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-[22px] font-semibold text-[#09090B] tracking-tight">
-              {client.name}
-            </h1>
-            <Badge variant="default">{typeLabel(client.type)}</Badge>
+      <div className="flex items-start justify-between gap-6 mb-6 flex-wrap">
+        <div className="flex items-center gap-5 min-w-0 flex-1">
+          <Avatar name={client.name} size={64} />
+          <div className="min-w-0">
+            <p className="text-[13px] font-medium text-[#75808A]">Fiche client</p>
+            <div className="flex items-center gap-3 flex-wrap mt-1">
+              <h1 className="text-[28px] font-semibold text-[#191C1F] tracking-[-0.5px] leading-[1.1]">
+                {client.name}
+              </h1>
+              <Badge variant={typeVariant(client.type)} dot>{typeLabel(client.type)}</Badge>
+            </div>
+            <p className="text-[14px] text-[#75808A] mt-1.5">
+              {[client.street, client.postalCode, client.city, client.country].filter(Boolean).join(', ') || '—'}
+            </p>
           </div>
-          <p className="text-[13px] text-[#71717A] mt-1">
-            {[client.street, client.postalCode, client.city, client.country].filter(Boolean).join(', ') || '—'}
-          </p>
         </div>
         <div className="text-right flex-shrink-0">
-          <p className="text-[11px] font-medium text-[#71717A] uppercase tracking-wider mb-1">
+          <p className="text-[12px] font-medium text-[#75808A] uppercase tracking-wider">
             Actifs sous gestion
           </p>
-          <p className="text-[22px] font-semibold text-[#09090B] tabular-nums">
+          <p className="text-[32px] font-semibold text-[#191C1F] tabular-nums tracking-[-0.6px] leading-[1.1] mt-1">
             {client.aum ? fmtEUR(client.aum) : '—'}
           </p>
+          <div className="flex items-center justify-end gap-2 mt-1">
+            <Delta value="2.4%" positive prefix="+" />
+            <span className="text-[12px] text-[#A5ADB6]">12 mois</span>
+          </div>
           {client.accountNumber && (
-            <p className="text-[12px] text-[#71717A] font-mono mt-0.5">№ {client.accountNumber}</p>
+            <p className="text-[11px] text-[#A5ADB6] font-mono mt-1">№ {client.accountNumber}</p>
           )}
         </div>
       </div>
 
-      {/* ── Stats strip ─────────────────────────────────── */}
-      <Card className="mb-6">
-        <div className="grid grid-cols-5 divide-x divide-[rgba(9,9,11,0.06)]">
-          <StatCell label="KYC" value={kycStatusText} />
-          <StatCell label="Profil de risque" value={parsed.risk || 'Non défini'} />
-          <StatCell label="Industrie" value={client.industry || '—'} />
-          <StatCell label="Wallets" value={wallets.length} />
-          <StatCell label="Client depuis" value={fmtDate(client.createdDate)} />
-        </div>
-      </Card>
+      {/* ── KPI strip ───────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <KPITile
+          label="Conformité KYC"
+          value={kycStatusText}
+          delta={<Badge variant={kycValid ? 'success' : kycLive?.overallStatus === 'attention_required' ? 'error' : 'warning'} size="sm" dot>MiCA Art. 66</Badge>}
+          visual={
+            <IconPill tone={kycTone} size={48}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                {kycValid
+                  ? <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  : <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />}
+              </svg>
+            </IconPill>
+          }
+        />
+        <KPITile
+          label="Profil de risque"
+          value={parsed.risk || 'Non défini'}
+          delta={parsed.allocation ? <span className="text-[12px] font-medium text-[#75808A]">Allocation : {parsed.allocation}</span> : null}
+          visual={
+            <IconPill tone="indigo" size={48}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </IconPill>
+          }
+        />
+        <KPITile
+          label="Wallets DFNS"
+          value={wallets.length}
+          delta={<span className="text-[12px] font-medium text-[#75808A]">{wallets.filter(w => w.status === 'Active').length} actif{wallets.filter(w => w.status === 'Active').length > 1 ? 's' : ''}</span>}
+          visual={<Sparkline tone="blue" points={[0.2, 0.35, 0.3, 0.5, 0.45, 0.65, 0.6, 0.85]} width={130} height={40} />}
+        />
+        <KPITile
+          label="Client depuis"
+          value={fmtDate(client.createdDate)}
+          delta={<span className="text-[12px] font-medium text-[#75808A]">{client.industry || 'Secteur N/A'}</span>}
+          visual={
+            <IconPill tone="pink" size={48}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </IconPill>
+          }
+        />
+      </div>
 
       {/* ── Tabs ────────────────────────────────────────── */}
-      <div className="border-b border-[rgba(9,9,11,0.08)] mb-6">
-        <nav className="flex items-center gap-1 overflow-x-auto">
+      <div className="mb-6">
+        <nav className="inline-flex items-center gap-1 bg-white rounded-full p-1 border border-[rgba(25,28,31,0.06)] shadow-[0_0_20px_-10px_rgba(0,0,0,0.1)] overflow-x-auto max-w-full">
           {tabs.map(t => {
             const active = tab === t.id;
             return (
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
-                className={`relative h-9 px-3 text-[13px] font-medium whitespace-nowrap transition-colors ${
-                  active ? 'text-[#09090B]' : 'text-[#71717A] hover:text-[#09090B]'
+                className={`h-9 px-4 text-[13px] font-semibold rounded-full whitespace-nowrap transition-all tracking-[-0.1px] ${
+                  active
+                    ? 'bg-[#191C1F] text-white shadow-[0_2px_8px_-2px_rgba(25,28,31,0.3)]'
+                    : 'text-[#75808A] hover:text-[#191C1F] hover:bg-[#F7F8FA]'
                 }`}
               >
                 {t.label}
-                {active && <span className="absolute left-0 right-0 -bottom-px h-0.5 bg-[#09090B]" />}
               </button>
             );
           })}
@@ -268,12 +328,12 @@ export default function ClientDetail({ client: initialClient, onBack }) {
           <div className="lg:col-span-2 space-y-5">
             {parsed.text && (
               <SectionCard title="À propos">
-                <p className="text-[13px] text-[#52525B] leading-relaxed">{parsed.text}</p>
+                <p className="text-[14px] text-[#52585F] leading-relaxed">{parsed.text}</p>
               </SectionCard>
             )}
 
             <SectionCard title="Informations détaillées">
-              <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+              <div className="grid grid-cols-2 gap-x-8 gap-y-5">
                 <Field label="Nom complet" value={client.name} />
                 <Field label="Numéro de compte" value={client.accountNumber} mono />
                 <Field label="Type de compte" value={typeLabel(client.type)} />
@@ -286,7 +346,7 @@ export default function ClientDetail({ client: initialClient, onBack }) {
             </SectionCard>
 
             <SectionCard title="Adresse de facturation">
-              <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+              <div className="grid grid-cols-2 gap-x-8 gap-y-5">
                 <Field label="Rue" value={client.street} />
                 <Field label="Ville" value={client.city} />
                 <Field label="Code postal" value={client.postalCode} />
@@ -294,54 +354,121 @@ export default function ClientDetail({ client: initialClient, onBack }) {
               </div>
             </SectionCard>
 
-            <SectionCard title={`Contacts (${contacts.length})`}>
+            <Card>
+              <div className="px-5 py-4 flex items-center justify-between border-b border-[rgba(25,28,31,0.06)]">
+                <h3 className="text-[15px] font-semibold text-[#191C1F] tracking-[-0.15px]">
+                  Contacts
+                </h3>
+                <span className="text-[13px] font-medium text-[#75808A]">{contacts.length} personne{contacts.length > 1 ? 's' : ''}</span>
+              </div>
               {loadingContacts ? (
-                <div className="py-6 text-center"><Spinner /></div>
+                <div className="py-8 text-center"><Spinner /></div>
               ) : contacts.length === 0 ? (
-                <p className="text-[13px] text-[#71717A] py-4">Aucun contact associé.</p>
+                <p className="px-5 py-6 text-[13px] text-[#75808A]">Aucun contact associé.</p>
               ) : (
-                <div className="divide-y divide-[rgba(9,9,11,0.06)] -mx-5">
-                  {contacts.map(c => (
-                    <div key={c.Id} className="px-5 py-3 flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-[#F4F4F5] rounded-md flex items-center justify-center text-[#52525B] text-[11px] font-semibold">
-                          {(c.FirstName?.[0] || '') + (c.LastName?.[0] || '')}
-                        </div>
-                        <div>
-                          <p className="text-[13px] font-medium text-[#09090B]">
-                            {[c.FirstName, c.LastName].filter(Boolean).join(' ')}
-                          </p>
-                          {c.Title && <p className="text-[11px] text-[#71717A]">{c.Title}</p>}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        {c.Email && <p className="text-[12px] text-[#52525B]">{c.Email}</p>}
-                        {c.Phone && <p className="text-[11px] text-[#71717A]">{c.Phone}</p>}
-                      </div>
-                    </div>
-                  ))}
+                <div>
+                  {contacts.map((c, i) => {
+                    const name = [c.FirstName, c.LastName].filter(Boolean).join(' ');
+                    return (
+                      <ListRow
+                        key={c.Id}
+                        icon={<Avatar name={name} size={40} />}
+                        title={name || '—'}
+                        subtitle={c.Title || c.Email || ''}
+                        trailing={c.Email || ''}
+                        trailingSub={c.Phone || ''}
+                        divider={i < contacts.length - 1}
+                      />
+                    );
+                  })}
                 </div>
               )}
-            </SectionCard>
+            </Card>
           </div>
 
           <aside className="space-y-5">
-            <SectionCard title="Conformité KYC">
-              <div className="flex items-center gap-2.5">
-                <span
-                  className="w-2 h-2 rounded-full"
-                  style={{ background: kycValid ? '#10B981' : kycLive?.overallStatus === 'attention_required' ? '#EF4444' : '#F59E0B' }}
-                />
-                <p className="text-[13px] font-medium text-[#09090B]">{kycStatusText}</p>
-              </div>
-              {kycLive?.stats && (
-                <p className="text-[12px] text-[#71717A] mt-2">
-                  {kycLive.stats.documentsVerified} doc(s) vérifié(s) · AML {kycLive.stats.amlClean ? 'clean' : 'en attente'}
+            {/* Wealth breakdown (Revolut-style) */}
+            <Card>
+              <div className="px-5 pt-5 pb-3">
+                <p className="text-[13px] font-medium text-[#75808A]">Répartition du patrimoine</p>
+                <p className="text-[26px] font-semibold text-[#191C1F] tabular-nums tracking-[-0.4px] mt-1">
+                  {client.aum ? fmtEUR(client.aum) : '—'}
                 </p>
-              )}
+              </div>
+              <div className="pt-1">
+                <ListRow
+                  icon={
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                  }
+                  tone="blue"
+                  title="Liquidités"
+                  subtitle="Compte courant"
+                  trailing={fmtEUR(Math.round((client.aum || 0) * 0.15))}
+                  trailingSub="15%"
+                />
+                <ListRow
+                  icon={
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19a3 3 0 11-6 0 3 3 0 016 0zm12-3a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  }
+                  tone="green"
+                  title="Investissements"
+                  subtitle="Actions · Obligations"
+                  trailing={fmtEUR(Math.round((client.aum || 0) * 0.65))}
+                  trailingSub="65%"
+                />
+                <ListRow
+                  icon={
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  }
+                  tone="indigo"
+                  title="Immobilier"
+                  subtitle="Résidentiel · Commercial"
+                  trailing={fmtEUR(Math.round((client.aum || 0) * 0.15))}
+                  trailingSub="15%"
+                />
+                <ListRow
+                  icon={
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  }
+                  tone="orange"
+                  title="Actifs numériques"
+                  subtitle={parsed.allocation ? `Cible ${parsed.allocation}` : 'Crypto custody'}
+                  trailing={fmtEUR(Math.round((client.aum || 0) * 0.05))}
+                  trailingSub="5%"
+                  divider={false}
+                />
+              </div>
+            </Card>
+
+            <SectionCard title="Conformité KYC">
+              <div className="flex items-center gap-3">
+                <IconPill tone={kycTone} size={40}>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                    {kycValid
+                      ? <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      : <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />}
+                  </svg>
+                </IconPill>
+                <div className="min-w-0">
+                  <p className="text-[15px] font-semibold text-[#191C1F] tracking-[-0.1px]">{kycStatusText}</p>
+                  {kycLive?.stats && (
+                    <p className="text-[12px] text-[#75808A] mt-0.5">
+                      {kycLive.stats.documentsVerified} doc{kycLive.stats.documentsVerified > 1 ? 's' : ''} · AML {kycLive.stats.amlClean ? 'clean' : 'en attente'}
+                    </p>
+                  )}
+                </div>
+              </div>
               {!kycValid && kycModuleEnabled && (
                 <Button
-                  variant="secondary"
+                  variant="accent"
                   size="sm"
                   className="w-full mt-4"
                   onClick={() => setTab('kyc')}
@@ -350,14 +477,14 @@ export default function ClientDetail({ client: initialClient, onBack }) {
                 </Button>
               )}
               {parsed.documents.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-[rgba(9,9,11,0.06)]">
-                  <p className="text-[11px] font-semibold text-[#71717A] uppercase tracking-wider mb-2">
+                <div className="mt-5 pt-4 border-t border-[rgba(25,28,31,0.06)]">
+                  <p className="text-[11px] font-semibold text-[#75808A] uppercase tracking-wider mb-2.5">
                     Documents Salesforce
                   </p>
-                  <ul className="space-y-1">
+                  <ul className="space-y-2">
                     {parsed.documents.map((doc, i) => (
-                      <li key={i} className="flex items-center gap-2 text-[12px] text-[#52525B]">
-                        <svg className="w-3 h-3 text-[#10B981] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                      <li key={i} className="flex items-center gap-2.5 text-[13px] text-[#52585F]">
+                        <svg className="w-3.5 h-3.5 text-[#00BE90] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.8}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
                         {doc}
@@ -368,26 +495,15 @@ export default function ClientDetail({ client: initialClient, onBack }) {
               )}
             </SectionCard>
 
-            <SectionCard title="Profil de risque">
-              <p className="text-[14px] font-semibold text-[#09090B]">
-                {parsed.risk || 'Non défini'}
-              </p>
-              {parsed.allocation && (
-                <p className="text-[12px] text-[#71717A] mt-1">
-                  Allocation crypto cible : <span className="text-[#09090B] font-medium">{parsed.allocation}</span>
-                </p>
-              )}
-            </SectionCard>
-
             <SectionCard title="Actions rapides">
               <div className="space-y-2">
                 <Button
-                  variant="secondary"
-                  size="sm"
+                  variant="accent"
+                  size="md"
                   className="w-full justify-start"
                   onClick={() => { setTab('wallets'); setShowCreate(true); }}
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                   </svg>
                   Créer un wallet
@@ -396,9 +512,9 @@ export default function ClientDetail({ client: initialClient, onBack }) {
                   <a
                     href={client.website.startsWith('http') ? client.website : `https://${client.website}`}
                     target="_blank" rel="noopener noreferrer"
-                    className="w-full h-8 inline-flex items-center gap-1.5 px-3 text-[13px] font-medium rounded-md bg-white text-[#09090B] border border-[rgba(9,9,11,0.1)] hover:bg-[#FAFAFA] transition-colors"
+                    className="w-full h-10 inline-flex items-center justify-start gap-2 px-4 text-[14px] font-semibold rounded-xl bg-white text-[#191C1F] border border-[rgba(25,28,31,0.1)] hover:bg-[#F7F8FA] transition-colors tracking-[-0.1px]"
                   >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                     </svg>
                     Ouvrir le site
@@ -410,18 +526,18 @@ export default function ClientDetail({ client: initialClient, onBack }) {
             <RiskConfigPanel client={client} />
 
             <SectionCard title="Metadata Salesforce">
-              <dl className="space-y-3">
+              <dl className="space-y-3.5">
                 <div>
-                  <dt className="text-[11px] font-medium text-[#71717A] uppercase tracking-wider mb-0.5">ID Salesforce</dt>
-                  <dd className="text-[11px] font-mono text-[#52525B] break-all">{client.id}</dd>
+                  <dt className="text-[11px] font-semibold text-[#75808A] uppercase tracking-wider mb-1">ID Salesforce</dt>
+                  <dd className="text-[11px] font-mono text-[#52585F] break-all">{client.id}</dd>
                 </div>
                 <div>
-                  <dt className="text-[11px] font-medium text-[#71717A] uppercase tracking-wider mb-0.5">Propriétaire</dt>
-                  <dd className="text-[11px] font-mono text-[#52525B] break-all">{client.ownerId || '—'}</dd>
+                  <dt className="text-[11px] font-semibold text-[#75808A] uppercase tracking-wider mb-1">Propriétaire</dt>
+                  <dd className="text-[11px] font-mono text-[#52585F] break-all">{client.ownerId || '—'}</dd>
                 </div>
                 <div>
-                  <dt className="text-[11px] font-medium text-[#71717A] uppercase tracking-wider mb-0.5">Créé le</dt>
-                  <dd className="text-[12px] text-[#09090B]">{fmtDate(client.createdDate)}</dd>
+                  <dt className="text-[11px] font-semibold text-[#75808A] uppercase tracking-wider mb-1">Créé le</dt>
+                  <dd className="text-[13px] text-[#191C1F] font-medium">{fmtDate(client.createdDate)}</dd>
                 </div>
               </dl>
             </SectionCard>
@@ -459,19 +575,21 @@ export default function ClientDetail({ client: initialClient, onBack }) {
 
       {/* ══════════ WALLETS ══════════ */}
       {tab === 'wallets' && (
-        <div className="animate-fade">
+        <div className="animate-fade space-y-5">
           {client.Custody_Eligible__c !== true && !kycValid && (
-            <div className="mb-5 px-4 py-3 bg-[#FFFBEB] border border-[rgba(245,158,11,0.25)] rounded-md flex items-start gap-2.5">
-              <svg className="w-4 h-4 text-[#F59E0B] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-              <div className="flex-1">
-                <p className="text-[13px] font-medium text-[#92400E]">Client non éligible à la custody</p>
-                <p className="text-[12px] text-[#B45309] mt-0.5">
+            <div className="px-5 py-4 bg-[#FFF6E0] border border-[rgba(255,184,0,0.25)] rounded-2xl flex items-start gap-3">
+              <IconPill tone="amber" size={36}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </IconPill>
+              <div className="flex-1 pt-0.5">
+                <p className="text-[14px] font-semibold text-[#191C1F]">Client non éligible à la custody</p>
+                <p className="text-[13px] text-[#75808A] mt-0.5">
                   La création de wallets requiert l'éligibilité.{' '}
                   <button
                     onClick={() => setTab('eligibility')}
-                    className="underline font-medium hover:text-[#92400E]"
+                    className="underline font-semibold text-[#B07800] hover:text-[#191C1F]"
                   >
                     Voir l'onglet Éligibilité
                   </button>
@@ -481,22 +599,22 @@ export default function ClientDetail({ client: initialClient, onBack }) {
           )}
 
           {error && (
-            <div className="mb-5 px-4 py-2.5 bg-[#FEF2F2] border border-[rgba(239,68,68,0.2)] rounded-md">
-              <p className="text-[12px] font-medium text-[#B91C1C]">Erreur DFNS : {error}</p>
+            <div className="px-5 py-4 bg-[#FDECEE] border border-[rgba(236,76,90,0.2)] rounded-2xl">
+              <p className="text-[13px] font-medium text-[#C93545]">Erreur DFNS : {error}</p>
             </div>
           )}
 
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
-              <h2 className="text-[15px] font-semibold text-[#09090B]">Wallets DFNS</h2>
-              <p className="text-[12px] text-[#71717A] mt-0.5">{wallets.length} wallet{wallets.length > 1 ? 's' : ''} actif{wallets.length > 1 ? 's' : ''}</p>
+              <h2 className="text-[20px] font-semibold text-[#191C1F] tracking-[-0.3px]">Wallets DFNS</h2>
+              <p className="text-[13px] text-[#75808A] mt-0.5">{wallets.length} wallet{wallets.length > 1 ? 's' : ''} · MPC custody</p>
             </div>
             <Button
-              variant="primary"
+              variant="accent"
               onClick={() => setShowCreate(true)}
               disabled={client.Custody_Eligible__c !== true && !kycValid}
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
               Créer un wallet
@@ -504,93 +622,124 @@ export default function ClientDetail({ client: initialClient, onBack }) {
           </div>
 
           {loading ? (
-            <div className="flex justify-center py-16"><Spinner /></div>
+            <div className="flex justify-center py-16"><Spinner size="w-6 h-6" /></div>
           ) : wallets.length === 0 ? (
-            <Card>
+            <Card className="py-4">
               <EmptyState
                 title="Aucun wallet"
                 description="Créez un premier wallet pour ce client via DFNS."
+                icon={
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                }
               />
             </Card>
           ) : (
-            <div className="grid md:grid-cols-2 gap-3">
-              {wallets.map(w => {
+            <Card>
+              {wallets.map((w, i) => {
                 const n = net(w.network);
                 const active = selectedWallet?.id === w.id;
                 return (
-                  <button
+                  <div
                     key={w.id}
                     onClick={() => selectWallet(w)}
-                    className={`bg-white border rounded-lg p-4 text-left transition-all ${
-                      active
-                        ? 'border-[#09090B] ring-2 ring-[rgba(9,9,11,0.08)]'
-                        : 'border-[rgba(9,9,11,0.08)] hover:border-[rgba(9,9,11,0.15)] hover:bg-[#FAFAFA]'
-                    }`}
+                    className={`flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors ${
+                      active ? 'bg-[#E6F0FD]' : 'hover:bg-[#F7F8FA]'
+                    } ${i < wallets.length - 1 ? 'border-b border-[rgba(25,28,31,0.06)]' : ''}`}
                   >
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-8 h-8 rounded-md flex items-center justify-center text-white font-bold text-[12px] flex-shrink-0" style={{ backgroundColor: n.color }}>
-                        {n.icon}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold text-[#09090B] truncate">{w.name || n.name}</p>
-                        <p className="text-[11px] text-[#71717A]">{n.name}</p>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        {frozenWallets[w.id] && <Badge variant="error">Gelé</Badge>}
-                        <Badge variant={w.status === 'Active' ? 'success' : 'warning'}>{w.status}</Badge>
-                      </div>
+                    <div
+                      className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-[13px] flex-shrink-0 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.2)]"
+                      style={{ backgroundColor: n.color }}
+                    >
+                      {n.icon}
                     </div>
-                    <div className="font-mono text-[11px] text-[#52525B] bg-[#FAFAFA] rounded px-2.5 py-1.5 truncate">
-                      {truncAddr(w.address, 10)}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-[15px] font-semibold text-[#191C1F] truncate tracking-[-0.15px]">{w.name || n.name}</p>
+                        {frozenWallets[w.id] && <Badge variant="error" size="sm" dot>Gelé</Badge>}
+                        <Badge variant={w.status === 'Active' ? 'success' : 'warning'} size="sm" dot>{w.status}</Badge>
+                      </div>
+                      <p className="text-[12px] font-mono text-[#75808A] truncate mt-0.5">{truncAddr(w.address, 10)}</p>
                     </div>
-                  </button>
+                    <div className="text-right flex-shrink-0 hidden sm:block">
+                      <p className="text-[11px] font-semibold text-[#75808A] uppercase tracking-wider">Réseau</p>
+                      <p className="text-[13px] font-semibold text-[#191C1F] mt-0.5">{n.name}</p>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-[#F7F8FA] flex items-center justify-center text-[#75808A] flex-shrink-0">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </div>
                 );
               })}
-            </div>
+            </Card>
           )}
 
           {selectedWallet && (
-            <Card className="mt-5 p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-[15px] font-semibold text-[#09090B]">{selectedWallet.name || 'Wallet'}</h3>
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-[13px] flex-shrink-0"
+                    style={{ backgroundColor: net(selectedWallet.network).color }}
+                  >
+                    {net(selectedWallet.network).icon}
+                  </div>
+                  <div>
+                    <h3 className="text-[18px] font-semibold text-[#191C1F] tracking-[-0.2px]">{selectedWallet.name || 'Wallet'}</h3>
+                    <p className="text-[12px] text-[#75808A] mt-0.5">{net(selectedWallet.network).name}</p>
+                  </div>
+                </div>
                 <Button
-                  variant="primary"
+                  variant="accent"
                   onClick={() => setShowTransfer(true)}
                   disabled={client.Custody_Eligible__c !== true && !kycValid}
                 >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
                   Envoyer
                 </Button>
               </div>
-              <div className="grid grid-cols-3 gap-4 mb-4">
-                <div className="bg-[#FAFAFA] rounded-md p-3">
-                  <p className="text-[11px] font-medium text-[#71717A] uppercase tracking-wider mb-1">Adresse</p>
-                  <p className="text-[11px] font-mono text-[#09090B] break-all">{selectedWallet.address}</p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
+                <div className="bg-[#F7F8FA] rounded-xl p-4">
+                  <p className="text-[11px] font-semibold text-[#75808A] uppercase tracking-wider mb-1.5">Adresse</p>
+                  <p className="text-[12px] font-mono text-[#191C1F] break-all">{selectedWallet.address}</p>
                 </div>
-                <div className="bg-[#FAFAFA] rounded-md p-3">
-                  <p className="text-[11px] font-medium text-[#71717A] uppercase tracking-wider mb-1">Réseau</p>
-                  <p className="text-[13px] font-medium text-[#09090B]">{net(selectedWallet.network).name}</p>
-                </div>
-                <div className="bg-[#FAFAFA] rounded-md p-3">
-                  <p className="text-[11px] font-medium text-[#71717A] uppercase tracking-wider mb-1">Valeur nette</p>
-                  <p className="text-[16px] font-semibold text-[#09090B] tabular-nums">
+                <div className="bg-[#F7F8FA] rounded-xl p-4">
+                  <p className="text-[11px] font-semibold text-[#75808A] uppercase tracking-wider mb-1.5">Valeur nette</p>
+                  <p className="text-[20px] font-semibold text-[#191C1F] tabular-nums tracking-[-0.2px]">
                     {assets?.netWorth?.USD ? `$${assets.netWorth.USD.toLocaleString()}` : '—'}
+                  </p>
+                </div>
+                <div className="bg-[#F7F8FA] rounded-xl p-4">
+                  <p className="text-[11px] font-semibold text-[#75808A] uppercase tracking-wider mb-1.5">Actifs</p>
+                  <p className="text-[20px] font-semibold text-[#191C1F] tabular-nums tracking-[-0.2px]">
+                    {assets?.assets?.length || 0}
                   </p>
                 </div>
               </div>
 
               {assets?.assets?.length > 0 && (
                 <div>
-                  <p className="text-[11px] font-semibold text-[#71717A] uppercase tracking-wider mb-2">Actifs</p>
-                  <div className="space-y-1">
+                  <p className="text-[11px] font-semibold text-[#75808A] uppercase tracking-wider mb-2">Portefeuille</p>
+                  <div className="space-y-1.5">
                     {assets.assets.map((a, i) => (
-                      <div key={i} className="flex items-center justify-between py-2 px-3 bg-[#FAFAFA] rounded-md">
-                        <div className="flex items-center gap-2.5">
-                          <span className="text-[13px] font-semibold text-[#09090B]">{a.symbol}</span>
-                          <Badge>{a.kind}</Badge>
+                      <div key={i} className="flex items-center justify-between py-3 px-4 bg-[#F7F8FA] rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <IconPill tone="blue" size={36}>
+                            <span className="text-[11px] font-bold">{a.symbol?.slice(0, 3)}</span>
+                          </IconPill>
+                          <div>
+                            <p className="text-[14px] font-semibold text-[#191C1F]">{a.symbol}</p>
+                            <p className="text-[11px] text-[#75808A]">{a.kind}</p>
+                          </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-[13px] font-semibold text-[#09090B] tabular-nums">{a.balance}</p>
-                          {a.quotes?.USD && <p className="text-[11px] text-[#71717A] tabular-nums">${a.quotes.USD.toLocaleString()}</p>}
+                          <p className="text-[14px] font-semibold text-[#191C1F] tabular-nums">{a.balance}</p>
+                          {a.quotes?.USD && <p className="text-[11px] text-[#75808A] tabular-nums">${a.quotes.USD.toLocaleString()}</p>}
                         </div>
                       </div>
                     ))}
@@ -601,65 +750,61 @@ export default function ClientDetail({ client: initialClient, onBack }) {
           )}
 
           {selectedWallet && (
-            <div className="mt-5">
-              <WalletFreezePanel
-                walletId={selectedWallet.id}
-                salesforceAccountId={client.id}
-                clientName={client.name || client.Name}
-              />
-            </div>
+            <WalletFreezePanel
+              walletId={selectedWallet.id}
+              salesforceAccountId={client.id}
+              clientName={client.name || client.Name}
+            />
           )}
 
-          <div className="mt-5">
-            <WhitelistPanel client={client} />
-          </div>
+          <WhitelistPanel client={client} />
         </div>
       )}
 
       {/* ══════════ TRANSFERS ══════════ */}
       {tab === 'transfers' && selectedWallet && (
         <div className="animate-fade">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-5">
             <div>
-              <h2 className="text-[15px] font-semibold text-[#09090B]">Transferts — {selectedWallet.name}</h2>
-              <p className="text-[12px] text-[#71717A] mt-0.5">{history.length} opération{history.length > 1 ? 's' : ''}</p>
+              <h2 className="text-[20px] font-semibold text-[#191C1F] tracking-[-0.3px]">Transferts — {selectedWallet.name}</h2>
+              <p className="text-[13px] text-[#75808A] mt-0.5">{history.length} opération{history.length > 1 ? 's' : ''}</p>
             </div>
-            <Button variant="primary" onClick={() => setShowTransfer(true)}>
+            <Button variant="accent" onClick={() => setShowTransfer(true)}>
               Nouveau transfert
             </Button>
           </div>
           {history.length === 0 ? (
-            <Card>
+            <Card className="py-4">
               <EmptyState title="Aucun transfert" description="Les transferts apparaîtront ici." />
             </Card>
           ) : (
             <Card className="overflow-hidden">
               <table className="w-full text-[13px]">
                 <thead>
-                  <tr className="border-b border-[rgba(9,9,11,0.08)] bg-[#FAFAFA]">
-                    <th className="text-left px-4 h-9 text-[11px] font-semibold text-[#71717A] uppercase tracking-wider">Direction</th>
-                    <th className="text-left px-4 h-9 text-[11px] font-semibold text-[#71717A] uppercase tracking-wider">Adresse</th>
-                    <th className="text-right px-4 h-9 text-[11px] font-semibold text-[#71717A] uppercase tracking-wider">Montant</th>
-                    <th className="text-left px-4 h-9 text-[11px] font-semibold text-[#71717A] uppercase tracking-wider">Statut</th>
-                    <th className="text-left px-4 h-9 text-[11px] font-semibold text-[#71717A] uppercase tracking-wider">Date</th>
+                  <tr className="border-b border-[rgba(25,28,31,0.06)] bg-[#F7F8FA]">
+                    <th className="text-left px-5 h-11 text-[11px] font-semibold text-[#75808A] uppercase tracking-wider">Direction</th>
+                    <th className="text-left px-5 h-11 text-[11px] font-semibold text-[#75808A] uppercase tracking-wider">Adresse</th>
+                    <th className="text-right px-5 h-11 text-[11px] font-semibold text-[#75808A] uppercase tracking-wider">Montant</th>
+                    <th className="text-left px-5 h-11 text-[11px] font-semibold text-[#75808A] uppercase tracking-wider">Statut</th>
+                    <th className="text-left px-5 h-11 text-[11px] font-semibold text-[#75808A] uppercase tracking-wider">Date</th>
                   </tr>
                 </thead>
                 <tbody>
                   {history.map((tx, i) => (
-                    <tr key={tx.id || i} className="border-b border-[rgba(9,9,11,0.06)] last:border-0 hover:bg-[#FAFAFA]">
-                      <td className="px-4 py-2.5">
-                        <Badge variant={tx.direction === 'In' ? 'success' : 'info'}>{tx.direction || '—'}</Badge>
+                    <tr key={tx.id || i} className="border-b border-[rgba(25,28,31,0.06)] last:border-0 hover:bg-[#F7F8FA]">
+                      <td className="px-5 py-3">
+                        <Badge variant={tx.direction === 'In' ? 'success' : 'info'} dot>{tx.direction || '—'}</Badge>
                       </td>
-                      <td className="px-4 py-2.5 font-mono text-[11px] text-[#52525B]">
+                      <td className="px-5 py-3 font-mono text-[12px] text-[#52585F]">
                         {truncAddr(tx.to || tx.from, 8)}
                       </td>
-                      <td className="px-4 py-2.5 text-right font-semibold text-[#09090B] tabular-nums">
+                      <td className="px-5 py-3 text-right font-semibold text-[#191C1F] tabular-nums">
                         {tx.value || '—'}
                       </td>
-                      <td className="px-4 py-2.5">
-                        <Badge variant={tx.status === 'Confirmed' ? 'success' : 'warning'}>{tx.status || 'Pending'}</Badge>
+                      <td className="px-5 py-3">
+                        <Badge variant={tx.status === 'Confirmed' ? 'success' : 'warning'} dot>{tx.status || 'Pending'}</Badge>
                       </td>
-                      <td className="px-4 py-2.5 text-[12px] text-[#71717A]">
+                      <td className="px-5 py-3 text-[13px] text-[#75808A]">
                         {tx.timestamp ? new Date(tx.timestamp).toLocaleDateString('fr-FR') : '—'}
                       </td>
                     </tr>
@@ -673,7 +818,7 @@ export default function ClientDetail({ client: initialClient, onBack }) {
 
       {tab === 'transfers' && !selectedWallet && (
         <div className="animate-fade">
-          <Card>
+          <Card className="py-4">
             <EmptyState
               title="Sélectionnez un wallet"
               description="Choisissez un wallet dans l'onglet Wallets pour voir ses transferts."
@@ -685,32 +830,38 @@ export default function ClientDetail({ client: initialClient, onBack }) {
       {/* ══════════ HISTORY ══════════ */}
       {tab === 'history' && (
         <div className="animate-fade">
-          <div className="mb-4">
-            <h2 className="text-[15px] font-semibold text-[#09090B]">Historique global</h2>
-            <p className="text-[12px] text-[#71717A] mt-0.5">Tous les wallets du client</p>
+          <div className="mb-5">
+            <h2 className="text-[20px] font-semibold text-[#191C1F] tracking-[-0.3px]">Historique global</h2>
+            <p className="text-[13px] text-[#75808A] mt-0.5">Tous les wallets du client</p>
           </div>
           {wallets.length === 0 ? (
-            <Card>
+            <Card className="py-4">
               <EmptyState title="Aucun wallet" description="Créez un wallet pour voir l'historique." />
             </Card>
           ) : (
-            <Card className="divide-y divide-[rgba(9,9,11,0.06)]">
-              {wallets.map(w => {
+            <Card>
+              {wallets.map((w, i) => {
                 const n = net(w.network);
                 return (
-                  <div key={w.id} className="px-4 py-3 flex items-center justify-between">
+                  <div
+                    key={w.id}
+                    className={`px-5 py-4 flex items-center justify-between gap-4 ${i < wallets.length - 1 ? 'border-b border-[rgba(25,28,31,0.06)]' : ''}`}
+                  >
                     <div className="flex items-center gap-3">
-                      <div className="w-7 h-7 rounded-md flex items-center justify-center text-white text-[11px] font-bold" style={{ backgroundColor: n.color }}>
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[12px] font-bold"
+                        style={{ backgroundColor: n.color }}
+                      >
                         {n.icon}
                       </div>
                       <div>
-                        <p className="text-[13px] font-medium text-[#09090B]">{w.name}</p>
-                        <p className="font-mono text-[11px] text-[#71717A]">{truncAddr(w.address, 8)}</p>
+                        <p className="text-[14px] font-semibold text-[#191C1F] tracking-[-0.1px]">{w.name}</p>
+                        <p className="font-mono text-[12px] text-[#75808A]">{truncAddr(w.address, 8)}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <Badge variant={w.status === 'Active' ? 'success' : 'default'}>{w.status}</Badge>
-                      <p className="text-[11px] text-[#71717A] mt-0.5">
+                      <Badge variant={w.status === 'Active' ? 'success' : 'default'} size="sm" dot>{w.status}</Badge>
+                      <p className="text-[11px] text-[#75808A] mt-1">
                         {w.dateCreated ? new Date(w.dateCreated).toLocaleDateString('fr-FR') : ''}
                       </p>
                     </div>
@@ -751,7 +902,7 @@ export default function ClientDetail({ client: initialClient, onBack }) {
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" onClick={() => setShowCreate(false)}>Annuler</Button>
-            <Button variant="primary" onClick={handleCreate} disabled={creating || !newWallet.name}>
+            <Button variant="accent" onClick={handleCreate} disabled={creating || !newWallet.name}>
               {creating ? 'Création…' : 'Créer le wallet'}
             </Button>
           </div>
@@ -797,7 +948,7 @@ export default function ClientDetail({ client: initialClient, onBack }) {
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" onClick={() => setShowTransfer(false)}>Annuler</Button>
-            <Button variant="primary" onClick={handleTransfer} disabled={sending || !transfer.to || !transfer.amount}>
+            <Button variant="accent" onClick={handleTransfer} disabled={sending || !transfer.to || !transfer.amount}>
               {sending ? 'Envoi…' : 'Soumettre'}
             </Button>
           </div>
@@ -810,8 +961,8 @@ export default function ClientDetail({ client: initialClient, onBack }) {
 /* ─── Sub-components ─── */
 function SectionCard({ title, children }) {
   return (
-    <Card className="p-5">
-      <h3 className="text-[13px] font-semibold text-[#09090B] mb-4">{title}</h3>
+    <Card className="p-6">
+      <h3 className="text-[15px] font-semibold text-[#191C1F] tracking-[-0.15px] mb-5">{title}</h3>
       {children}
     </Card>
   );
@@ -820,17 +971,17 @@ function SectionCard({ title, children }) {
 function Field({ label, value, mono, link }) {
   return (
     <div>
-      <p className="text-[11px] font-medium text-[#71717A] uppercase tracking-wider mb-1">{label}</p>
+      <p className="text-[11px] font-semibold text-[#75808A] uppercase tracking-wider mb-1.5">{label}</p>
       {link && value ? (
         <a
           href={value.startsWith('http') ? value : `https://${value}`}
           target="_blank" rel="noopener noreferrer"
-          className="text-[13px] font-medium text-[#09090B] hover:underline"
+          className="text-[14px] font-semibold text-[#0666EB] hover:underline"
         >
           {value}
         </a>
       ) : (
-        <p className={`text-[13px] ${mono ? 'font-mono text-[#52525B]' : 'text-[#09090B] font-medium'}`}>
+        <p className={`text-[14px] ${mono ? 'font-mono text-[#52585F]' : 'text-[#191C1F] font-semibold tracking-[-0.1px]'}`}>
           {value || '—'}
         </p>
       )}

@@ -10,32 +10,45 @@
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
   /* Surfaces */
-  --color-bg:          #FAFAFA;
-  --color-bg-2:        #F4F4F5;
+  --color-bg:          #F7F8FA;
+  --color-bg-2:        #F1F3F6;
   --color-surface:     #FFFFFF;
-  --color-surface-alt: #FAFAFA;
+  --color-surface-alt: #FAFBFC;
 
-  /* Ink — neutral grayscale */
-  --color-ink:         #09090B;
-  --color-ink-2:       #18181B;
-  --color-ink-3:       #52525B;
-  --color-ink-4:       #71717A;
-  --color-ink-5:       #A1A1AA;
-  --color-ink-6:       #D4D4D8;
+  /* Ink — Revolut-inspired softer neutrals */
+  --color-ink:         #191C1F;
+  --color-ink-2:       #2A2E33;
+  --color-ink-3:       #52585F;
+  --color-ink-4:       #75808A;
+  --color-ink-5:       #A5ADB6;
+  --color-ink-6:       #D7DCE2;
 
   /* Borders */
-  --color-border:        rgba(9, 9, 11, 0.08);
-  --color-border-strong: rgba(9, 9, 11, 0.12);
+  --color-border:        rgba(25, 28, 31, 0.08);
+  --color-border-strong: rgba(25, 28, 31, 0.14);
 
-  /* Signal states */
-  --color-success:    #10B981;
-  --color-success-bg: #ECFDF5;
-  --color-warning:    #F59E0B;
-  --color-warning-bg: #FFFBEB;
-  --color-error:      #EF4444;
-  --color-error-bg:   #FEF2F2;
-  --color-info:       #3B82F6;
-  --color-info-bg:    #EFF6FF;
+  /* Revolut accents */
+  --color-accent:       #0666EB;   /* Revolut blue */
+  --color-accent-2:     #0B84FF;   /* Bright blue */
+  --color-accent-bg:    #E6F0FD;   /* Soft blue tint */
+
+  /* Signal states (Revolut-inspired) */
+  --color-success:    #00BE90;
+  --color-success-bg: #E6F9F2;
+  --color-warning:    #FFB800;
+  --color-warning-bg: #FFF6E0;
+  --color-error:      #EC4C5A;
+  --color-error-bg:   #FDECEE;
+  --color-info:       #0666EB;
+  --color-info-bg:    #E6F0FD;
+  --color-pink:       #E950A4;
+  --color-pink-bg:    #FCEAF4;
+  --color-orange:     #EC7E00;
+  --color-orange-bg:  #FDEFDB;
+
+  /* Elevation — Revolut soft drop shadow */
+  --shadow-card:   0px 0px 20px -10px rgba(0, 0, 0, 0.16);
+  --shadow-card-lg: 0px 4px 32px -12px rgba(0, 0, 0, 0.18);
 }
 
 /* ═════════════════════════════════════════════════════
@@ -43,16 +56,17 @@
    ═════════════════════════════════════════════════════ */
 html, body {
   margin: 0;
-  background: #FAFAFA;
-  color: #09090B;
+  background: #F7F8FA;
+  color: #191C1F;
   font-family: "Inter", -apple-system, sans-serif;
   font-weight: 400;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-feature-settings: "cv11", "ss01", "ss03";
   text-rendering: optimizeLegibility;
+  letter-spacing: -0.003em;
 }
 
 #root { min-height: 100vh; }
@@ -66,23 +80,58 @@ html, body {
 
 /* Selection */
 ::selection {
-  background: rgba(9, 9, 11, 0.12);
-  color: #09090B;
+  background: rgba(6, 102, 235, 0.15);
+  color: #191C1F;
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(9, 9, 11, 0.1); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(9, 9, 11, 0.2); }
+::-webkit-scrollbar-thumb { background: rgba(25, 28, 31, 0.1); border-radius: 8px; border: 2px solid #F7F8FA; }
+::-webkit-scrollbar-thumb:hover { background: rgba(25, 28, 31, 0.2); }
 
 /* Form elements */
 input, select, textarea, button {
   font-family: "Inter", sans-serif;
-  font-size: 13px;
-  color: #09090B;
+  font-size: 14px;
+  color: #191C1F;
 }
 input:focus, select:focus, textarea:focus { outline: none; }
+
+/* ═════════════════════════════════════════════════════
+   REVOLUT-STYLE UTILITIES
+   ═════════════════════════════════════════════════════ */
+.card-elevated {
+  background: #FFFFFF;
+  border-radius: 18px;
+  box-shadow: 0px 0px 20px -10px rgba(0, 0, 0, 0.16);
+  border: 1px solid rgba(25, 28, 31, 0.04);
+}
+.card-elevated-lg {
+  background: #FFFFFF;
+  border-radius: 22px;
+  box-shadow: 0px 4px 32px -12px rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(25, 28, 31, 0.04);
+}
+
+.tile-hover {
+  transition: transform 180ms cubic-bezier(0.2, 0, 0.2, 1), box-shadow 180ms cubic-bezier(0.2, 0, 0.2, 1);
+}
+.tile-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0px 8px 32px -12px rgba(6, 102, 235, 0.18);
+}
+
+/* Gradient sparkline backgrounds */
+.sparkline-gradient-blue {
+  background: linear-gradient(180deg, rgba(6, 102, 235, 0.18) 0%, rgba(6, 102, 235, 0) 100%);
+}
+.sparkline-gradient-green {
+  background: linear-gradient(180deg, rgba(0, 190, 144, 0.18) 0%, rgba(0, 190, 144, 0) 100%);
+}
+.sparkline-gradient-pink {
+  background: linear-gradient(180deg, rgba(233, 80, 164, 0.18) 0%, rgba(233, 80, 164, 0) 100%);
+}
 
 /* ═════════════════════════════════════════════════════
    MOTION — fast, functional, never decorative
