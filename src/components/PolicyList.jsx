@@ -4,7 +4,7 @@ import {
   Badge, Modal, Spinner, EmptyState, inputCls, selectCls, labelCls,
   PageHeader, Metric, MetricRow, Card, Button, FooterDisclosure, StatusDot,
 } from './shared';
-import { HeroDial } from './brand';
+import { HeroMesh } from './brand';
 
 /* ─────────────────────────────────────────────────────────
    PolicyList — Governance rules · DFNS approval policies
@@ -65,10 +65,9 @@ export default function PolicyList() {
     <div className="space-y-10">
       {/* ── Editorial header ──────────────────────────── */}
       <div className="relative">
-        <HeroDial
-          size={300}
-          strokeOpacity={0.08}
-          className="absolute -right-4 -top-12 pointer-events-none select-none hero-drift hidden md:block"
+        <HeroMesh
+          size={400}
+          className="absolute -right-8 -top-16 hidden md:block"
         />
       <PageHeader
         eyebrow="Gouvernance · Politiques d'approbation"

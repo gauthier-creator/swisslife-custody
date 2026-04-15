@@ -1,43 +1,24 @@
 /* ═══════════════════════════════════════════════════════
    SwissLife Custody — Brand identity primitives
    ───────────────────────────────────────────────────────
-   Horological language: watch dial, bronze seal, fleuron
-   ornaments. Used across the app to create a coherent
-   visual identity that's distinctly SwissLife Custody,
-   not an off-the-shelf component library.
+   Modern fintech language inspired by ElevenLabs, Revolut,
+   Mercury, Ramp. Mesh gradients · conic rings · live halos
+   · sparklines. Warm bronze palette preserved.
    ═══════════════════════════════════════════════════════ */
 
-const INK    = '#0A0A0A';
-const BRONZE = '#7C5E3C';
+const BRONZE      = '#7C5E3C';
+const BRONZE_2    = '#9A7A51';
+const BRONZE_HI   = '#D4A574';
 
 /* ───────────────────────────────────────────────────────
-   BrandMark — animated monogram loader
-   A 12-o'clock sweep hand rotates around a ticked dial
-   with the SL monogram at the center. Replaces Spinner
-   in page-level loading moments.
+   BrandMark — modern conic ring loader
+   Outer conic-gradient ring spinning inside a soft halo
+   pulse · center is a dark disc with white italic Sℓ.
+   Replaces the watch-dial loader.
    ─────────────────────────────────────────────────────── */
 export function BrandMark({ size = 64, label }) {
-  const cx = 32, cy = 32;
-  // 60 tick marks around the perimeter
-  const ticks = Array.from({ length: 60 }).map((_, i) => {
-    const angle = ((i * 6 - 90) * Math.PI) / 180;
-    const isHour = i % 5 === 0;
-    const rOuter = 28;
-    const rInner = isHour ? 22.5 : 25.6;
-    return (
-      <line
-        key={i}
-        x1={cx + Math.cos(angle) * rOuter}
-        y1={cy + Math.sin(angle) * rOuter}
-        x2={cx + Math.cos(angle) * rInner}
-        y2={cy + Math.sin(angle) * rInner}
-        stroke={isHour ? 'rgba(10,10,10,0.55)' : 'rgba(10,10,10,0.22)'}
-        strokeWidth={isHour ? 1.3 : 0.7}
-        strokeLinecap="round"
-      />
-    );
-  });
-
+  const inset = size * 0.18;
+  const centerSize = size - inset * 2;
   return (
     <div
       className="relative inline-flex items-center justify-center"
@@ -45,230 +26,172 @@ export function BrandMark({ size = 64, label }) {
       role={label ? 'status' : undefined}
       aria-label={label || 'Chargement'}
     >
-      <svg
-        width={size}
-        height={size}
-        viewBox="0 0 64 64"
-        fill="none"
-        className="absolute inset-0"
-      >
-        {/* outer hairline bezel */}
-        <circle cx={cx} cy={cy} r={29.5} stroke="rgba(10,10,10,0.08)" />
-        <circle cx={cx} cy={cy} r={27.4} stroke="rgba(10,10,10,0.05)" />
-        {ticks}
-        {/* rotating sweep hand */}
-        <g className="brand-dial-rotate" style={{ transformOrigin: '32px 32px' }}>
-          <line
-            x1={cx}
-            y1={cy}
-            x2={cx}
-            y2={cy - 22}
-            stroke={BRONZE}
-            strokeWidth="1.5"
-            strokeLinecap="round"
-          />
-          <circle cx={cx} cy={cy - 22} r="1.8" fill={BRONZE} />
-        </g>
-        {/* center cap */}
-        <circle cx={cx} cy={cy} r="2.4" fill={INK} />
-        <circle cx={cx} cy={cy} r="1" fill="#FFFFFF" opacity="0.8" />
-      </svg>
-    </div>
-  );
-}
-
-/* ───────────────────────────────────────────────────────
-   HeroDial — decorative watch-dial backdrop
-   Sits absolute-positioned behind PageHeader titles to
-   give a subtle "this product is crafted" feel.
-   Always aria-hidden, pointer-events-none.
-   ─────────────────────────────────────────────────────── */
-export function HeroDial({ size = 360, className = '', strokeOpacity = 0.08 }) {
-  const half = size / 2;
-  const rBezel = size * 0.48;
-  const rTrack = size * 0.40;
-  const rHour  = size * 0.45;
-  const rHourInner = size * 0.42;
-  const rMin   = size * 0.435;
-  const rMinInner = size * 0.425;
-
-  const hourTicks = Array.from({ length: 12 }).map((_, i) => {
-    const a = ((i * 30 - 90) * Math.PI) / 180;
-    return (
-      <line
-        key={`h${i}`}
-        x1={half + Math.cos(a) * rHour}
-        y1={half + Math.sin(a) * rHour}
-        x2={half + Math.cos(a) * rHourInner}
-        y2={half + Math.sin(a) * rHourInner}
-        stroke={BRONZE}
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        opacity={strokeOpacity * 5}
+      {/* Halo pulse */}
+      <span
+        aria-hidden="true"
+        className="absolute inset-0 rounded-full animate-halo-pulse"
+        style={{
+          background:
+            'radial-gradient(circle, rgba(212,165,116,0.38) 0%, rgba(124,94,60,0.18) 45%, transparent 72%)',
+        }}
       />
-    );
-  });
-
-  const minuteTicks = Array.from({ length: 60 }).map((_, i) => {
-    if (i % 5 === 0) return null;
-    const a = ((i * 6 - 90) * Math.PI) / 180;
-    return (
-      <line
-        key={`m${i}`}
-        x1={half + Math.cos(a) * rMin}
-        y1={half + Math.sin(a) * rMin}
-        x2={half + Math.cos(a) * rMinInner}
-        y2={half + Math.sin(a) * rMinInner}
-        stroke={INK}
-        strokeWidth="0.7"
-        opacity={strokeOpacity * 2.2}
+      {/* Conic gradient ring — masked to become a donut */}
+      <span
+        aria-hidden="true"
+        className="absolute inset-0 rounded-full animate-ring-spin"
+        style={{
+          background:
+            'conic-gradient(from 0deg, rgba(124,94,60,0) 0deg, rgba(212,165,116,0.1) 60deg, #D4A574 180deg, #7C5E3C 300deg, rgba(124,94,60,0) 360deg)',
+          WebkitMask:
+            'radial-gradient(circle, transparent 58%, black 60%)',
+          mask:
+            'radial-gradient(circle, transparent 58%, black 60%)',
+        }}
       />
-    );
-  });
-
-  const numeralFS = Math.round(size * 0.055);
-  const numeralR = size * 0.37;
-  const numerals = [
-    ['XII', 0],
-    ['III', 90],
-    ['VI',  180],
-    ['IX',  270],
-  ].map(([label, deg]) => {
-    const a = ((deg - 90) * Math.PI) / 180;
-    return (
-      <text
-        key={label}
-        x={half + Math.cos(a) * numeralR}
-        y={half + Math.sin(a) * numeralR + numeralFS * 0.36}
-        textAnchor="middle"
-        fontFamily="Fraunces, ui-serif, Georgia, serif"
-        fontSize={numeralFS}
-        fontStyle="italic"
-        fill={BRONZE}
-        opacity={strokeOpacity * 5}
+      {/* Center dark disc */}
+      <span
+        className="relative inline-flex items-center justify-center rounded-full"
+        style={{
+          width: centerSize,
+          height: centerSize,
+          background:
+            'radial-gradient(circle at 34% 28%, #1A1A1A 0%, #0A0A0A 60%, #000 100%)',
+          boxShadow:
+            '0 1px 2px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)',
+        }}
       >
-        {label}
-      </text>
-    );
-  });
-
-  return (
-    <svg
-      className={className}
-      width={size}
-      height={size}
-      viewBox={`0 0 ${size} ${size}`}
-      fill="none"
-      aria-hidden="true"
-    >
-      {/* faint outer halo */}
-      <circle cx={half} cy={half} r={rBezel} stroke={INK} strokeWidth="0.8" opacity={strokeOpacity} />
-      <circle cx={half} cy={half} r={rBezel - 3} stroke={INK} strokeWidth="0.4" opacity={strokeOpacity * 0.8} />
-      {/* dashed inner track (engraving feel) */}
-      <circle
-        cx={half}
-        cy={half}
-        r={rTrack}
-        stroke={BRONZE}
-        strokeWidth="1"
-        strokeDasharray="2 5"
-        opacity={strokeOpacity * 2.6}
-      />
-      {minuteTicks}
-      {hourTicks}
-      {numerals}
-      {/* monogram center */}
-      <text
-        x={half}
-        y={half + size * 0.08}
-        textAnchor="middle"
-        fontFamily="Fraunces, ui-serif, Georgia, serif"
-        fontSize={size * 0.26}
-        fontStyle="italic"
-        fill={INK}
-        opacity={strokeOpacity * 0.7}
-      >
-        Sℓ
-      </text>
-    </svg>
-  );
-}
-
-/* ───────────────────────────────────────────────────────
-   WaxSeal — bronze foil medallion
-   Displays an embossed SL monogram surrounded by tiny
-   engraving marks. Use to mark validated states:
-   KYC validé · Contrat signé · Compliance clear.
-   ─────────────────────────────────────────────────────── */
-export function WaxSeal({ size = 56, label, tilt = -4, className = '' }) {
-  const cx = 32, cy = 32;
-  const engraving = Array.from({ length: 36 }).map((_, i) => {
-    const a = ((i * 10 - 90) * Math.PI) / 180;
-    const long = i % 3 === 0;
-    const r1 = 23.8;
-    const r2 = long ? 21.6 : 22.8;
-    return (
-      <line
-        key={i}
-        x1={cx + Math.cos(a) * r1}
-        y1={cy + Math.sin(a) * r1}
-        x2={cx + Math.cos(a) * r2}
-        y2={cy + Math.sin(a) * r2}
-        stroke="rgba(255,236,206,0.55)"
-        strokeWidth={long ? 0.9 : 0.6}
-        strokeLinecap="round"
-      />
-    );
-  });
-
-  return (
-    <div className={`inline-flex flex-col items-center gap-1.5 ${className}`}>
-      <div
-        className="relative inline-flex items-center justify-center wax-seal"
-        style={{ width: size, height: size, transform: `rotate(${tilt}deg)` }}
-      >
-        <svg width={size} height={size} viewBox="0 0 64 64" fill="none">
-          <defs>
-            <radialGradient id="ws-grad" cx="32%" cy="28%" r="78%">
-              <stop offset="0%"   stopColor="#D4A574" />
-              <stop offset="38%"  stopColor="#9A7A51" />
-              <stop offset="78%"  stopColor="#6A4F30" />
-              <stop offset="100%" stopColor="#4A3520" />
-            </radialGradient>
-            <radialGradient id="ws-high" cx="30%" cy="25%" r="36%">
-              <stop offset="0%"   stopColor="rgba(255,255,255,0.45)" />
-              <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-            </radialGradient>
-            <filter id="ws-drop" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="1.6" />
-            </filter>
-          </defs>
-          {/* cast shadow */}
-          <ellipse cx="33" cy="36" rx="26" ry="25" fill="rgba(10,10,10,0.32)" filter="url(#ws-drop)" />
-          {/* medallion body */}
-          <circle cx={cx} cy={cy} r="26" fill="url(#ws-grad)" />
-          {/* pressed rim */}
-          <circle cx={cx} cy={cy} r="23.5" fill="none" stroke="rgba(255,236,206,0.35)" strokeWidth="0.6" />
-          <circle cx={cx} cy={cy} r="20.5" fill="none" stroke="rgba(10,10,10,0.22)" strokeWidth="0.4" />
-          {engraving}
-          {/* specular highlight */}
-          <circle cx="24" cy="22" r="10" fill="url(#ws-high)" />
-        </svg>
-        {/* embossed monogram */}
         <span
-          className="absolute font-display italic select-none pointer-events-none"
+          className="font-display italic text-white select-none"
           style={{
-            fontSize: size * 0.50,
+            fontSize: centerSize * 0.5,
             lineHeight: 1,
-            color: '#FBE7C4',
-            textShadow:
-              '0 1px 0 rgba(0,0,0,0.4), 0 -0.5px 0 rgba(255,255,255,0.35), 0 0 10px rgba(124,94,60,0.35)',
             letterSpacing: '-0.04em',
             transform: 'translateY(-1px)',
           }}
         >
           Sℓ
         </span>
+      </span>
+    </div>
+  );
+}
+
+/* ───────────────────────────────────────────────────────
+   HeroMesh — drifting aurora mesh backdrop
+   Three blurred blobs slowly drifting behind page headers.
+   Replaces the decorative watch dial. aria-hidden.
+   ─────────────────────────────────────────────────────── */
+export function HeroMesh({ size = 360, className = '', opacity = 1 }) {
+  return (
+    <div
+      className={`relative ${className}`}
+      style={{ width: size, height: size, pointerEvents: 'none', opacity }}
+      aria-hidden="true"
+    >
+      {/* Blob 1 — warm cream, top-left */}
+      <span
+        className="absolute rounded-full aurora-drift-1"
+        style={{
+          left: '8%',
+          top: '6%',
+          width: size * 0.62,
+          height: size * 0.62,
+          background:
+            'radial-gradient(circle, rgba(223,196,154,0.55) 0%, rgba(223,196,154,0) 62%)',
+          filter: 'blur(34px)',
+        }}
+      />
+      {/* Blob 2 — bronze, center */}
+      <span
+        className="absolute rounded-full aurora-drift-2"
+        style={{
+          left: '30%',
+          top: '28%',
+          width: size * 0.58,
+          height: size * 0.58,
+          background:
+            'radial-gradient(circle, rgba(154,122,81,0.42) 0%, rgba(154,122,81,0) 60%)',
+          filter: 'blur(40px)',
+        }}
+      />
+      {/* Blob 3 — sandy highlight, right */}
+      <span
+        className="absolute rounded-full aurora-drift-3"
+        style={{
+          right: '4%',
+          top: '18%',
+          width: size * 0.54,
+          height: size * 0.54,
+          background:
+            'radial-gradient(circle, rgba(212,165,116,0.48) 0%, rgba(212,165,116,0) 60%)',
+          filter: 'blur(38px)',
+        }}
+      />
+    </div>
+  );
+}
+
+/* ───────────────────────────────────────────────────────
+   VerifiedBadge — gradient ring · checkmark · halo
+   Replaces the wax seal. Use for validated states
+   (KYC validé, compliance clear, account verified).
+   ─────────────────────────────────────────────────────── */
+export function VerifiedBadge({ size = 56, label, className = '' }) {
+  return (
+    <div className={`inline-flex flex-col items-center gap-1.5 ${className}`}>
+      <div
+        className="relative inline-flex items-center justify-center verified-pop"
+        style={{ width: size, height: size }}
+      >
+        {/* Halo */}
+        <span
+          aria-hidden="true"
+          className="absolute rounded-full animate-halo-pulse"
+          style={{
+            inset: `-${Math.round(size * 0.16)}px`,
+            background:
+              'radial-gradient(circle, rgba(124,94,60,0.28) 0%, rgba(124,94,60,0) 62%)',
+          }}
+        />
+        <svg
+          width={size}
+          height={size}
+          viewBox="0 0 48 48"
+          fill="none"
+          className="relative"
+        >
+          <defs>
+            <linearGradient id="vb-ring" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor={BRONZE_HI} />
+              <stop offset="50%" stopColor={BRONZE_2} />
+              <stop offset="100%" stopColor={BRONZE} />
+            </linearGradient>
+            <radialGradient id="vb-fill" cx="34%" cy="28%" r="80%">
+              <stop offset="0%" stopColor="#E9C79C" />
+              <stop offset="45%" stopColor={BRONZE_2} />
+              <stop offset="100%" stopColor={BRONZE} />
+            </radialGradient>
+          </defs>
+          {/* Outer gradient ring */}
+          <circle
+            cx="24" cy="24" r="22"
+            stroke="url(#vb-ring)"
+            strokeWidth="2"
+            fill="rgba(255,255,255,0.6)"
+          />
+          {/* Inner filled disc */}
+          <circle cx="24" cy="24" r="17" fill="url(#vb-fill)" />
+          {/* Specular highlight */}
+          <ellipse cx="18" cy="16" rx="8" ry="5" fill="rgba(255,255,255,0.32)" />
+          {/* Check */}
+          <path
+            d="M15 24 L21.5 30 L33 18"
+            stroke="#FFFFFF"
+            strokeWidth="2.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
       </div>
       {label && (
         <span className="text-[9.5px] font-medium uppercase tracking-[0.12em] text-[#7C5E3C]">
@@ -280,86 +203,180 @@ export function WaxSeal({ size = 56, label, tilt = -4, className = '' }) {
 }
 
 /* ───────────────────────────────────────────────────────
-   Ornament — horizontal fleuron rule
-   Editorial divider used above eyebrows, in modals,
-   and between sections. Bronze diamond flanked by fading
-   hairlines and two dot accents.
+   GradientRule — modern divider
+   Gradient hairline with a small bronze dot in the center.
+   Replaces the fleuron ornament.
    ─────────────────────────────────────────────────────── */
-export function Ornament({ className = '', width = 'auto', tone = 'bronze' }) {
-  const color = tone === 'ink' ? INK : BRONZE;
+export function GradientRule({ className = '' }) {
   return (
     <div
       className={`flex items-center gap-3 ${className}`}
-      style={{ width }}
       aria-hidden="true"
     >
       <span
         className="flex-1 h-px"
-        style={{ background: `linear-gradient(to right, transparent, ${color}66)` }}
+        style={{
+          background:
+            'linear-gradient(to right, transparent, rgba(124,94,60,0.35))',
+        }}
       />
-      <svg width="30" height="10" viewBox="0 0 30 10" fill="none">
-        <circle cx="3" cy="5" r="1" fill={color} opacity="0.7" />
-        <path d="M10 5 L15 1 L20 5 L15 9 Z" fill={color} opacity="0.9" />
-        <circle cx="27" cy="5" r="1" fill={color} opacity="0.7" />
-      </svg>
+      <span className="relative inline-flex items-center justify-center" style={{ width: 10, height: 10 }}>
+        <span
+          className="absolute inset-0 rounded-full"
+          style={{
+            background:
+              'radial-gradient(circle, rgba(124,94,60,0.25) 0%, rgba(124,94,60,0) 70%)',
+          }}
+        />
+        <span
+          className="relative w-[6px] h-[6px] rounded-full"
+          style={{
+            background: `linear-gradient(135deg, ${BRONZE_HI}, ${BRONZE})`,
+            boxShadow: '0 0 0 1px rgba(124,94,60,0.2)',
+          }}
+        />
+      </span>
       <span
         className="flex-1 h-px"
-        style={{ background: `linear-gradient(to left, transparent, ${color}66)` }}
+        style={{
+          background:
+            'linear-gradient(to left, transparent, rgba(124,94,60,0.35))',
+        }}
       />
     </div>
   );
 }
 
 /* ───────────────────────────────────────────────────────
-   ArchivalStamp — passport-style corner mark
-   Small rotated stamp used to mark archived / confidential
-   states. Think "SPÉCIMEN" on old bank documents.
+   LiveIndicator — pulsing live dot
+   Modern "live" signal with ping animation. Use for
+   live data, real-time sync, active monitoring.
    ─────────────────────────────────────────────────────── */
-export function ArchivalStamp({ label = 'Confidentiel', className = '', rotate = -8 }) {
+const LIVE_TONES = {
+  success: { dot: '#16A34A', ping: 'rgba(22,163,74,0.35)' },
+  bronze:  { dot: BRONZE,    ping: 'rgba(124,94,60,0.35)' },
+  info:    { dot: '#2563EB', ping: 'rgba(37,99,235,0.32)' },
+  warning: { dot: '#CA8A04', ping: 'rgba(202,138,4,0.32)'  },
+};
+export function LiveIndicator({ tone = 'success', label, className = '' }) {
+  const { dot, ping } = LIVE_TONES[tone] || LIVE_TONES.success;
   return (
-    <div
-      className={`inline-flex items-center gap-2 px-3 py-1 border-2 border-[#7C5E3C] rounded-[4px] ${className}`}
-      style={{ transform: `rotate(${rotate}deg)` }}
-    >
-      <span className="w-1 h-1 rounded-full bg-[#7C5E3C]" />
-      <span className="text-[10.5px] font-medium uppercase tracking-[0.18em] text-[#7C5E3C] font-display italic">
-        {label}
+    <span className={`inline-flex items-center gap-2 ${className}`}>
+      <span className="relative inline-flex" style={{ width: 8, height: 8 }}>
+        <span
+          className="absolute inset-0 rounded-full animate-live-ping"
+          style={{ background: ping }}
+        />
+        <span
+          className="relative inline-block w-2 h-2 rounded-full"
+          style={{ background: dot, boxShadow: `0 0 0 2px rgba(255,255,255,0.9)` }}
+        />
       </span>
-      <span className="w-1 h-1 rounded-full bg-[#7C5E3C]" />
-    </div>
+      {label && (
+        <span className="text-[10.5px] font-medium uppercase tracking-[0.1em] text-[#4A4A4A]">
+          {label}
+        </span>
+      )}
+    </span>
   );
 }
 
 /* ───────────────────────────────────────────────────────
-   CornerFleuron — engraved corner ornament
-   Sits in the top-right of premium cards as a tiny badge.
+   ChartLineBackdrop — decorative area chart
+   SVG sparkline-ish curve as a hero ornament. Not data.
    ─────────────────────────────────────────────────────── */
-export function CornerFleuron({ size = 28, className = '' }) {
+export function ChartLineBackdrop({ className = '', width = 800, height = 200, opacity = 1 }) {
   return (
     <svg
       className={className}
-      width={size}
-      height={size}
-      viewBox="0 0 32 32"
+      viewBox={`0 0 ${width} ${height}`}
       fill="none"
       aria-hidden="true"
+      preserveAspectRatio="none"
+      style={{ opacity }}
     >
+      <defs>
+        <linearGradient id="cl-area" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%"  stopColor="rgba(212,165,116,0.38)" />
+          <stop offset="70%" stopColor="rgba(212,165,116,0.04)" />
+          <stop offset="100%" stopColor="rgba(212,165,116,0)" />
+        </linearGradient>
+        <linearGradient id="cl-stroke" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%"  stopColor="rgba(124,94,60,0)" />
+          <stop offset="35%" stopColor="rgba(154,122,81,0.9)" />
+          <stop offset="75%" stopColor="rgba(212,165,116,1)" />
+          <stop offset="100%" stopColor="rgba(124,94,60,0)" />
+        </linearGradient>
+      </defs>
       <path
-        d="M2 2 H14 M2 2 V14"
-        stroke={BRONZE}
-        strokeWidth="1"
-        strokeLinecap="round"
-        opacity="0.55"
+        d="M0 140 C 80 110, 140 60, 220 80 S 340 170, 420 120 S 540 50, 620 80 S 740 160, 800 100 L800 200 L0 200 Z"
+        fill="url(#cl-area)"
       />
       <path
-        d="M6 2 H12 M2 6 V12"
-        stroke={BRONZE}
-        strokeWidth="0.6"
+        d="M0 140 C 80 110, 140 60, 220 80 S 340 170, 420 120 S 540 50, 620 80 S 740 160, 800 100"
+        stroke="url(#cl-stroke)"
+        strokeWidth="1.4"
         strokeLinecap="round"
-        opacity="0.35"
+        fill="none"
       />
-      <circle cx="2" cy="2" r="1.4" fill={BRONZE} opacity="0.7" />
-      <path d="M8 8 L10 6 L12 8 L10 10 Z" fill={BRONZE} opacity="0.4" />
+    </svg>
+  );
+}
+
+/* ───────────────────────────────────────────────────────
+   SparklineBadge — tiny area spark for metric tiles
+   ─────────────────────────────────────────────────────── */
+export function SparklineBadge({
+  points = [14, 18, 12, 22, 19, 26, 24, 30, 28, 34],
+  width = 72,
+  height = 22,
+  tone = 'bronze',
+  className = '',
+}) {
+  const min = Math.min(...points);
+  const max = Math.max(...points);
+  const range = max - min || 1;
+  const step = width / (points.length - 1);
+  const coords = points.map((p, i) => {
+    const x = i * step;
+    const y = height - 2 - ((p - min) / range) * (height - 4);
+    return [x, y];
+  });
+  const linePath = coords
+    .map(([x, y], i) => (i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`))
+    .join(' ');
+  const areaPath = `${linePath} L ${width} ${height} L 0 ${height} Z`;
+  const stroke = tone === 'success' ? '#16A34A' : BRONZE;
+  const fillTop =
+    tone === 'success' ? 'rgba(22,163,74,0.22)' : 'rgba(212,165,116,0.32)';
+  const last = coords[coords.length - 1];
+
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      fill="none"
+      aria-hidden="true"
+      className={className}
+    >
+      <defs>
+        <linearGradient id={`spark-${tone}`} x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%"  stopColor={fillTop} />
+          <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+        </linearGradient>
+      </defs>
+      <path d={areaPath} fill={`url(#spark-${tone})`} />
+      <path
+        d={linePath}
+        stroke={stroke}
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <circle cx={last[0]} cy={last[1]} r="1.8" fill={stroke} />
+      <circle cx={last[0]} cy={last[1]} r="3.2" fill={stroke} opacity="0.22" />
     </svg>
   );
 }

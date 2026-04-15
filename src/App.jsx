@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastContainer, useToast } from './components/shared';
-import { BrandMark, Ornament } from './components/brand';
+import { BrandMark, GradientRule } from './components/brand';
 import Layout from './components/Layout';
 import LoginPage from './components/LoginPage';
 import ConfigPage from './components/ConfigPage';
@@ -47,7 +47,7 @@ function AppInner() {
       <div className="min-h-screen bg-paper flex items-center justify-center">
         <div className="text-center animate-fade flex flex-col items-center">
           <BrandMark size={72} label="Chargement" />
-          <Ornament className="mt-6 w-40" />
+          <GradientRule className="mt-6 w-40" />
           <p className="text-[10.5px] font-medium uppercase tracking-[0.12em] text-[#7C5E3C] mt-4">Initialisation</p>
           <p className="text-[13px] text-[#6B6B6B] mt-1 tracking-[-0.006em] font-display italic">Ouverture de la session sécurisée…</p>
         </div>
@@ -71,7 +71,7 @@ function AppInner() {
       <div className="min-h-screen bg-paper flex items-center justify-center">
         <div className="text-center animate-fade flex flex-col items-center">
           <BrandMark size={72} label="Profil" />
-          <Ornament className="mt-6 w-40" />
+          <GradientRule className="mt-6 w-40" />
           <p className="text-[10.5px] font-medium uppercase tracking-[0.12em] text-[#7C5E3C] mt-4">Habilitations</p>
           <p className="text-[13px] text-[#6B6B6B] mt-1 tracking-[-0.006em] font-display italic">Vérification du mandat banquier…</p>
         </div>

@@ -4,7 +4,7 @@ import {
   fmtEUR, fmtCompactEUR, Badge, Card, EmptyState, Avatar,
   Metric, MetricRow, Delta, SkeletonCircle, Skeleton, useCountUp,
 } from './shared';
-import { HeroDial, Ornament } from './brand';
+import { HeroMesh, GradientRule, LiveIndicator } from './brand';
 
 // Thin wrapper to animate a numeric metric value on mount
 function CountUpNumber({ value, format = (v) => v }) {
@@ -66,10 +66,9 @@ export default function ClientList({ onSelectClient }) {
       {/* ── Editorial header ───────────────────────────── */}
       <div className="relative">
         {/* Decorative watch-dial backdrop — pure identity */}
-        <HeroDial
-          size={340}
-          strokeOpacity={0.09}
-          className="absolute -right-12 -top-20 pointer-events-none select-none hero-drift hidden md:block"
+        <HeroMesh
+          size={440}
+          className="absolute -right-16 -top-24 hidden md:block"
         />
         <header className="relative flex items-end justify-between gap-8 flex-wrap animate-slide-up">
           <div className="max-w-2xl">
@@ -108,9 +107,13 @@ export default function ClientList({ onSelectClient }) {
         </header>
       </div>
 
-      {/* ── Ornamental break ───────────────────────────── */}
+      {/* ── Gradient break ─────────────────────────────── */}
       {!loading && clients.length > 0 && (
-        <Ornament className="max-w-[620px] mx-auto animate-fade" />
+        <div className="flex items-center justify-center gap-4 animate-fade">
+          <GradientRule className="max-w-[520px] flex-1" />
+          <LiveIndicator tone="success" label="Sync · 12s" className="flex-shrink-0" />
+          <GradientRule className="max-w-[520px] flex-1" />
+        </div>
       )}
 
       {/* ── Metric row — Mercury style ─────────────────── */}

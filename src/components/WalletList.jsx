@@ -6,7 +6,7 @@ import {
   Metric, MetricRow, Table, tdCls, tdMuted, trCls, FooterDisclosure,
   Skeleton, SkeletonRow, CopyButton, useCountUp,
 } from './shared';
-import { HeroDial } from './brand';
+import { HeroMesh } from './brand';
 
 function CountUpNumber({ value, format = (v) => v }) {
   const display = useCountUp(value);
@@ -61,10 +61,9 @@ export default function WalletList() {
     <div className="space-y-10">
       {/* ── Editorial header ──────────────────────────── */}
       <div className="relative">
-        <HeroDial
-          size={320}
-          strokeOpacity={0.085}
-          className="absolute -right-8 -top-16 pointer-events-none select-none hero-drift hidden md:block"
+        <HeroMesh
+          size={420}
+          className="absolute -right-12 -top-20 hidden md:block"
         />
       <PageHeader
         eyebrow="Conservation · DFNS Custody"

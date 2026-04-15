@@ -455,113 +455,123 @@ input:focus, select:focus, textarea:focus { outline: none; }
 }
 
 /* ═════════════════════════════════════════════════════
-   BRAND IDENTITY — horological language
-   Watch dial · bronze seal · ruled paper · engraving
+   BRAND IDENTITY — modern fintech language
+   Mesh aurora · conic rings · live halos · glass cards
+   (inspired by ElevenLabs / Revolut / Mercury / Ramp)
    ═════════════════════════════════════════════════════ */
 
-/* Rotating sweep hand on BrandMark loader */
-@keyframes brandDialRotate {
+/* Soft radial halo pulse — used under BrandMark and VerifiedBadge */
+@keyframes haloPulse {
+  0%, 100% { opacity: 0.55; transform: scale(1);    }
+  50%      { opacity: 1;    transform: scale(1.08); }
+}
+.animate-halo-pulse {
+  animation: haloPulse 2.8s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+
+/* Conic gradient ring loader */
+@keyframes ringSpin {
   from { transform: rotate(0deg);   }
   to   { transform: rotate(360deg); }
 }
-.brand-dial-rotate {
-  animation: brandDialRotate 2.6s linear infinite;
-  transform-origin: 32px 32px;
-  transform-box: fill-box;
+.animate-ring-spin {
+  animation: ringSpin 1.4s linear infinite;
+  will-change: transform;
 }
 
-/* Wax seal press-in reveal */
-@keyframes sealPress {
-  0%   { opacity: 0; transform: scale(0.6) rotate(-14deg); filter: blur(2px); }
-  65%  { opacity: 1; transform: scale(1.06) rotate(-2deg); filter: blur(0); }
-  100% { opacity: 1; transform: scale(1) rotate(var(--seal-tilt, -4deg)); }
+/* Aurora drift — three blobs at different speeds & directions */
+@keyframes auroraDrift1 {
+  0%, 100% { transform: translate3d(0, 0, 0)   scale(1);    }
+  50%      { transform: translate3d(18px, -14px, 0) scale(1.06); }
 }
-.wax-seal {
-  animation: sealPress 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+@keyframes auroraDrift2 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1);    }
+  50%      { transform: translate3d(-22px, 10px, 0) scale(1.08); }
+}
+@keyframes auroraDrift3 {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1);    }
+  50%      { transform: translate3d(10px, 18px, 0) scale(1.05); }
+}
+.aurora-drift-1 { animation: auroraDrift1 14s ease-in-out infinite; will-change: transform; }
+.aurora-drift-2 { animation: auroraDrift2 18s ease-in-out infinite; will-change: transform; }
+.aurora-drift-3 { animation: auroraDrift3 22s ease-in-out infinite; will-change: transform; }
+
+/* Live ping — expanding dot ring */
+@keyframes livePing {
+  0%   { transform: scale(1);   opacity: 0.75; }
+  75%  { transform: scale(2.6); opacity: 0;    }
+  100% { transform: scale(2.6); opacity: 0;    }
+}
+.animate-live-ping {
+  animation: livePing 2s cubic-bezier(0, 0, 0.2, 1) infinite;
   will-change: transform, opacity;
 }
 
-/* Slow drift for decorative hero backdrops — very subtle parallax feel */
-@keyframes heroDrift {
-  0%, 100% { transform: translate3d(0, 0, 0); }
-  50%      { transform: translate3d(0, -4px, 0); }
+/* VerifiedBadge entry pop */
+@keyframes verifiedPop {
+  0%   { opacity: 0; transform: scale(0.6); }
+  60%  { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
 }
-.hero-drift {
-  animation: heroDrift 9s ease-in-out infinite;
+.verified-pop {
+  animation: verifiedPop 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
-/* Ruled paper — ledger lines for key content zones */
-.bg-ruled-paper {
+/* Dot mesh background — modern fintech texture */
+.bg-dot-mesh {
   background-color: #FDFCFA;
   background-image:
-    repeating-linear-gradient(
-      to bottom,
-      transparent 0,
-      transparent 27px,
-      rgba(10, 10, 10, 0.045) 27px,
-      rgba(10, 10, 10, 0.045) 28px
-    );
-  background-attachment: local;
-}
-.bg-ruled-paper-bronze {
-  background-color: #FDFCFA;
-  background-image:
-    repeating-linear-gradient(
-      to bottom,
-      transparent 0,
-      transparent 31px,
-      rgba(124, 94, 60, 0.10) 31px,
-      rgba(124, 94, 60, 0.10) 32px
-    );
+    radial-gradient(rgba(124, 94, 60, 0.14) 1px, transparent 1.2px),
+    radial-gradient(ellipse 60% 40% at 20% 10%, rgba(212,165,116,0.12), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 85% 90%, rgba(154,122,81,0.08), transparent 60%);
+  background-size: 22px 22px, 100% 100%, 100% 100%;
 }
 
-/* Guilloché — concentric engraving pattern, private-bank texture */
-.bg-guilloche {
-  background-image:
-    repeating-radial-gradient(
-      circle at 50% 50%,
-      rgba(124, 94, 60, 0.035) 0,
-      rgba(124, 94, 60, 0.035) 0.5px,
-      transparent 0.5px,
-      transparent 4px
-    );
-}
-
-/* Bronze foil gradient — for rim / ring ornaments */
-.foil-bronze {
-  background: linear-gradient(135deg, #D4A574 0%, #9A7A51 30%, #7C5E3C 55%, #C99868 75%, #6A4F30 100%);
-}
-
-/* Subtle engraved border — used on premium cards */
-.engraved {
-  position: relative;
+/* Glassmorphism card — frosted white with bronze rim */
+.glass-card {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(10, 10, 10, 0.06);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
   box-shadow:
-    0 0 0 1px rgba(10, 10, 10, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    inset 0 -1px 0 rgba(10, 10, 10, 0.02);
+    0 1px 2px rgba(10, 10, 10, 0.04),
+    0 12px 32px -16px rgba(124, 94, 60, 0.18);
 }
-.engraved::before {
+
+/* Gradient border utility — bronze ring around cards */
+.gradient-ring {
+  position: relative;
+  background: #FFFFFF;
+  border-radius: 16px;
+}
+.gradient-ring::before {
   content: "";
   position: absolute;
-  inset: 4px;
-  border: 1px solid rgba(124, 94, 60, 0.14);
+  inset: 0;
+  padding: 1px;
   border-radius: inherit;
+  background: linear-gradient(135deg, rgba(212,165,116,0.6) 0%, rgba(124,94,60,0.08) 40%, rgba(154,122,81,0.5) 100%);
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
   pointer-events: none;
 }
 
-/* Section ornament breaker (used between major sections) */
-.section-break {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 8px 0;
-}
-.section-break::before,
-.section-break::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(to right, transparent, rgba(124, 94, 60, 0.4), transparent);
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-halo-pulse,
+  .animate-ring-spin,
+  .aurora-drift-1,
+  .aurora-drift-2,
+  .aurora-drift-3,
+  .animate-live-ping,
+  .verified-pop {
+    animation: none !important;
+  }
 }
 
 /* Print */

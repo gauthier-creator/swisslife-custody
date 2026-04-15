@@ -16,7 +16,7 @@ import {
   fmtEUR, fmtCompactEUR, Badge, Card, Modal, Spinner, EmptyState, Button,
   Avatar, Metric, MetricRow, Delta, inputCls, selectCls, labelCls,
 } from './shared';
-import { WaxSeal, CornerFleuron } from './brand';
+import { VerifiedBadge } from './brand';
 import { API_BASE } from '../config/constants';
 
 /* ─────────────────────────────────────────────────────────
@@ -237,7 +237,7 @@ export default function ClientDetail({ client: initialClient, onBack }) {
         <div className="flex items-start gap-5 flex-shrink-0 animate-slide-up stagger-1">
           {kycValid && (
             <div className="hidden lg:block pt-2">
-              <WaxSeal size={64} label="KYC validé" tilt={-5} />
+              <VerifiedBadge size={60} label="KYC validé" />
             </div>
           )}
           <div className="text-right">

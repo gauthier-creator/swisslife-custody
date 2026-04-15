@@ -751,36 +751,6 @@ export function Illustration({ name, size = 88 }) {
           <circle cx="58" cy="56" r="3" fill={bronze} />
         </svg>
       );
-    case 'dial':
-      return (
-        <svg {...common}>
-          {/* watch dial — hour markers + sweep hand */}
-          <circle cx="44" cy="44" r="36" fill={paper} stroke="rgba(10,10,10,0.08)" />
-          <circle cx="44" cy="44" r="30" fill="#FFFFFF" stroke="rgba(10,10,10,0.08)" />
-          {[...Array(12)].map((_, i) => {
-            const a = ((i * 30 - 90) * Math.PI) / 180;
-            const x1 = 44 + Math.cos(a) * 27;
-            const y1 = 44 + Math.sin(a) * 27;
-            const x2 = 44 + Math.cos(a) * 23.5;
-            const y2 = 44 + Math.sin(a) * 23.5;
-            return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={bronze} strokeWidth={i % 3 === 0 ? 1.8 : 1} strokeLinecap="round" opacity="0.85" />;
-          })}
-          <line x1="44" y1="44" x2="44" y2="25" stroke={ink} strokeWidth="1.6" strokeLinecap="round" />
-          <line x1="44" y1="44" x2="56" y2="38" stroke={bronze} strokeWidth="1.2" strokeLinecap="round" />
-          <circle cx="44" cy="44" r="2" fill={ink} />
-        </svg>
-      );
-    case 'signet':
-      return (
-        <svg {...common}>
-          {/* signet ring — a bronze band seen from above with an engraved crest */}
-          <ellipse cx="44" cy="56" rx="28" ry="6" fill="rgba(10,10,10,0.06)" />
-          <circle cx="44" cy="40" r="24" fill={paper} stroke="rgba(10,10,10,0.1)" />
-          <circle cx="44" cy="40" r="17" fill="#FFFFFF" stroke="rgba(10,10,10,0.08)" />
-          <circle cx="44" cy="40" r="11" fill="none" stroke={bronze} strokeWidth="1.4" strokeDasharray="2 2.5" opacity="0.9" />
-          <text x="44" y="46" textAnchor="middle" fontFamily="Fraunces, serif" fontSize="14" fontStyle="italic" fill={bronze}>Sℓ</text>
-        </svg>
-      );
     case 'compass':
       return (
         <svg {...common}>
@@ -807,23 +777,6 @@ export function Illustration({ name, size = 88 }) {
             </g>
           ))}
           <circle cx="44" cy="34" r="2" fill={bronze} />
-        </svg>
-      );
-    case 'seal':
-      return (
-        <svg {...common}>
-          <defs>
-            <radialGradient id="empty-seal-grad" cx="32%" cy="28%" r="78%">
-              <stop offset="0%" stopColor="#D4A574" />
-              <stop offset="55%" stopColor="#9A7A51" />
-              <stop offset="100%" stopColor="#6A4F30" />
-            </radialGradient>
-          </defs>
-          <circle cx="44" cy="46" r="32" fill="rgba(10,10,10,0.14)" />
-          <circle cx="44" cy="44" r="32" fill="url(#empty-seal-grad)" />
-          <circle cx="44" cy="44" r="27" fill="none" stroke="rgba(255,240,220,0.35)" strokeWidth="0.8" />
-          <circle cx="44" cy="44" r="23" fill="none" stroke="rgba(10,10,10,0.22)" strokeWidth="0.5" />
-          <text x="44" y="52" textAnchor="middle" fontFamily="Fraunces, serif" fontSize="26" fontStyle="italic" fill="#FBE7C4" style={{ textShadow: '0 1px 0 rgba(0,0,0,0.3)' }}>Sℓ</text>
         </svg>
       );
     case 'empty':
