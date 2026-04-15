@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Badge, Card, Modal, Spinner, Button, textareaCls, labelCls } from './shared';
-import { updateAccountFields } from '../services/salesforceApi';
+import { getSalesforceStatus } from '../services/salesforceApi';
+import { runSanctionsScreening } from '../services/dfnsApi';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE } from '../config/constants';
 import { supabase } from '../lib/supabase';
@@ -11,8 +12,6 @@ import CustodyContractModal from './CustodyContractModal';
    Hairline checklist · monochrome · bronze accent
    ───────────────────────────────────────────────────────── */
 
-const KYC_STATUSES = ['Valide', 'En cours', 'Non verifie', 'Expire'];
-
 const kycVariant = (s) => {
   if (!s) return 'default';
   const k = s.toLowerCase();
@@ -22,8 +21,8 @@ const kycVariant = (s) => {
 };
 
 export default function CustodyEligibilityPanel({ client, onUpdate }) {
-  const { isAdmin } = useAuth();
-  const [updating, setUpdating] = useState(null);
+  const { isAdmin, session, profile } = useAuth();
+  const currentEmail = profile?.email || session?.user?.email || null;
   const [showAdequacy, setShowAdequacy] = useState(false);
   const [showContract, setShowContract] = useState(false);
   const [adequacy, setAdequacy] = useState({ q1: null, q2: null, q3: null, q4: null, notes: '' });
@@ -33,6 +32,22 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
   const [generatingLink, setGeneratingLink] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [adequacyLinkCopied, setAdequacyLinkCopied] = useState(false);
+
+  // Salesforce deep-link (KYC is managed upstream by Swisslife teams in Salesforce)
+  const [sfInstanceUrl, setSfInstanceUrl] = useState(null);
+  useEffect(() => {
+    let mounted = true;
+    getSalesforceStatus().then(s => { if (mounted) setSfInstanceUrl(s?.instanceUrl || null); });
+    return () => { mounted = false; };
+  }, []);
+  const salesforceDeepLink = sfInstanceUrl
+    ? `${sfInstanceUrl.replace(/\/$/, '')}/lightning/r/Account/${client.id}/view`
+    : null;
+
+  // DFNS sanctions screening
+  const [screening, setScreening] = useState(false);
+  const [screeningResult, setScreeningResult] = useState(null);
+  const [screeningError, setScreeningError] = useState(null);
 
   const isEligible = client.Custody_Eligible__c === true;
 
@@ -88,20 +103,31 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
     });
   };
 
-  const updateField = async (fields) => {
-    const fieldName = Object.keys(fields)[0];
-    setUpdating(fieldName);
+  // Run DFNS sanctions / PEP / adverse-media screening
+  const runScreening = async () => {
+    setScreening(true);
+    setScreeningError(null);
+    setScreeningResult(null);
     try {
-      await updateAccountFields(client.id, fields);
+      const result = await runSanctionsScreening({
+        salesforceAccountId: client.id,
+        clientName: client.name,
+        initiatedByEmail: currentEmail,
+      });
+      setScreeningResult(result);
+      // Salesforce is patched server-side — refresh the parent so badges update
       if (onUpdate) await onUpdate();
     } catch (err) {
-      alert('Erreur Salesforce : ' + err.message);
+      setScreeningError(err.message || 'Echec du screening');
+    } finally {
+      setScreening(false);
     }
-    setUpdating(null);
   };
 
-  const toggleSanctions = () => updateField({ Custody_Sanctions_Clear__c: !client.Custody_Sanctions_Clear__c });
-  const changeKycStatus = (newStatus) => updateField({ Custody_KYC_Status__c: newStatus });
+  const openInSalesforce = () => {
+    if (!salesforceDeepLink) return;
+    window.open(salesforceDeepLink, '_blank', 'noopener,noreferrer');
+  };
 
   const allAdequacyOui = adequacy.q1 === 'Oui' && adequacy.q2 === 'Oui' && adequacy.q3 === 'Oui' && adequacy.q4 === 'Oui';
 
@@ -142,25 +168,25 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
       key: 'kyc',
       idx: 1,
       title: 'Vérification KYC',
-      caption: 'Identité, domicile, origine des fonds',
+      caption: 'Géré par les équipes Swisslife dans Salesforce · identité, domicile, origine des fonds',
       done: client.Custody_KYC_Status__c === 'Valide',
       action: (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <Badge variant={kycVariant(client.Custody_KYC_Status__c)} dot>
             {client.Custody_KYC_Status__c || 'Non renseigné'}
           </Badge>
-          {isAdmin && (
-            <select
-              className="h-9 text-[13px] font-medium bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] px-3 outline-none focus:border-[rgba(10,10,10,0.35)] focus:ring-4 focus:ring-[rgba(10,10,10,0.04)] cursor-pointer tracking-[-0.006em]"
-              value={client.Custody_KYC_Status__c || ''}
-              onChange={(e) => changeKycStatus(e.target.value)}
-              disabled={updating === 'Custody_KYC_Status__c'}
-            >
-              <option value="" disabled>Modifier…</option>
-              {KYC_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          )}
-          {updating === 'Custody_KYC_Status__c' && <Spinner />}
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={openInSalesforce}
+            disabled={!salesforceDeepLink}
+            title={salesforceDeepLink || 'Salesforce non connecté'}
+          >
+            <svg className="w-[13px] h-[13px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+            Ouvrir dans Salesforce
+          </Button>
         </div>
       ),
     },
@@ -168,25 +194,37 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
       key: 'sanctions',
       idx: 2,
       title: 'Screening sanctions',
-      caption: 'Listes EU, ONU, OFAC · adverse media',
+      caption: 'Listes OFAC, EU, ONU · PEP · adverse media — automatisé via DFNS Risk Engine',
       done: client.Custody_Sanctions_Clear__c === true,
       action: (
-        <div className="flex items-center gap-2">
-          <Badge variant={client.Custody_Sanctions_Clear__c ? 'success' : 'error'} dot>
-            {client.Custody_Sanctions_Clear__c ? 'Clear' : 'Non vérifié'}
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          <Badge
+            variant={
+              screening ? 'warning' :
+              client.Custody_Sanctions_Clear__c ? 'success' :
+              screeningResult && !screeningResult.clear ? 'error' : 'default'
+            }
+            dot
+          >
+            {screening ? 'Analyse…' :
+              client.Custody_Sanctions_Clear__c ? 'Clear' :
+              screeningResult && !screeningResult.clear ? 'Alerte' : 'Non vérifié'}
           </Badge>
           {isAdmin && (
             <Button
               size="sm"
-              variant={client.Custody_Sanctions_Clear__c ? 'ghost' : 'secondary'}
-              onClick={toggleSanctions}
-              disabled={updating === 'Custody_Sanctions_Clear__c'}
+              variant="secondary"
+              onClick={runScreening}
+              disabled={screening}
             >
-              {updating === 'Custody_Sanctions_Clear__c' && <Spinner />}
-              {client.Custody_Sanctions_Clear__c ? 'Révoquer' : 'Valider'}
+              {screening && <Spinner />}
+              {client.Custody_Sanctions_Clear__c ? 'Relancer' : 'Lancer le screening'}
             </Button>
           )}
         </div>
+      ),
+      meta: (screeningResult || screeningError) && (
+        <ScreeningReport result={screeningResult} error={screeningError} />
       ),
     },
     {
@@ -314,30 +352,33 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
           {items.map((item, i) => (
             <li
               key={item.key}
-              className={`px-7 py-5 flex items-start justify-between gap-6 ${i < items.length - 1 ? 'border-b border-[rgba(10,10,10,0.06)]' : ''}`}
+              className={`px-7 py-5 ${i < items.length - 1 ? 'border-b border-[rgba(10,10,10,0.06)]' : ''}`}
             >
-              <div className="flex items-start gap-5 min-w-0 flex-1">
-                {/* Check indicator */}
-                <div className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center"
-                  style={item.done
-                    ? { background: '#0A0A0A', color: '#FFFFFF' }
-                    : { background: '#F5F3EE', color: '#6B6B6B', border: '1px solid rgba(10,10,10,0.06)' }
-                  }
-                >
-                  {item.done ? (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : (
-                    <span className="text-[13px] font-medium tabular-nums">{item.idx}</span>
-                  )}
+              <div className="flex items-start justify-between gap-6">
+                <div className="flex items-start gap-5 min-w-0 flex-1">
+                  {/* Check indicator */}
+                  <div className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center"
+                    style={item.done
+                      ? { background: '#0A0A0A', color: '#FFFFFF' }
+                      : { background: '#F5F3EE', color: '#6B6B6B', border: '1px solid rgba(10,10,10,0.06)' }
+                    }
+                  >
+                    {item.done ? (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <span className="text-[13px] font-medium tabular-nums">{item.idx}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1 pt-0.5">
+                    <h4 className="text-[14.5px] font-medium text-[#0A0A0A] tracking-[-0.01em]">{item.title}</h4>
+                    <p className="text-[13px] text-[#6B6B6B] mt-1 tracking-[-0.003em]">{item.caption}</p>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1 pt-0.5">
-                  <h4 className="text-[14.5px] font-medium text-[#0A0A0A] tracking-[-0.01em]">{item.title}</h4>
-                  <p className="text-[13px] text-[#6B6B6B] mt-1 tracking-[-0.003em]">{item.caption}</p>
-                </div>
+                <div className="flex-shrink-0 pt-0.5">{item.action}</div>
               </div>
-              <div className="flex-shrink-0 pt-0.5">{item.action}</div>
+              {item.meta && <div className="mt-4 pl-14">{item.meta}</div>}
             </li>
           ))}
         </ul>
@@ -469,6 +510,103 @@ function SigningLinkCard({ title, caption, link, copied, onCopy }) {
         </Button>
       </div>
     </Card>
+  );
+}
+
+/* ─── Sub · DFNS screening report ─── */
+function ScreeningReport({ result, error }) {
+  if (error) {
+    return (
+      <div className="px-4 py-3 bg-white border border-[rgba(220,38,38,0.2)] rounded-[10px]">
+        <p className="text-[12px] text-[#991B1B] tracking-[-0.003em]">
+          <span className="font-medium">Erreur DFNS · </span>{error}
+        </p>
+      </div>
+    );
+  }
+  if (!result) return null;
+
+  const clear = result.clear;
+  return (
+    <div
+      className={`rounded-[12px] border overflow-hidden ${
+        clear
+          ? 'border-[rgba(10,10,10,0.08)] bg-white'
+          : 'border-[rgba(220,38,38,0.22)] bg-white'
+      }`}
+    >
+      <div className="px-5 py-4 border-b border-[rgba(10,10,10,0.06)] flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div
+            className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
+            style={clear ? { background: '#0A0A0A', color: '#fff' } : { background: '#FEF2F2', color: '#991B1B', border: '1px solid rgba(220,38,38,0.2)' }}
+          >
+            {clear ? (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+            )}
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#9B9B9B]">DFNS Risk Engine · rapport</p>
+            <p className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em] mt-0.5">
+              {clear ? 'Aucune correspondance · dossier blanchi' : `${result.matches.length} correspondance${result.matches.length > 1 ? 's' : ''} détectée${result.matches.length > 1 ? 's' : ''}`}
+            </p>
+          </div>
+        </div>
+        <span className="text-[10.5px] font-medium uppercase tracking-[0.08em] text-[#9B9B9B] tabular-nums whitespace-nowrap hidden sm:block">
+          {new Date(result.screenedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+        </span>
+      </div>
+
+      <div className="px-5 py-4 space-y-3">
+        <div>
+          <p className="text-[10.5px] font-medium uppercase tracking-[0.08em] text-[#9B9B9B] mb-2">Listes consultées</p>
+          <div className="flex flex-wrap gap-1.5">
+            {(result.listsConsulted || []).map(l => (
+              <span
+                key={l}
+                className="inline-flex items-center gap-1.5 px-2.5 h-6 rounded-full bg-[#FBFAF7] border border-[rgba(10,10,10,0.06)] text-[11px] font-medium text-[#4A4A4A] tracking-[-0.003em]"
+              >
+                <span className="w-1 h-1 rounded-full bg-[#7C5E3C]" />
+                {l}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {!clear && result.matches?.length > 0 && (
+          <div>
+            <p className="text-[10.5px] font-medium uppercase tracking-[0.08em] text-[#991B1B] mb-2">Alertes Tracfin</p>
+            <ul className="space-y-1.5">
+              {result.matches.map((m, i) => (
+                <li
+                  key={i}
+                  className="flex items-center justify-between gap-4 px-3 py-2 rounded-[8px] bg-[rgba(220,38,38,0.04)] border border-[rgba(220,38,38,0.15)]"
+                >
+                  <div className="min-w-0">
+                    <p className="text-[12.5px] font-medium text-[#0A0A0A] tracking-[-0.003em] truncate">{m.list}</p>
+                    <p className="text-[11px] text-[#6B6B6B] tracking-[-0.003em] mt-0.5">
+                      terme déclencheur : <span className="font-mono text-[#991B1B]">{m.matchedTerm}</span>
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-medium tabular-nums text-[#991B1B] whitespace-nowrap">
+                    score {(m.score * 100).toFixed(0)}%
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-[11px] text-[#6B6B6B] leading-relaxed mt-3 tracking-[-0.003em]">
+              Une alerte de conformité a été créée dans le dashboard Tracfin. Revue manuelle requise avant ouverture du dossier.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

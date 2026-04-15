@@ -112,6 +112,20 @@ export async function createPolicy(policy) {
 }
 
 // ============================================================
+// Sanctions / PEP / adverse-media screening (DFNS Risk Engine)
+// ============================================================
+export async function runSanctionsScreening({ salesforceAccountId, clientName, initiatedByEmail }) {
+  const authHeaders = await getAuthHeaders();
+  const res = await fetch(`${API_BASE}/api/dfns/sanctions-screen`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ salesforceAccountId, clientName, initiatedByEmail }),
+  });
+  if (!res.ok) throw await dfnsError(res, 'Echec du screening sanctions');
+  return res.json();
+}
+
+// ============================================================
 // Test connection
 // ============================================================
 export async function testDfnsConnection() {
