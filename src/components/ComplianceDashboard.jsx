@@ -6,6 +6,7 @@ import {
   PageHeader, Metric, MetricRow, UnderlineTabs, Card, Button,
   StatusDot, FooterDisclosure, useCountUp, Skeleton, SkeletonRow,
 } from './shared';
+import { HeroDial, WaxSeal, Ornament } from './brand';
 import {
   fetchApprovals, approveTransfer, rejectTransfer, executeTransfer,
   fetchAlerts, fetchAlertStats, acknowledgeAlert, resolveAlert,
@@ -409,13 +410,32 @@ export default function ComplianceDashboard() {
   return (
     <div className="space-y-10">
       {/* ── Editorial header ─────────────────────────── */}
-      <PageHeader
-        eyebrow="Supervision · Compliance Cloud"
-        title="Compliance"
-        accent="cockpit"
-        description="Supervision temps-réel des approbations à quatre yeux, alertes AML, journal d'audit horodaté et déclarations Tracfin. Chaque action est cryptographiquement signée et auditable."
-        trailing={<StatusDot tone="success" label="Flux temps-réel" />}
-      />
+      <div className="relative">
+        <HeroDial
+          size={360}
+          strokeOpacity={0.09}
+          className="absolute -right-12 -top-24 pointer-events-none select-none hero-drift hidden md:block"
+        />
+        <PageHeader
+          eyebrow="Supervision · Compliance Cloud"
+          title="Compliance"
+          accent="cockpit"
+          description="Supervision temps-réel des approbations à quatre yeux, alertes AML, journal d'audit horodaté et déclarations Tracfin. Chaque action est cryptographiquement signée et auditable."
+          trailing={
+            <div className="flex items-center gap-5">
+              <StatusDot tone="success" label="Flux temps-réel" />
+              {stats.openAlerts === 0 && stats.pendingApprovals === 0 && (
+                <div className="hidden lg:block" style={{ '--seal-tilt': '-6deg' }}>
+                  <WaxSeal size={64} label="Cockpit clear" tilt={-6} />
+                </div>
+              )}
+            </div>
+          }
+        />
+      </div>
+
+      {/* ── Ornamental break ─────────────────────────── */}
+      <Ornament className="max-w-[520px] mx-auto animate-fade" />
 
       {/* ── Stat tiles ───────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-5 animate-slide-up stagger-2">

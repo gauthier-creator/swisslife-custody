@@ -16,6 +16,7 @@ import {
   fmtEUR, fmtCompactEUR, Badge, Card, Modal, Spinner, EmptyState, Button,
   Avatar, Metric, MetricRow, Delta, inputCls, selectCls, labelCls,
 } from './shared';
+import { WaxSeal, CornerFleuron } from './brand';
 import { API_BASE } from '../config/constants';
 
 /* ─────────────────────────────────────────────────────────
@@ -233,18 +234,25 @@ export default function ClientDetail({ client: initialClient, onBack }) {
             </div>
           </div>
         </div>
-        <div className="text-right flex-shrink-0 animate-slide-up stagger-1">
-          <p className="text-eyebrow">Actifs sous gestion</p>
-          <p className="display-md text-[#0A0A0A] tabular-nums mt-2">
-            {client.aum ? fmtCompactEUR(client.aum) : '—'}
-          </p>
-          <div className="flex items-center justify-end gap-2 mt-2.5">
-            <Delta value="2.4%" positive prefix="+" />
-            <span className="text-[12px] text-[#6B6B6B] tracking-[-0.003em]">12 mois</span>
-          </div>
-          {client.accountNumber && (
-            <p className="text-[11px] text-[#9B9B9B] font-mono mt-3 tracking-wider">№ {client.accountNumber}</p>
+        <div className="flex items-start gap-5 flex-shrink-0 animate-slide-up stagger-1">
+          {kycValid && (
+            <div className="hidden lg:block pt-2">
+              <WaxSeal size={64} label="KYC validé" tilt={-5} />
+            </div>
           )}
+          <div className="text-right">
+            <p className="text-eyebrow">Actifs sous gestion</p>
+            <p className="display-md text-[#0A0A0A] tabular-nums mt-2">
+              {client.aum ? fmtCompactEUR(client.aum) : '—'}
+            </p>
+            <div className="flex items-center justify-end gap-2 mt-2.5">
+              <Delta value="2.4%" positive prefix="+" />
+              <span className="text-[12px] text-[#6B6B6B] tracking-[-0.003em]">12 mois</span>
+            </div>
+            {client.accountNumber && (
+              <p className="text-[11px] text-[#9B9B9B] font-mono mt-3 tracking-wider">№ {client.accountNumber}</p>
+            )}
+          </div>
         </div>
       </header>
 

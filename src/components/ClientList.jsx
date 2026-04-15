@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { fetchClients } from '../services/salesforceApi';
 import {
   fmtEUR, fmtCompactEUR, Badge, Card, EmptyState, Avatar,
-  Metric, MetricRow, Delta, SkeletonRow, SkeletonCircle, Skeleton, useCountUp,
+  Metric, MetricRow, Delta, SkeletonCircle, Skeleton, useCountUp,
 } from './shared';
+import { HeroDial, Ornament } from './brand';
 
 // Thin wrapper to animate a numeric metric value on mount
 function CountUpNumber({ value, format = (v) => v }) {
@@ -63,36 +64,54 @@ export default function ClientList({ onSelectClient }) {
   return (
     <div className="space-y-10">
       {/* ── Editorial header ───────────────────────────── */}
-      <header className="flex items-end justify-between gap-8 flex-wrap animate-slide-up">
-        <div className="max-w-2xl">
-          <p className="text-eyebrow">Portefeuille · Conservation d'actifs</p>
-          <h1 className="display-lg text-[#0A0A0A] mt-3">
-            Clients
-          </h1>
-          <p className="text-[15px] text-[#4A4A4A] mt-4 leading-relaxed max-w-xl tracking-[-0.006em]">
-            {loading
-              ? 'Synchronisation du registre Salesforce…'
-              : <>Registre de <span className="text-[#0A0A0A] font-medium">{clients.length} client{clients.length > 1 ? 's' : ''}</span> sous mandat de conservation. Synchronisé à l'instant avec Salesforce Cloud.</>}
-          </p>
-        </div>
+      <div className="relative">
+        {/* Decorative watch-dial backdrop — pure identity */}
+        <HeroDial
+          size={340}
+          strokeOpacity={0.09}
+          className="absolute -right-12 -top-20 pointer-events-none select-none hero-drift hidden md:block"
+        />
+        <header className="relative flex items-end justify-between gap-8 flex-wrap animate-slide-up">
+          <div className="max-w-2xl">
+            <div className="flex items-center gap-3">
+              <span className="w-6 h-px bg-[#7C5E3C]" />
+              <p className="text-[10.5px] font-medium uppercase tracking-[0.14em] text-[#7C5E3C]">
+                Portefeuille · Conservation d'actifs
+              </p>
+            </div>
+            <h1 className="display-lg text-[#0A0A0A] mt-3">
+              Clients <span className="font-display italic text-[#7C5E3C]">sous mandat</span>
+            </h1>
+            <p className="text-[15px] text-[#4A4A4A] mt-4 leading-relaxed max-w-xl tracking-[-0.006em]">
+              {loading
+                ? 'Synchronisation du registre Salesforce…'
+                : <>Registre de <span className="text-[#0A0A0A] font-medium">{clients.length} client{clients.length > 1 ? 's' : ''}</span> sous mandat de conservation. Synchronisé à l'instant avec Salesforce Cloud.</>}
+            </p>
+          </div>
 
-        {/* Search */}
-        <div className="relative flex-shrink-0 animate-slide-up stagger-1">
-          <svg
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9B9B9B] pointer-events-none"
-            fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.2-5.2m2.2-5.3a7.5 7.5 0 11-15 0 7.5 7.5 0 0115 0z" />
-          </svg>
-          <input
-            type="text"
-            value={search}
-            onChange={handleSearch}
-            placeholder="Rechercher un client…"
-            className="h-11 pl-10 pr-4 w-[320px] text-[14px] bg-white border border-[rgba(10,10,10,0.1)] rounded-full outline-none focus:border-[rgba(10,10,10,0.35)] focus:ring-4 focus:ring-[rgba(10,10,10,0.04)] placeholder:text-[#9B9B9B] tracking-[-0.006em] transition-all"
-          />
-        </div>
-      </header>
+          {/* Search */}
+          <div className="relative flex-shrink-0 animate-slide-up stagger-1">
+            <svg
+              className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9B9B9B] pointer-events-none"
+              fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.2-5.2m2.2-5.3a7.5 7.5 0 11-15 0 7.5 7.5 0 0115 0z" />
+            </svg>
+            <input
+              type="text"
+              value={search}
+              onChange={handleSearch}
+              placeholder="Rechercher un client…"
+              className="h-11 pl-10 pr-4 w-[320px] text-[14px] bg-white border border-[rgba(10,10,10,0.1)] rounded-full outline-none focus:border-[rgba(10,10,10,0.35)] focus:ring-4 focus:ring-[rgba(10,10,10,0.04)] placeholder:text-[#9B9B9B] tracking-[-0.006em] transition-all"
+            />
+          </div>
+        </header>
+      </div>
+
+      {/* ── Ornamental break ───────────────────────────── */}
+      {!loading && clients.length > 0 && (
+        <Ornament className="max-w-[620px] mx-auto animate-fade" />
+      )}
 
       {/* ── Metric row — Mercury style ─────────────────── */}
       {!loading && clients.length > 0 && (
