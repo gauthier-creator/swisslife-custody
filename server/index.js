@@ -2127,10 +2127,14 @@ app.patch('/api/compliance/alerts/:id/resolve', async (req, res) => {
 });
 
 // ============================================================
-// KYC / KYB — ComplyCube integration
+// KYC / KYB — ComplyCube integration (with sandbox demo fallback)
 // ============================================================
 const COMPLYCUBE_BASE = 'https://api.complycube.com/v1';
 const COMPLYCUBE_KEY = process.env.COMPLYCUBE_API_KEY || '';
+// Demo mode is ON automatically when no real key is set, or explicitly via env.
+const KYC_DEMO_MODE = !COMPLYCUBE_KEY || process.env.KYC_DEMO_MODE === 'true';
+
+console.log(`[KYC] mode=${KYC_DEMO_MODE ? 'DEMO (sandbox)' : 'LIVE (ComplyCube)'}`);
 
 // Helper: ComplyCube API call
 async function complyCubeRequest(method, path, body = null) {
@@ -2150,6 +2154,43 @@ async function complyCubeRequest(method, path, body = null) {
   return res.json();
 }
 
+// Demo-mode helper: deterministic fake complycube IDs from a salesforce ID.
+function demoClientId(salesforceAccountId) {
+  return `demo_cli_${crypto.createHash('sha1').update(String(salesforceAccountId)).digest('hex').slice(0, 16)}`;
+}
+function demoCheckId() {
+  return `demo_chk_${crypto.randomBytes(8).toString('hex')}`;
+}
+
+// Demo screening outcome — uses client name to give realistic demo behaviour.
+function demoAmlOutcome(clientName = '') {
+  const n = (clientName || '').toLowerCase();
+  if (n.includes('reject') || n.includes('pep') || n.includes('sanction')) {
+    return {
+      status: 'failed',
+      result: {
+        outcome: 'attention',
+        screening: {
+          sanctions: { matches: 1, lists: ['OFAC_SDN'] },
+          pep: { matches: 0 },
+          adverse_media: { matches: 0 },
+        },
+      },
+    };
+  }
+  return {
+    status: 'complete',
+    result: {
+      outcome: 'clear',
+      screening: {
+        sanctions: { matches: 0, lists: ['OFAC', 'EU', 'UN', 'UK_HMT'] },
+        pep: { matches: 0 },
+        adverse_media: { matches: 0 },
+      },
+    },
+  };
+}
+
 // POST /api/kyc/upload-document — Upload doc & create verification check
 app.post('/api/kyc/upload-document', upload.single('file'), async (req, res) => {
   try {
@@ -2159,16 +2200,27 @@ app.post('/api/kyc/upload-document', upload.single('file'), async (req, res) => 
       return res.status(400).json({ error: 'salesforceAccountId, documentType, and file are required' });
     }
 
-    if (!COMPLYCUBE_KEY) {
-      return res.status(503).json({ error: 'ComplyCube API key not configured' });
-    }
-
     let checkResult;
 
-    {
-      // ComplyCube flow
-      // 1. Check if client exists, create if not
-      let { data: existingChecks } = await supabaseAdmin
+    if (KYC_DEMO_MODE) {
+      // ── DEMO / sandbox mode — simulate ComplyCube responses ──
+      // Deterministic client id so repeated uploads map to the same "client".
+      const complyCubeClientId = demoClientId(salesforceAccountId);
+
+      // Simulate a very quick document check. Names containing "reject" fail.
+      const rejected = (clientName || '').toLowerCase().includes('reject');
+      checkResult = {
+        id: demoCheckId(),
+        complyCubeClientId,
+        status: rejected ? 'failed' : 'complete',
+        result: rejected
+          ? { outcome: 'attention', reason: 'demo_rejected', breakdown: { visualAuthenticity: 'clear', dataConsistency: 'attention' } }
+          : { outcome: 'clear', breakdown: { visualAuthenticity: 'clear', dataConsistency: 'clear', dataValidation: 'clear' } },
+      };
+    } else {
+      // ── LIVE ComplyCube flow ──
+      // 1. Reuse existing ComplyCube client id if we already created one.
+      const { data: existingChecks } = await supabaseAdmin
         .from('kyc_checks')
         .select('complycube_client_id')
         .eq('salesforce_account_id', salesforceAccountId)
@@ -2216,12 +2268,14 @@ app.post('/api/kyc/upload-document', upload.single('file'), async (req, res) => 
       checkResult = {
         id: check.id,
         complyCubeClientId,
-        status: check.status === 'complete' ? 'complete' : 'processing',
+        status: check.status === 'complete'
+          ? (check.result?.outcome === 'clear' ? 'complete' : 'failed')
+          : 'processing',
         result: check.result || {},
       };
     }
 
-    // Save to Supabase
+    // Save to Supabase (aligned with current schema)
     const { data: kycCheck, error: dbError } = await supabaseAdmin
       .from('kyc_checks')
       .insert({
@@ -2229,6 +2283,8 @@ app.post('/api/kyc/upload-document', upload.single('file'), async (req, res) => 
         client_name: clientName,
         complycube_client_id: checkResult.complyCubeClientId || null,
         complycube_check_id: checkResult.id,
+        provider: KYC_DEMO_MODE ? 'demo' : 'complycube',
+        provider_check_id: checkResult.id,
         check_type: 'document_check',
         document_type: documentType,
         status: checkResult.status,
@@ -2245,7 +2301,7 @@ app.post('/api/kyc/upload-document', upload.single('file'), async (req, res) => 
     await logAudit({
       userEmail: initiatedByEmail,
       action: 'kyc.document_uploaded',
-      category: 'kyc',
+      category: 'compliance',
       entityType: 'kyc_check',
       entityId: kycCheck.id,
       clientName,
@@ -2271,15 +2327,20 @@ app.post('/api/kyc/aml-screen', async (req, res) => {
       return res.status(400).json({ error: 'salesforceAccountId is required' });
     }
 
-    if (!COMPLYCUBE_KEY) {
-      return res.status(503).json({ error: 'ComplyCube API key not configured' });
-    }
-
     let screenResult;
 
-    {
-      // ComplyCube AML screening
-      let { data: existingChecks } = await supabaseAdmin
+    if (KYC_DEMO_MODE) {
+      // ── DEMO / sandbox mode ──
+      const outcome = demoAmlOutcome(clientName);
+      screenResult = {
+        id: demoCheckId(),
+        complyCubeClientId: demoClientId(salesforceAccountId),
+        status: outcome.status,
+        result: outcome.result,
+      };
+    } else {
+      // ── LIVE ComplyCube screening ──
+      const { data: existingChecks } = await supabaseAdmin
         .from('kyc_checks')
         .select('complycube_client_id')
         .eq('salesforce_account_id', salesforceAccountId)
@@ -2298,6 +2359,7 @@ app.post('/api/kyc/aml-screen', async (req, res) => {
 
       screenResult = {
         id: check.id,
+        complyCubeClientId,
         status: check.status === 'complete' ? (check.result?.outcome === 'clear' ? 'complete' : 'failed') : 'processing',
         result: check.result || {},
       };
@@ -2309,7 +2371,10 @@ app.post('/api/kyc/aml-screen', async (req, res) => {
       .insert({
         salesforce_account_id: salesforceAccountId,
         client_name: clientName,
+        complycube_client_id: screenResult.complyCubeClientId || null,
         complycube_check_id: screenResult.id,
+        provider: KYC_DEMO_MODE ? 'demo' : 'complycube',
+        provider_check_id: screenResult.id,
         check_type: 'screening_check',
         status: screenResult.status,
         result: screenResult.result,
@@ -2324,7 +2389,7 @@ app.post('/api/kyc/aml-screen', async (req, res) => {
     await logAudit({
       userEmail: initiatedByEmail,
       action: 'kyc.aml_screening',
-      category: 'kyc',
+      category: 'compliance',
       entityType: 'kyc_check',
       entityId: kycCheck.id,
       clientName,
@@ -2334,18 +2399,18 @@ app.post('/api/kyc/aml-screen', async (req, res) => {
       req,
     });
 
-    // If AML failed, auto-create compliance alert
+    // If AML failed, auto-create compliance alert (schema: type/severity/message)
     if (screenResult.status === 'failed') {
-      await supabaseAdmin.from('compliance_alerts').insert({
-        alert_type: 'aml_match',
+      const { error: alertErr } = await supabaseAdmin.from('compliance_alerts').insert({
+        type: 'sanctions_match',
         severity: 'critical',
-        title: `Alerte AML — ${clientName}`,
-        description: `Le screening AML pour ${clientName} a detecte des correspondances potentielles. Revue manuelle requise.`,
         salesforce_account_id: salesforceAccountId,
         client_name: clientName,
+        message: `Alerte AML — ${clientName} : correspondance potentielle détectée sur les listes de sanctions. Revue manuelle requise.`,
         details: screenResult.result,
         status: 'open',
       });
+      if (alertErr) console.error('[KYC] compliance_alerts insert error:', alertErr.message);
     }
 
     res.json(kycCheck);
@@ -2367,8 +2432,8 @@ app.get('/api/kyc/check/:checkId', async (req, res) => {
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Check not found' });
 
-    // If still processing, poll ComplyCube
-    if (data.status === 'processing' && data.complycube_check_id) {
+    // If still processing, poll ComplyCube (skip in demo mode — no real API).
+    if (!KYC_DEMO_MODE && data.status === 'processing' && data.complycube_check_id) {
       try {
         const ccCheck = await complyCubeRequest('GET', `/checks/${data.complycube_check_id}`);
         if (ccCheck.status === 'complete') {
@@ -2471,7 +2536,7 @@ app.post('/api/kyc/validate', requireAdmin, async (req, res) => {
     await logAudit({
       userEmail: validatedByEmail,
       action: 'kyc.validated',
-      category: 'kyc',
+      category: 'compliance',
       entityType: 'kyc_validation',
       entityId: data.id,
       salesforceAccountId,
