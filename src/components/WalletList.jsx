@@ -3,15 +3,10 @@ import { listWallets } from '../services/dfnsApi';
 import { SUPPORTED_NETWORKS } from '../config/constants';
 import {
   Badge, EmptyState, Card, SectionCard, PageHeader, StatusDot,
-  Metric, MetricRow, Table, tdCls, tdMuted, trCls, FooterDisclosure,
-  Skeleton, SkeletonRow, CopyButton, useCountUp, MarbleCard, FleuronRule,
+  Table, tdCls, tdMuted, trCls, FooterDisclosure,
+  Skeleton, SkeletonRow, CopyButton,
 } from './shared';
-import { MandatCard, MandatCarousel } from './ProductCards';
-
-function CountUpNumber({ value, format = (v) => v }) {
-  const display = useCountUp(value);
-  return <>{format(display)}</>;
-}
+import { MarbleHero } from './ProductCards';
 
 /* ─────────────────────────────────────────────────────────
    WalletList — Editorial DFNS custody registry
@@ -86,90 +81,49 @@ export default function WalletList() {
         }
       />
 
-      {/* ── Marble hero ───────────────────────────────── */}
+      {/* ── Marble hero (live KPIs) ───────────────────── */}
       {!loading && wallets.length > 0 && (
         <div className="animate-slide-up stagger-1">
-          <MarbleCard
-            variant="peach"
-            eyebrow="Conservation multi-chain"
+          <MarbleHero
+            marble="peach"
+            seed={7}
+            eyebrow="Chambre forte DFNS"
             title="Chaque wallet, signé par quorum MPC."
-            description="Threshold cryptography 2-sur-3 · ségrégation stricte des clés · audit trail on-chain. Aucune clé privée stockée en clair, aucune signature sans consentement."
-          >
-            <div className="mt-6 flex items-center gap-3 flex-wrap">
-              <span className="inline-flex items-center gap-2 h-9 px-4 rounded-full bg-[#0A0A0A] text-white text-[12.5px] font-medium tracking-[-0.003em]">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            description="Threshold 2-sur-3 · ségrégation stricte des clés · audit trail on-chain. Reporting MiCA Art. 60 généré en continu."
+            primaryCta={{
+              label: 'Provisionner un wallet',
+              icon: (
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
-                Provisionner un wallet
-              </span>
-              <span className="inline-flex items-center gap-2 h-9 px-4 rounded-full bg-white/70 backdrop-blur border border-[rgba(10,10,10,0.1)] text-[#2A1F12] text-[12.5px] font-medium tracking-[-0.003em]">
-                Règlement MiCA · Art. 60
-              </span>
-            </div>
-          </MarbleCard>
+              ),
+            }}
+            secondaryCta={{ label: 'Travel Rule · Art. 7b' }}
+            stats={[
+              {
+                label: 'Wallets provisionnés',
+                value: wallets.length,
+                caption: `${activeCount} actifs`,
+              },
+              {
+                label: 'Réseaux actifs',
+                value: networkCount,
+                caption: 'Multi-chain DFNS',
+              },
+              {
+                label: 'Clients liés',
+                value: clientCount,
+                caption: 'Mandats',
+              },
+              {
+                label: 'Signatures MPC',
+                value: '2 / 3',
+                caption: 'Threshold actif',
+              },
+            ]}
+          />
         </div>
       )}
-
-      {/* ── Metric row ────────────────────────────────── */}
-      {!loading && wallets.length > 0 && (
-        <div className="animate-slide-up stagger-2">
-          <MetricRow>
-            <Metric label="Wallets totaux" value={<CountUpNumber value={wallets.length} />} caption={`${activeCount} actifs`} progress={Math.min(100, wallets.length * 12)} />
-            <Metric label="Réseaux actifs" value={<CountUpNumber value={networkCount} />} caption="Multi-chain" progress={Math.min(100, networkCount * 16)} />
-            <Metric label="Clients liés"   value={<CountUpNumber value={clientCount} />} caption="Mandats de conservation" progress={Math.min(100, clientCount * 10)} />
-            <Metric label="Signatures MPC" value="2 / 3" caption="Threshold cryptography" progress={66} />
-          </MetricRow>
-        </div>
-      )}
-
-      {/* ── Custody tiers — marble portfolio tiles ──────── */}
-      {!loading && wallets.length > 0 && (
-        <div className="animate-slide-up stagger-3">
-          <MandatCarousel
-            eyebrow="Segmentation de conservation"
-            title="Les tiers de custody DFNS."
-            trailing={
-              <span className="hidden md:inline-flex items-center gap-1.5 h-9 px-3 mr-2 rounded-full bg-[#FBFAF7] border border-[rgba(10,10,10,0.08)] text-[11px] font-medium text-[#6B6B6B] tracking-[-0.003em]">
-                <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
-                4 tiers · MPC 2/3
-              </span>
-            }
-          >
-            <MandatCard
-              label="Froide"
-              marble="pearl"
-              seed={13}
-              assetClasses={['Multi-sig offline', 'Air-gap', 'Archive UHNWI']}
-              disabled={['Trading actif']}
-              cta="Configurer"
-            />
-            <MandatCard
-              label="Tiède"
-              marble="ivory"
-              seed={17}
-              assetClasses={['MPC 2/3', 'Whitelist stricte', 'Review T+1']}
-              disabled={['Instant settlement']}
-              cta="Configurer"
-            />
-            <MandatCard
-              label="Chaude"
-              marble="peach"
-              seed={21}
-              assetClasses={['Signature < 1s', 'Quorum auto', 'Real-time KYT']}
-              cta="Configurer"
-            />
-            <MandatCard
-              label="OTC desk"
-              marble="bronze"
-              seed={25}
-              assetClasses={['Travel Rule', 'Block trades', 'Counterparty KYC', 'Tracfin']}
-              cta="Configurer"
-            />
-          </MandatCarousel>
-        </div>
-      )}
-
-      {!loading && wallets.length > 0 && <FleuronRule className="max-w-md mx-auto opacity-90" />}
 
       {/* ── Content ───────────────────────────────────── */}
       {loading ? (

@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react';
 import { listPolicies, createPolicy } from '../services/dfnsApi';
 import {
   Badge, Modal, Spinner, EmptyState, inputCls, selectCls, labelCls,
-  PageHeader, Metric, MetricRow, Card, Button, FooterDisclosure, StatusDot,
-  MarbleCard, FleuronRule,
+  PageHeader, Card, Button, FooterDisclosure, StatusDot,
 } from './shared';
-import { MandatCard, MandatCarousel } from './ProductCards';
+import { MarbleHero } from './ProductCards';
 
 /* ─────────────────────────────────────────────────────────
    PolicyList — Governance rules · DFNS approval policies
@@ -82,78 +81,51 @@ export default function PolicyList() {
         }
       />
 
-      {/* ── Marble hero ───────────────────────────────── */}
+      {/* ── Marble hero (live KPIs) ───────────────────── */}
       {!loading && (
         <div className="animate-slide-up stagger-1">
-          <MarbleCard
-            variant="peach"
-            eyebrow="Quatre yeux · Horodatage ACPR"
+          <MarbleHero
+            marble="ivory"
+            seed={11}
+            eyebrow="Gouvernance DFNS · ACPR"
             title="Les règles qui encadrent chaque signature."
             description="Chaque politique est auditée, horodatée, versionnée. Rien n'est signé en dehors de ces rails — transferts, whitelistings, rotations de clé."
+            primaryCta={{
+              label: 'Nouvelle politique',
+              icon: (
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+              ),
+              onClick: () => setShowCreate(true),
+            }}
+            secondaryCta={{ label: 'Journal d’audit · ACPR' }}
+            stats={[
+              {
+                label: 'Politiques actives',
+                value: activeCount,
+                caption: 'En production',
+              },
+              {
+                label: 'En attente',
+                value: pendingCount,
+                caption: 'Approbation admin',
+                delta: pendingCount > 0 ? `+${pendingCount}` : null,
+              },
+              {
+                label: 'Couverture',
+                value: policies.length,
+                caption: 'Règles définies',
+              },
+              {
+                label: 'Quorum MPC',
+                value: '2 / 3',
+                caption: 'Threshold actif',
+              },
+            ]}
           />
         </div>
       )}
-
-      {/* ── Metrics ───────────────────────────────────── */}
-      {!loading && (
-        <div className="animate-slide-up stagger-2">
-          <MetricRow>
-            <Metric label="Politiques actives" value={activeCount} caption="Appliquées en temps réel" progress={Math.min(100, activeCount * 25)} />
-            <Metric label="En attente" value={pendingCount} caption="Approbation admin requise" progress={Math.min(100, pendingCount * 20)} />
-            <Metric label="Couverture" value={policies.length} caption="Règles définies" progress={Math.min(100, policies.length * 15)} />
-            <Metric label="Signataires" value="2/3" caption="Quorum MPC threshold" progress={66} />
-          </MetricRow>
-        </div>
-      )}
-
-      {/* ── Governance templates — marble portfolio tiles ── */}
-      {!loading && (
-        <div className="animate-slide-up stagger-3">
-          <MandatCarousel
-            eyebrow="Modèles de gouvernance"
-            title="Quatre templates, quatre niveaux d'exigence."
-            trailing={
-              <span className="hidden md:inline-flex items-center gap-1.5 h-9 px-3 mr-2 rounded-full bg-[#FBFAF7] border border-[rgba(10,10,10,0.08)] text-[11px] font-medium text-[#6B6B6B] tracking-[-0.003em]">
-                <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
-                4 niveaux
-              </span>
-            }
-          >
-            <MandatCard
-              label="Standard"
-              marble="pearl"
-              seed={31}
-              assetClasses={['Signature unique', 'Whitelist', 'Journal']}
-              disabled={['Quatre yeux', 'Hors-horaires']}
-              cta="Instancier"
-            />
-            <MandatCard
-              label="Renforcée"
-              marble="ivory"
-              seed={34}
-              assetClasses={['Quatre yeux', 'Seuil 10k €', 'Whitelist stricte', 'KYT']}
-              disabled={['Double escalade']}
-              cta="Instancier"
-            />
-            <MandatCard
-              label="Fiduciaire"
-              marble="peach"
-              seed={37}
-              assetClasses={['Quatre yeux', 'Seuil 100k €', 'PPE flag', 'Double escalade']}
-              cta="Instancier"
-            />
-            <MandatCard
-              label="Institutionnelle"
-              marble="bronze"
-              seed={40}
-              assetClasses={['Quorum 3/4', 'Block trades', 'Tracfin auto', 'ACPR report', 'Horodatage']}
-              cta="Instancier"
-            />
-          </MandatCarousel>
-        </div>
-      )}
-
-      {!loading && <FleuronRule className="max-w-md mx-auto opacity-90" />}
 
       {/* ── List ──────────────────────────────────────── */}
       {loading ? (

@@ -654,6 +654,148 @@ export function MandatCard({
 }
 
 /* ═══════════════════════════════════════════════════════
+   MarbleHero — rich hero banner with marble bg + live KPIs
+   Real working surface: eyebrow · serif title · description
+   · CTA cluster on the left · KPI pills grid on the right
+   ═══════════════════════════════════════════════════════ */
+export function MarbleHero({
+  eyebrow,
+  title,
+  description,
+  marble = 'peach',
+  seed = 7,
+  stats = [],        // [{ label, value, caption, delta, tone }]
+  primaryCta,        // { label, icon, onClick }
+  secondaryCta,      // { label, onClick }
+  className = '',
+}) {
+  return (
+    <div
+      className={`relative overflow-hidden rounded-[22px] border border-[rgba(124,94,60,0.2)] ${className}`}
+      style={{
+        boxShadow:
+          '0 1px 0 rgba(255,255,255,0.9) inset, 0 1px 2px rgba(10,10,10,0.04), 0 24px 56px -24px rgba(124,94,60,0.35), 0 12px 24px -14px rgba(10,10,10,0.1)',
+      }}
+    >
+      {/* Marble background — spans the full card */}
+      <div className="absolute inset-0 rounded-[22px] overflow-hidden">
+        <MarbleTexture variant={marble} seed={seed} />
+      </div>
+
+      {/* Subtle inner highlight */}
+      <div
+        className="absolute inset-0 pointer-events-none rounded-[22px]"
+        style={{ background: 'radial-gradient(ellipse 70% 50% at 30% 0%, rgba(255,255,255,0.5), transparent 60%)' }}
+      />
+
+      {/* Corner fleurons */}
+      <svg viewBox="0 0 24 24" width="14" height="14" className="absolute top-5 right-6 opacity-35 pointer-events-none" fill="#9A7A51">
+        <path d="M12 2 C 12 7.5, 12 7.5, 17.5 8.5 C 22 9.2, 22 9.2, 22 12 C 22 14.8, 22 14.8, 17.5 15.5 C 12 16.5, 12 16.5, 12 22 C 12 16.5, 12 16.5, 6.5 15.5 C 2 14.8, 2 14.8, 2 12 C 2 9.2, 2 9.2, 6.5 8.5 C 12 7.5, 12 7.5, 12 2 Z" fillOpacity="0.85" />
+      </svg>
+
+      {/* Content */}
+      <div className="relative px-9 py-9 flex items-stretch gap-10 flex-wrap lg:flex-nowrap">
+        {/* ── Left: editorial block + CTAs ── */}
+        <div className="flex-1 min-w-0 max-w-[52ch]">
+          {eyebrow && (
+            <p className="text-[10.5px] font-medium text-[#7C5E3C] uppercase tracking-[0.14em] mb-4 flex items-center gap-2">
+              <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
+              {eyebrow}
+            </p>
+          )}
+          {title && (
+            <h2
+              className="font-display text-[32px] text-[#2A1F12] leading-[1.06]"
+              style={{ letterSpacing: '-0.026em', textShadow: '0 1px 0 rgba(255,255,255,0.35)' }}
+            >
+              {title}
+            </h2>
+          )}
+          {description && (
+            <p className="mt-3 text-[13.5px] text-[#5C4A34] leading-[1.6] tracking-[-0.003em]">
+              {description}
+            </p>
+          )}
+
+          {(primaryCta || secondaryCta) && (
+            <div className="mt-6 flex items-center gap-2.5 flex-wrap">
+              {primaryCta && (
+                <button
+                  onClick={primaryCta.onClick}
+                  className="inline-flex items-center gap-2 h-10 px-4 rounded-full bg-[#0A0A0A] text-white text-[12.5px] font-medium tracking-[-0.003em] transition-all hover:bg-[#1F1F1F] active:scale-[0.98]"
+                  style={{ boxShadow: '0 1px 0 rgba(255,255,255,0.1) inset, 0 1px 2px rgba(10,10,10,0.2), 0 6px 16px -6px rgba(10,10,10,0.4)' }}
+                >
+                  {primaryCta.icon}
+                  {primaryCta.label}
+                </button>
+              )}
+              {secondaryCta && (
+                <button
+                  onClick={secondaryCta.onClick}
+                  className="inline-flex items-center gap-2 h-10 px-4 rounded-full bg-white/70 backdrop-blur border border-[rgba(124,94,60,0.22)] text-[#2A1F12] text-[12.5px] font-medium tracking-[-0.003em] transition-all hover:bg-white/90"
+                >
+                  {secondaryCta.label}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Right: live KPI grid — a 2x2 tight editorial strip ── */}
+        {stats.length > 0 && (
+          <div className="flex-shrink-0 w-full lg:w-auto lg:max-w-[440px]">
+            <div
+              className="grid grid-cols-2 gap-px rounded-[14px] overflow-hidden bg-[rgba(124,94,60,0.16)]"
+              style={{ boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 1px 2px rgba(124,94,60,0.15), 0 8px 24px -12px rgba(124,94,60,0.25)' }}
+            >
+              {stats.slice(0, 4).map((s, i) => (
+                <div
+                  key={i}
+                  className="relative bg-white/85 backdrop-blur-sm p-4 min-w-[170px]"
+                >
+                  <p className="text-[9.5px] font-medium text-[#7C5E3C] uppercase tracking-[0.1em] flex items-center gap-1.5">
+                    <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
+                    {s.label}
+                  </p>
+                  <p
+                    className="mt-2 font-display text-[24px] text-[#2A1F12] leading-[1.05] tabular-nums"
+                    style={{ letterSpacing: '-0.024em' }}
+                  >
+                    {s.value}
+                  </p>
+                  {(s.caption || s.delta) && (
+                    <div className="mt-1.5 flex items-center gap-1.5">
+                      {s.delta && (
+                        <span
+                          className="inline-flex items-center gap-0.5 text-[10.5px] font-medium tabular-nums"
+                          style={{ color: s.delta.startsWith('-') ? '#DC2626' : '#16A34A' }}
+                        >
+                          <svg className="w-2 h-2" viewBox="0 0 10 10" fill="currentColor">
+                            {s.delta.startsWith('-')
+                              ? <path d="M5 8.5L1.5 3H8.5L5 8.5Z" />
+                              : <path d="M5 1.5L8.5 7H1.5L5 1.5Z" />}
+                          </svg>
+                          {s.delta}
+                        </span>
+                      )}
+                      {s.caption && (
+                        <span className="text-[10.5px] text-[#6B6B6B] tracking-[-0.003em] truncate">
+                          {s.caption}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
    MandatCarousel — horizontal snap scroller for MandatCards
    ═══════════════════════════════════════════════════════ */
 export function MandatCarousel({ title, eyebrow, children, trailing, className = '' }) {
