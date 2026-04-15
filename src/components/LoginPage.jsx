@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { inputCls, labelCls, Button, Spinner } from './shared';
+import { inputCls, labelCls, Button, Card, Spinner } from './shared';
 
 /* ─────────────────────────────────────────────────────────
-   Login — the first impression
-   One door, set with typographic care.
+   LoginPage — Linear-style centered auth card
    ───────────────────────────────────────────────────────── */
 
 export default function LoginPage() {
@@ -38,150 +37,143 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAF7] text-[#0B0B0C] flex">
-      {/* ── Left — editorial panel ─────────────────────── */}
-      <aside className="hidden lg:flex lg:w-1/2 relative border-r border-[rgba(11,11,12,0.08)]">
-        <div className="absolute top-10 left-10">
-          <p className="eyebrow text-[#8A6F3D]">SwissLife · Conservation</p>
-        </div>
-        <div className="flex-1 flex items-center px-16">
-          <div className="max-w-lg animate-whisper">
-            <p className="eyebrow mb-6">Depuis 1857 · Paris</p>
-            <h1 className="font-display-tight text-[80px] leading-[0.92] text-[#0B0B0C]">
-              La patience
-              <br />
-              et la précision
-              <br />
-              d'un coffre-fort.
-            </h1>
-            <p className="mt-10 text-[15px] text-[#6B6B70] leading-[1.8] font-light max-w-md">
-              Un outil pour les banquiers privés : gérer la conservation
-              d'actifs numériques avec la même rigueur qu'un dossier de valeurs,
-              conformément au règlement MiCA et à l'ordonnance de l'ACPR.
-            </p>
+    <div className="min-h-screen bg-[#FAFAFA] text-[#09090B] flex flex-col">
+      {/* ── Top brand bar ───────────────────────────────── */}
+      <header className="border-b border-[rgba(9,9,11,0.08)] bg-white">
+        <div className="max-w-[1280px] mx-auto px-6 h-12 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-6 h-6 bg-[#09090B] rounded-md flex items-center justify-center">
+              <span className="text-white text-[10px] font-bold tracking-tight">SL</span>
+            </div>
+            <span className="text-[13px] font-semibold text-[#09090B] tracking-tight">SwissLife Custody</span>
+            <span className="hidden md:inline text-[11px] text-[#A1A1AA] font-medium ml-1">Banque Privée</span>
           </div>
+          <p className="text-[11px] text-[#A1A1AA] font-medium uppercase tracking-wider">
+            AMF · ACPR · MiCA
+          </p>
         </div>
-        <div className="absolute bottom-10 left-10 right-10 flex items-center justify-between">
-          <p className="eyebrow">AMF · ACPR · Tracfin · MiCA Art. 60</p>
-          <p className="eyebrow text-[#A8A8AD]">7 rue Belgrand · Levallois</p>
-        </div>
-      </aside>
+      </header>
 
-      {/* ── Right — the door ───────────────────────────── */}
-      <main className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-sm animate-rise">
-          <div className="mb-12">
-            <p className="eyebrow mb-4">
-              {mode === 'login' ? 'Connexion' : 'Nouveau compte'}
-            </p>
-            <h2 className="font-display text-[44px] leading-[1.05] text-[#0B0B0C]">
-              {mode === 'login' ? 'Bonsoir.' : 'Bienvenue.'}
-            </h2>
-            <p className="mt-4 text-[14px] text-[#6B6B70] font-light leading-relaxed">
+      {/* ── Center card ─────────────────────────────────── */}
+      <main className="flex-1 flex items-center justify-center px-6 py-12">
+        <div className="w-full max-w-[380px] animate-fade">
+          <div className="mb-6 text-center">
+            <h1 className="text-[22px] font-semibold text-[#09090B] tracking-tight">
+              {mode === 'login' ? 'Connexion' : 'Créer un compte'}
+            </h1>
+            <p className="mt-1.5 text-[13px] text-[#71717A]">
               {mode === 'login'
                 ? 'Accédez à votre espace de conservation.'
-                : 'Créez votre compte pour rejoindre l\'équipe.'}
+                : 'Rejoignez l\'équipe SwissLife Custody.'}
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-8">
-            {mode === 'register' && (
+          <Card className="p-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {mode === 'register' && (
+                <div>
+                  <label className={labelCls}>Nom complet</label>
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={e => setFullName(e.target.value)}
+                    placeholder="Jean Dupont"
+                    className={inputCls}
+                    required
+                  />
+                </div>
+              )}
+
               <div>
-                <label className={labelCls}>Nom complet</label>
+                <label className={labelCls}>Email professionnel</label>
                 <input
-                  type="text"
-                  value={fullName}
-                  onChange={e => setFullName(e.target.value)}
-                  placeholder="Jean Dupont"
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="vous@swisslife.com"
                   className={inputCls}
                   required
                 />
               </div>
-            )}
 
-            <div>
-              <label className={labelCls}>Adresse email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="vous@swisslife.com"
-                className={inputCls}
-                required
-              />
-            </div>
-
-            <div>
-              <label className={labelCls}>Mot de passe</label>
-              <input
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className={inputCls}
-                required
-                minLength={6}
-              />
-            </div>
-
-            {mode === 'register' && (
               <div>
-                <label className={labelCls}>Rôle</label>
-                <div className="mt-3 flex gap-6">
-                  {[
-                    { id: 'banquier', label: 'Banquier' },
-                    { id: 'admin', label: 'Administrateur' },
-                  ].map(r => {
-                    const active = role === r.id;
-                    return (
-                      <button
-                        key={r.id}
-                        type="button"
-                        onClick={() => setRole(r.id)}
-                        className="relative py-2 text-[13px] tracking-tight transition-colors"
-                        style={{ color: active ? '#0B0B0C' : '#6B6B70' }}
-                      >
-                        {r.label}
-                        {active && <span className="absolute left-0 right-0 -bottom-px h-px bg-[#0B0B0C]" />}
-                      </button>
-                    );
-                  })}
+                <label className={labelCls}>Mot de passe</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className={inputCls}
+                  required
+                  minLength={6}
+                />
+              </div>
+
+              {mode === 'register' && (
+                <div>
+                  <label className={labelCls}>Rôle</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: 'banquier', label: 'Banquier' },
+                      { id: 'admin', label: 'Administrateur' },
+                    ].map(r => {
+                      const active = role === r.id;
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() => setRole(r.id)}
+                          className={`h-9 text-[13px] font-medium rounded-md border transition-colors ${
+                            active
+                              ? 'bg-[#F4F4F5] text-[#09090B] border-[rgba(9,9,11,0.15)]'
+                              : 'bg-white text-[#71717A] border-[rgba(9,9,11,0.1)] hover:bg-[#FAFAFA]'
+                          }`}
+                        >
+                          {r.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {error && (
-              <div className="py-3 px-4 border-l-2 border-[#7A2424] bg-[rgba(122,36,36,0.04)]">
-                <p className="text-[13px] text-[#7A2424]">{error}</p>
-              </div>
-            )}
-            {success && (
-              <div className="py-3 px-4 border-l-2 border-[#2E5D4F] bg-[rgba(46,93,79,0.04)]">
-                <p className="text-[13px] text-[#2E5D4F]">{success}</p>
-              </div>
-            )}
+              {error && (
+                <div className="px-3 py-2 bg-[#FEF2F2] border border-[rgba(239,68,68,0.2)] rounded-md">
+                  <p className="text-[12px] text-[#B91C1C]">{error}</p>
+                </div>
+              )}
+              {success && (
+                <div className="px-3 py-2 bg-[#ECFDF5] border border-[rgba(16,185,129,0.2)] rounded-md">
+                  <p className="text-[12px] text-[#047857]">{success}</p>
+                </div>
+              )}
 
-            <div className="pt-4">
-              <Button variant="primary" className="w-full" disabled={loading}>
-                {loading ? <><Spinner size="w-3 h-3" /> Chargement…</> : mode === 'login' ? 'Entrer' : 'Créer le compte'}
+              <Button variant="primary" size="lg" className="w-full" disabled={loading}>
+                {loading && <Spinner />}
+                {loading ? 'Chargement…' : mode === 'login' ? 'Se connecter' : 'Créer le compte'}
               </Button>
-            </div>
+            </form>
+          </Card>
 
+          <div className="mt-4 text-center">
             <button
               type="button"
               onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setSuccess(''); }}
-              className="w-full text-center eyebrow text-[#6B6B70] hover:text-[#0B0B0C] transition-colors"
+              className="text-[12px] text-[#71717A] hover:text-[#09090B] transition-colors"
             >
-              {mode === 'login' ? 'Créer un compte →' : '← Retour à la connexion'}
+              {mode === 'login' ? "Pas encore de compte ? Créer un compte" : "Déjà inscrit ? Se connecter"}
             </button>
-          </form>
-
-          <div className="mt-16 pt-8 border-t border-[rgba(11,11,12,0.08)] flex items-center justify-between">
-            <p className="eyebrow">SwissLife Banque Privée</p>
-            <p className="eyebrow text-[#A8A8AD]">Paris · 2026</p>
           </div>
         </div>
       </main>
+
+      {/* ── Footer ──────────────────────────────────────── */}
+      <footer className="border-t border-[rgba(9,9,11,0.08)]">
+        <div className="max-w-[1280px] mx-auto px-6 h-10 flex items-center justify-between">
+          <p className="text-[11px] text-[#A1A1AA]">SwissLife Banque Privée · Paris</p>
+          <p className="text-[11px] text-[#A1A1AA]">© 2026</p>
+        </div>
+      </footer>
     </div>
   );
 }

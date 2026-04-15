@@ -12,18 +12,17 @@ import { SUPPORTED_NETWORKS } from '../config/constants';
 import { createApproval, checkTransferRisk, checkWalletFreeze } from '../services/complianceApi';
 import { getKycStatus } from '../services/kycService';
 import { useAuth } from '../context/AuthContext';
-import { fmtEUR, Badge, Modal, Spinner, EmptyState, Button, Rule, Datum, inputCls, selectCls, labelCls } from './shared';
+import { fmtEUR, Badge, Card, Modal, Spinner, EmptyState, Button, StatCell, inputCls, selectCls, labelCls } from './shared';
 import { API_BASE } from '../config/constants';
 
 /* ─────────────────────────────────────────────────────────
-   Client detail — editorial monograph
-   One client, patiently set. Navigation as quiet labels.
+   ClientDetail — compact fintech detail view
    ───────────────────────────────────────────────────────── */
 
-const truncAddr = (a, n = 8) => a ? `${a.slice(0, n)}···${a.slice(-n)}` : '—';
-const fmtDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
+const truncAddr = (a, n = 8) => a ? `${a.slice(0, n)}…${a.slice(-n)}` : '—';
+const fmtDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 const typeLabel = (t) => {
-  if (t === 'Customer - Direct') return 'Personne physique';
+  if (t === 'Customer - Direct') return 'UHNWI';
   if (t === 'Other' || t === 'Institutional') return 'Institutionnel';
   return t || '—';
 };
@@ -54,7 +53,7 @@ export default function ClientDetail({ client: initialClient, onBack }) {
     try {
       const updated = await fetchClientById(client.id);
       setClient(updated);
-    } catch (err) { console.error('reloadClient error:', err); }
+    } catch (err) { console.error(err); }
   };
 
   const parsed = parseDescription(client.description);
@@ -82,7 +81,7 @@ export default function ClientDetail({ client: initialClient, onBack }) {
       }));
       setFrozenWallets(freezeMap);
     } catch (err) {
-      console.error('loadWallets error:', err); setError(err.message); setWallets([]);
+      console.error(err); setError(err.message); setWallets([]);
     }
     setLoading(false);
   };
@@ -96,7 +95,7 @@ export default function ClientDetail({ client: initialClient, onBack }) {
 
   const handleCreate = async () => {
     if (client.Custody_Eligible__c !== true && !kycValid) {
-      alert('Conformité : le client doit être éligible à la conservation avant toute création de portefeuille. Complétez l\'onglet Éligibilité.');
+      alert('Compliance : le client doit être éligible à la custody avant toute création de wallet.');
       return;
     }
     setCreating(true); setError(null);
@@ -111,8 +110,8 @@ export default function ClientDetail({ client: initialClient, onBack }) {
       setShowCreate(false);
       setNewWallet({ name: '', network: 'EthereumSepolia' });
     } catch (err) {
-      console.error('createWallet error:', err); setError(err.message);
-      alert('Erreur création portefeuille : ' + err.message);
+      console.error(err); setError(err.message);
+      alert('Erreur : ' + err.message);
     }
     setCreating(false);
   };
@@ -122,7 +121,7 @@ export default function ClientDetail({ client: initialClient, onBack }) {
     try {
       const [a, h] = await Promise.all([getWalletAssets(w.id), getWalletHistory(w.id)]);
       setAssets(a); setHistory(h.items || []);
-    } catch (err) { console.error('selectWallet error:', err); }
+    } catch (err) { console.error(err); }
   };
 
   const handleTransfer = async () => {
@@ -137,17 +136,16 @@ export default function ClientDetail({ client: initialClient, onBack }) {
       }).catch(() => ({ allowed: true, warnings: [], blocks: [] }));
 
       if (riskCheck.blocks && riskCheck.blocks.length > 0) {
-        alert('Transfert bloqué par la conformité\n\n' + riskCheck.blocks.join('\n'));
+        alert('Transfert bloqué par la compliance :\n\n' + riskCheck.blocks.join('\n'));
         setSending(false); return;
       }
 
-      let warningMsg = '';
-      if (riskCheck.warnings && riskCheck.warnings.length > 0) {
-        warningMsg = '\n\nAvertissements :\n· ' + riskCheck.warnings.join('\n· ');
-      }
+      const warningMsg = (riskCheck.warnings && riskCheck.warnings.length > 0)
+        ? '\n\nAvertissements :\n- ' + riskCheck.warnings.join('\n- ')
+        : '';
 
       const netInfo = SUPPORTED_NETWORKS.find(n => n.id === selectedWallet.network);
-      const confirmMsg = `Demande de transfert\n\nDepuis : ${selectedWallet.name}\nVers : ${transfer.to}\nMontant : ${transfer.amount} ${netInfo?.symbol || ''}${warningMsg}\n\nLe transfert sera soumis à approbation (principe des quatre yeux). Confirmez-vous ?`;
+      const confirmMsg = `DEMANDE DE TRANSFERT\n\nDepuis : ${selectedWallet.name}\nVers : ${transfer.to}\nMontant : ${transfer.amount} ${netInfo?.symbol || ''}${warningMsg}\n\nLe transfert sera soumis à approbation (4-eye). Confirmer ?`;
       if (!confirm(confirmMsg)) { setSending(false); return; }
 
       await createApproval({
@@ -163,32 +161,32 @@ export default function ClientDetail({ client: initialClient, onBack }) {
         requestedByEmail: user?.email || 'unknown',
       });
 
-      alert('Demande soumise. Un administrateur doit approuver la demande dans l\'onglet Conformité.');
+      alert('Demande soumise. Un administrateur doit approuver dans l\'onglet Compliance.');
       setShowTransfer(false);
       setTransfer({ to: '', amount: '', kind: 'Native' });
     } catch (err) {
-      console.error('transfer error:', err); setError(err.message);
+      console.error(err); setError(err.message);
       alert('Erreur : ' + err.message);
     }
     setSending(false);
   };
 
-  const net = (id) => SUPPORTED_NETWORKS.find(n => n.id === id) || { icon: '?', color: '#8A6F3D', name: id };
+  const net = (id) => SUPPORTED_NETWORKS.find(n => n.id === id) || { icon: '?', color: '#71717A', name: id };
 
-  const kycStatusText = kycValid ? 'Validé'
+  const kycStatusText = kycValid ? 'Valide'
     : kycLive?.overallStatus === 'in_progress' ? 'En cours'
     : kycLive?.overallStatus === 'ready_for_validation' ? 'À valider'
-    : kycLive?.overallStatus === 'attention_required' ? 'Attention requise'
+    : kycLive?.overallStatus === 'attention_required' ? 'Attention'
     : parsed.kyc?.toLowerCase().includes('cours') ? 'En cours'
     : 'Non vérifié';
 
   const tabs = [
-    { id: 'profile', label: 'Fiche' },
+    { id: 'profile', label: 'Fiche client' },
     { id: 'eligibility', label: 'Éligibilité' },
     ...(kycModuleEnabled ? [{ id: 'kyc', label: 'KYC / KYB' }] : []),
-    { id: 'wallets', label: 'Portefeuilles' },
+    { id: 'wallets', label: `Wallets (${wallets.length})` },
     { id: 'delegations', label: 'Délégations' },
-    ...(client.type !== 'Customer - Direct' ? [{ id: 'ubo', label: 'Bénéficiaires effectifs' }] : []),
+    ...(client.type !== 'Customer - Direct' ? [{ id: 'ubo', label: 'UBO' }] : []),
     { id: 'transfers', label: 'Transferts' },
     { id: 'history', label: 'Historique' },
   ];
@@ -198,216 +196,235 @@ export default function ClientDetail({ client: initialClient, onBack }) {
       {/* ── Back ─────────────────────────────────────────── */}
       <button
         onClick={onBack}
-        className="group flex items-center gap-2 eyebrow text-[#6B6B70] hover:text-[#0B0B0C] transition-colors mb-10"
+        className="flex items-center gap-1.5 text-[12px] text-[#71717A] hover:text-[#09090B] transition-colors mb-4 group"
       >
-        <svg className="w-3 h-3 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+        <svg className="w-3 h-3 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
         </svg>
-        Retour à l'index
+        Retour aux clients
       </button>
 
-      {/* ── Editorial header ─────────────────────────────── */}
-      <header className="mb-12">
-        <div className="flex items-start justify-between gap-10">
-          <div className="flex-1 min-w-0">
-            <p className="eyebrow mb-4">{typeLabel(client.type)}</p>
-            <h1 className="font-display-tight text-[68px] leading-[0.94] text-[#0B0B0C]">
+      {/* ── Header ──────────────────────────────────────── */}
+      <div className="flex items-start justify-between gap-6 mb-5">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-[22px] font-semibold text-[#09090B] tracking-tight">
               {client.name}
             </h1>
-            <p className="mt-5 text-[14px] text-[#6B6B70] leading-relaxed max-w-xl">
-              {[client.street, client.postalCode, client.city, client.country].filter(Boolean).join(' · ') || '—'}
-            </p>
+            <Badge variant="default">{typeLabel(client.type)}</Badge>
           </div>
-
-          {client.aum && (
-            <div className="text-right flex-shrink-0">
-              <p className="eyebrow mb-3">Actifs sous gestion</p>
-              <p className="font-display text-[42px] text-[#0B0B0C] tabular leading-none">
-                {fmtEUR(client.aum)}
-              </p>
-              {client.accountNumber && (
-                <p className="eyebrow mt-3 text-[#A8A8AD]">№ {client.accountNumber}</p>
-              )}
-            </div>
+          <p className="text-[13px] text-[#71717A] mt-1">
+            {[client.street, client.postalCode, client.city, client.country].filter(Boolean).join(', ') || '—'}
+          </p>
+        </div>
+        <div className="text-right flex-shrink-0">
+          <p className="text-[11px] font-medium text-[#71717A] uppercase tracking-wider mb-1">
+            Actifs sous gestion
+          </p>
+          <p className="text-[22px] font-semibold text-[#09090B] tabular-nums">
+            {client.aum ? fmtEUR(client.aum) : '—'}
+          </p>
+          {client.accountNumber && (
+            <p className="text-[12px] text-[#71717A] font-mono mt-0.5">№ {client.accountNumber}</p>
           )}
         </div>
+      </div>
 
-        {/* ── Datum strip ─────────────────────────────── */}
-        <div className="mt-12 pt-8 border-t border-[rgba(11,11,12,0.08)] grid grid-cols-5 gap-8">
-          <Datum label="Conformité KYC" value={kycStatusText} />
-          <Datum label="Profil de risque" value={parsed.risk || 'Non défini'} />
-          <Datum label="Industrie" value={client.industry || '—'} />
-          <Datum label="Portefeuilles" value={String(wallets.length).padStart(2, '0')} />
-          <Datum label="Client depuis" value={fmtDate(client.createdDate)} />
+      {/* ── Stats strip ─────────────────────────────────── */}
+      <Card className="mb-6">
+        <div className="grid grid-cols-5 divide-x divide-[rgba(9,9,11,0.06)]">
+          <StatCell label="KYC" value={kycStatusText} />
+          <StatCell label="Profil de risque" value={parsed.risk || 'Non défini'} />
+          <StatCell label="Industrie" value={client.industry || '—'} />
+          <StatCell label="Wallets" value={wallets.length} />
+          <StatCell label="Client depuis" value={fmtDate(client.createdDate)} />
         </div>
-      </header>
+      </Card>
 
-      {/* ── Navigation ──────────────────────────────────── */}
-      <nav className="flex items-center gap-8 border-b border-[rgba(11,11,12,0.08)] mb-12 overflow-x-auto">
-        {tabs.map(t => {
-          const active = tab === t.id;
-          return (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className="relative py-4 text-[13px] tracking-tight whitespace-nowrap transition-colors"
-              style={{ color: active ? '#0B0B0C' : '#6B6B70' }}
-            >
-              {t.label}
-              {active && <span className="absolute left-0 right-0 -bottom-px h-px bg-[#0B0B0C]" />}
-            </button>
-          );
-        })}
-      </nav>
+      {/* ── Tabs ────────────────────────────────────────── */}
+      <div className="border-b border-[rgba(9,9,11,0.08)] mb-6">
+        <nav className="flex items-center gap-1 overflow-x-auto">
+          {tabs.map(t => {
+            const active = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`relative h-9 px-3 text-[13px] font-medium whitespace-nowrap transition-colors ${
+                  active ? 'text-[#09090B]' : 'text-[#71717A] hover:text-[#09090B]'
+                }`}
+              >
+                {t.label}
+                {active && <span className="absolute left-0 right-0 -bottom-px h-0.5 bg-[#09090B]" />}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
 
       {/* ══════════ PROFILE ══════════ */}
       {tab === 'profile' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 animate-fade">
-          <div className="lg:col-span-2 space-y-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 animate-fade">
+          <div className="lg:col-span-2 space-y-5">
             {parsed.text && (
-              <Section title="Note">
-                <p className="text-[15px] text-[#2C2C2E] leading-[1.7] font-light max-w-2xl">
-                  {parsed.text}
-                </p>
-              </Section>
+              <SectionCard title="À propos">
+                <p className="text-[13px] text-[#52525B] leading-relaxed">{parsed.text}</p>
+              </SectionCard>
             )}
 
-            <Section title="Informations">
-              <div className="grid grid-cols-2 gap-x-12 gap-y-7">
-                <Datum label="Nom complet" value={client.name} />
-                <Datum label="Numéro de compte" value={client.accountNumber || '—'} />
-                <Datum label="Type de compte" value={typeLabel(client.type)} />
-                <Datum label="Industrie" value={client.industry || '—'} />
-                <Datum label="Chiffre d'affaires / AUM" value={client.aum ? fmtEUR(client.aum) : '—'} />
-                <Datum label="Téléphone" value={client.phone || '—'} />
-                <Datum label="Site internet" value={client.website || '—'} />
-                <Datum label="Effectifs" value={client.employees || '—'} />
+            <SectionCard title="Informations détaillées">
+              <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                <Field label="Nom complet" value={client.name} />
+                <Field label="Numéro de compte" value={client.accountNumber} mono />
+                <Field label="Type de compte" value={typeLabel(client.type)} />
+                <Field label="Industrie" value={client.industry} />
+                <Field label="Chiffre d'affaires / AUM" value={client.aum ? fmtEUR(client.aum) : '—'} />
+                <Field label="Téléphone" value={client.phone} />
+                <Field label="Site web" value={client.website} link />
+                <Field label="Nombre d'employés" value={client.employees} />
               </div>
-            </Section>
+            </SectionCard>
 
-            <Section title="Adresse de facturation">
-              <div className="grid grid-cols-2 gap-x-12 gap-y-7">
-                <Datum label="Rue" value={client.street || '—'} />
-                <Datum label="Ville" value={client.city || '—'} />
-                <Datum label="Code postal" value={client.postalCode || '—'} />
-                <Datum label="Pays" value={client.country || '—'} />
+            <SectionCard title="Adresse de facturation">
+              <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                <Field label="Rue" value={client.street} />
+                <Field label="Ville" value={client.city} />
+                <Field label="Code postal" value={client.postalCode} />
+                <Field label="Pays" value={client.country} />
               </div>
-            </Section>
+            </SectionCard>
 
-            <Section title={`Contacts · ${contacts.length}`}>
+            <SectionCard title={`Contacts (${contacts.length})`}>
               {loadingContacts ? (
-                <div className="py-6"><Spinner /></div>
+                <div className="py-6 text-center"><Spinner /></div>
               ) : contacts.length === 0 ? (
-                <p className="text-[13px] text-[#A8A8AD] font-light">Aucun contact associé.</p>
+                <p className="text-[13px] text-[#71717A] py-4">Aucun contact associé.</p>
               ) : (
-                <ul className="divide-y divide-[rgba(11,11,12,0.08)]">
+                <div className="divide-y divide-[rgba(9,9,11,0.06)] -mx-5">
                   {contacts.map(c => (
-                    <li key={c.Id} className="py-5 flex items-baseline justify-between gap-6">
-                      <div>
-                        <p className="font-display text-[18px] text-[#0B0B0C] leading-tight">
-                          {[c.FirstName, c.LastName].filter(Boolean).join(' ')}
-                        </p>
-                        {c.Title && <p className="eyebrow mt-1">{c.Title}</p>}
+                    <div key={c.Id} className="px-5 py-3 flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-[#F4F4F5] rounded-md flex items-center justify-center text-[#52525B] text-[11px] font-semibold">
+                          {(c.FirstName?.[0] || '') + (c.LastName?.[0] || '')}
+                        </div>
+                        <div>
+                          <p className="text-[13px] font-medium text-[#09090B]">
+                            {[c.FirstName, c.LastName].filter(Boolean).join(' ')}
+                          </p>
+                          {c.Title && <p className="text-[11px] text-[#71717A]">{c.Title}</p>}
+                        </div>
                       </div>
                       <div className="text-right">
-                        {c.Email && <p className="text-[12px] text-[#6B6B70]">{c.Email}</p>}
-                        {c.Phone && <p className="text-[12px] text-[#A8A8AD] mt-0.5">{c.Phone}</p>}
+                        {c.Email && <p className="text-[12px] text-[#52525B]">{c.Email}</p>}
+                        {c.Phone && <p className="text-[11px] text-[#71717A]">{c.Phone}</p>}
                       </div>
-                    </li>
+                    </div>
                   ))}
-                </ul>
+                </div>
               )}
-            </Section>
+            </SectionCard>
           </div>
 
-          <aside className="space-y-12">
-            <Section title="Conformité">
-              <div className="flex items-baseline gap-3">
+          <aside className="space-y-5">
+            <SectionCard title="Conformité KYC">
+              <div className="flex items-center gap-2.5">
                 <span
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ background: kycValid ? '#2E5D4F' : kycLive?.overallStatus === 'attention_required' ? '#7A2424' : '#8A4A1B' }}
+                  className="w-2 h-2 rounded-full"
+                  style={{ background: kycValid ? '#10B981' : kycLive?.overallStatus === 'attention_required' ? '#EF4444' : '#F59E0B' }}
                 />
-                <div>
-                  <p className="font-display text-[22px] text-[#0B0B0C] leading-tight">{kycStatusText}</p>
-                  {kycLive?.stats && (
-                    <p className="text-[12px] text-[#6B6B70] mt-1">
-                      {kycLive.stats.documentsVerified} document(s) vérifié(s) · AML {kycLive.stats.amlClean ? 'clean' : 'en attente'}
-                    </p>
-                  )}
-                </div>
+                <p className="text-[13px] font-medium text-[#09090B]">{kycStatusText}</p>
               </div>
+              {kycLive?.stats && (
+                <p className="text-[12px] text-[#71717A] mt-2">
+                  {kycLive.stats.documentsVerified} doc(s) vérifié(s) · AML {kycLive.stats.amlClean ? 'clean' : 'en attente'}
+                </p>
+              )}
               {!kycValid && kycModuleEnabled && (
-                <button
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full mt-4"
                   onClick={() => setTab('kyc')}
-                  className="mt-5 eyebrow text-[#8A6F3D] hover:text-[#0B0B0C] transition-colors"
                 >
-                  Lancer la vérification →
-                </button>
+                  Lancer la vérification
+                </Button>
               )}
               {parsed.documents.length > 0 && (
-                <div className="mt-6 pt-6 border-t border-[rgba(11,11,12,0.08)]">
-                  <p className="eyebrow mb-3">Documents Salesforce</p>
-                  <ul className="space-y-2">
+                <div className="mt-4 pt-4 border-t border-[rgba(9,9,11,0.06)]">
+                  <p className="text-[11px] font-semibold text-[#71717A] uppercase tracking-wider mb-2">
+                    Documents Salesforce
+                  </p>
+                  <ul className="space-y-1">
                     {parsed.documents.map((doc, i) => (
-                      <li key={i} className="flex items-start gap-2 text-[13px] text-[#2C2C2E] font-light">
-                        <span className="text-[#8A6F3D] mt-0.5">·</span>
+                      <li key={i} className="flex items-center gap-2 text-[12px] text-[#52525B]">
+                        <svg className="w-3 h-3 text-[#10B981] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
                         {doc}
                       </li>
                     ))}
                   </ul>
                 </div>
               )}
-            </Section>
+            </SectionCard>
 
-            <Section title="Profil de risque">
-              <p className="font-display text-[22px] text-[#0B0B0C] leading-tight">
+            <SectionCard title="Profil de risque">
+              <p className="text-[14px] font-semibold text-[#09090B]">
                 {parsed.risk || 'Non défini'}
               </p>
               {parsed.allocation && (
-                <p className="text-[13px] text-[#6B6B70] mt-3 font-light leading-relaxed">
-                  Allocation crypto cible : <span className="text-[#0B0B0C]">{parsed.allocation}</span>
+                <p className="text-[12px] text-[#71717A] mt-1">
+                  Allocation crypto cible : <span className="text-[#09090B] font-medium">{parsed.allocation}</span>
                 </p>
               )}
-            </Section>
+            </SectionCard>
 
-            <Section title="Actions">
-              <div className="space-y-3">
-                <button
+            <SectionCard title="Actions rapides">
+              <div className="space-y-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full justify-start"
                   onClick={() => { setTab('wallets'); setShowCreate(true); }}
-                  className="w-full text-left py-3 eyebrow text-[#0B0B0C] border-b border-[rgba(11,11,12,0.08)] hover:border-[#0B0B0C] transition-colors"
                 >
-                  Créer un portefeuille →
-                </button>
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                  Créer un wallet
+                </Button>
                 {client.website && (
                   <a
                     href={client.website.startsWith('http') ? client.website : `https://${client.website}`}
                     target="_blank" rel="noopener noreferrer"
-                    className="block text-left py-3 eyebrow text-[#0B0B0C] border-b border-[rgba(11,11,12,0.08)] hover:border-[#0B0B0C] transition-colors"
+                    className="w-full h-8 inline-flex items-center gap-1.5 px-3 text-[13px] font-medium rounded-md bg-white text-[#09090B] border border-[rgba(9,9,11,0.1)] hover:bg-[#FAFAFA] transition-colors"
                   >
-                    Ouvrir le site internet ↗
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    Ouvrir le site
                   </a>
                 )}
               </div>
-            </Section>
+            </SectionCard>
 
             <RiskConfigPanel client={client} />
 
-            <Section title="Métadonnées">
-              <dl className="space-y-4">
+            <SectionCard title="Metadata Salesforce">
+              <dl className="space-y-3">
                 <div>
-                  <dt className="eyebrow mb-1">Identifiant Salesforce</dt>
-                  <dd className="text-[12px] text-[#6B6B70] font-mono break-all">{client.id}</dd>
+                  <dt className="text-[11px] font-medium text-[#71717A] uppercase tracking-wider mb-0.5">ID Salesforce</dt>
+                  <dd className="text-[11px] font-mono text-[#52525B] break-all">{client.id}</dd>
                 </div>
                 <div>
-                  <dt className="eyebrow mb-1">Propriétaire</dt>
-                  <dd className="text-[12px] text-[#6B6B70] font-mono break-all">{client.ownerId || '—'}</dd>
+                  <dt className="text-[11px] font-medium text-[#71717A] uppercase tracking-wider mb-0.5">Propriétaire</dt>
+                  <dd className="text-[11px] font-mono text-[#52525B] break-all">{client.ownerId || '—'}</dd>
                 </div>
                 <div>
-                  <dt className="eyebrow mb-1">Créé le</dt>
-                  <dd className="text-[13px] text-[#2C2C2E] font-light">{fmtDate(client.createdDate)}</dd>
+                  <dt className="text-[11px] font-medium text-[#71717A] uppercase tracking-wider mb-0.5">Créé le</dt>
+                  <dd className="text-[12px] text-[#09090B]">{fmtDate(client.createdDate)}</dd>
                 </div>
               </dl>
-            </Section>
+            </SectionCard>
           </aside>
         </div>
       )}
@@ -444,148 +461,156 @@ export default function ClientDetail({ client: initialClient, onBack }) {
       {tab === 'wallets' && (
         <div className="animate-fade">
           {client.Custody_Eligible__c !== true && !kycValid && (
-            <div className="mb-10 py-5 px-6 border-l-2 border-[#8A4A1B] bg-[rgba(138,74,27,0.04)]">
-              <p className="eyebrow text-[#8A4A1B] mb-1">Conformité</p>
-              <p className="text-[14px] text-[#2C2C2E] font-light leading-relaxed">
-                La création de portefeuilles et les transferts requièrent que le client soit éligible à la conservation.{' '}
-                <button onClick={() => setTab('eligibility')} className="text-[#8A6F3D] underline underline-offset-4 hover:text-[#0B0B0C] transition-colors">
-                  Voir l'éligibilité
-                </button>
-              </p>
+            <div className="mb-5 px-4 py-3 bg-[#FFFBEB] border border-[rgba(245,158,11,0.25)] rounded-md flex items-start gap-2.5">
+              <svg className="w-4 h-4 text-[#F59E0B] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <div className="flex-1">
+                <p className="text-[13px] font-medium text-[#92400E]">Client non éligible à la custody</p>
+                <p className="text-[12px] text-[#B45309] mt-0.5">
+                  La création de wallets requiert l'éligibilité.{' '}
+                  <button
+                    onClick={() => setTab('eligibility')}
+                    className="underline font-medium hover:text-[#92400E]"
+                  >
+                    Voir l'onglet Éligibilité
+                  </button>
+                </p>
+              </div>
             </div>
           )}
 
           {error && (
-            <div className="mb-6 py-4 px-5 border-l-2 border-[#7A2424] bg-[rgba(122,36,36,0.04)]">
-              <p className="eyebrow text-[#7A2424] mb-1">Erreur DFNS</p>
-              <p className="text-[13px] text-[#7A2424] font-mono">{error}</p>
+            <div className="mb-5 px-4 py-2.5 bg-[#FEF2F2] border border-[rgba(239,68,68,0.2)] rounded-md">
+              <p className="text-[12px] font-medium text-[#B91C1C]">Erreur DFNS : {error}</p>
             </div>
           )}
 
-          <div className="flex items-end justify-between mb-10">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="eyebrow mb-2">Custody opérationnelle</p>
-              <h2 className="font-display text-[34px] leading-tight text-[#0B0B0C]">Portefeuilles</h2>
+              <h2 className="text-[15px] font-semibold text-[#09090B]">Wallets DFNS</h2>
+              <p className="text-[12px] text-[#71717A] mt-0.5">{wallets.length} wallet{wallets.length > 1 ? 's' : ''} actif{wallets.length > 1 ? 's' : ''}</p>
             </div>
             <Button
               variant="primary"
               onClick={() => setShowCreate(true)}
               disabled={client.Custody_Eligible__c !== true && !kycValid}
             >
-              Créer un portefeuille
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              Créer un wallet
             </Button>
           </div>
 
           {loading ? (
-            <div className="flex justify-center py-20"><Spinner /></div>
+            <div className="flex justify-center py-16"><Spinner /></div>
           ) : wallets.length === 0 ? (
-            <EmptyState
-              title="Aucun portefeuille"
-              description="Créez le premier portefeuille de ce client. La clé sera générée via DFNS, sous MPC."
-            />
+            <Card>
+              <EmptyState
+                title="Aucun wallet"
+                description="Créez un premier wallet pour ce client via DFNS."
+              />
+            </Card>
           ) : (
-            <ul className="divide-y divide-[rgba(11,11,12,0.08)]">
+            <div className="grid md:grid-cols-2 gap-3">
               {wallets.map(w => {
                 const n = net(w.network);
                 const active = selectedWallet?.id === w.id;
                 return (
-                  <li key={w.id}>
-                    <button
-                      onClick={() => selectWallet(w)}
-                      className="w-full text-left py-6 group transition-colors hover:bg-[rgba(11,11,12,0.015)] px-4 -mx-4"
-                    >
-                      <div className="flex items-baseline justify-between gap-6">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-baseline gap-3">
-                            <p className={`font-display text-[22px] text-[#0B0B0C] leading-tight truncate ${active ? 'underline underline-offset-[6px] decoration-[#8A6F3D]' : ''}`}>
-                              {w.name || n.name}
-                            </p>
-                            {frozenWallets[w.id] && <Badge variant="error">Gelé</Badge>}
-                            <Badge variant={w.status === 'Active' ? 'success' : 'warning'}>{w.status}</Badge>
-                          </div>
-                          <p className="eyebrow mt-2">{n.name}</p>
-                          <p className="mt-3 text-[12px] text-[#6B6B70] font-mono tabular">
-                            {truncAddr(w.address, 10)}
-                          </p>
-                        </div>
-                        <svg className="w-3 h-3 text-[#CFCFD1] group-hover:text-[#0B0B0C] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                        </svg>
+                  <button
+                    key={w.id}
+                    onClick={() => selectWallet(w)}
+                    className={`bg-white border rounded-lg p-4 text-left transition-all ${
+                      active
+                        ? 'border-[#09090B] ring-2 ring-[rgba(9,9,11,0.08)]'
+                        : 'border-[rgba(9,9,11,0.08)] hover:border-[rgba(9,9,11,0.15)] hover:bg-[#FAFAFA]'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-8 h-8 rounded-md flex items-center justify-center text-white font-bold text-[12px] flex-shrink-0" style={{ backgroundColor: n.color }}>
+                        {n.icon}
                       </div>
-                    </button>
-                  </li>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-semibold text-[#09090B] truncate">{w.name || n.name}</p>
+                        <p className="text-[11px] text-[#71717A]">{n.name}</p>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {frozenWallets[w.id] && <Badge variant="error">Gelé</Badge>}
+                        <Badge variant={w.status === 'Active' ? 'success' : 'warning'}>{w.status}</Badge>
+                      </div>
+                    </div>
+                    <div className="font-mono text-[11px] text-[#52525B] bg-[#FAFAFA] rounded px-2.5 py-1.5 truncate">
+                      {truncAddr(w.address, 10)}
+                    </div>
+                  </button>
                 );
               })}
-            </ul>
+            </div>
           )}
 
           {selectedWallet && (
-            <div className="mt-12 pt-12 border-t border-[rgba(11,11,12,0.08)]">
-              <div className="flex items-end justify-between mb-8">
-                <div>
-                  <p className="eyebrow mb-2">Détail</p>
-                  <h3 className="font-display text-[30px] leading-tight text-[#0B0B0C]">
-                    {selectedWallet.name || 'Portefeuille'}
-                  </h3>
-                </div>
+            <Card className="mt-5 p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[15px] font-semibold text-[#09090B]">{selectedWallet.name || 'Wallet'}</h3>
                 <Button
-                  variant="outline"
+                  variant="primary"
                   onClick={() => setShowTransfer(true)}
                   disabled={client.Custody_Eligible__c !== true && !kycValid}
                 >
                   Envoyer
                 </Button>
               </div>
-
-              <div className="grid grid-cols-3 gap-10 mb-10">
-                <div>
-                  <p className="eyebrow mb-2">Adresse</p>
-                  <p className="text-[12px] text-[#0B0B0C] font-mono break-all leading-relaxed">
-                    {selectedWallet.address}
+              <div className="grid grid-cols-3 gap-4 mb-4">
+                <div className="bg-[#FAFAFA] rounded-md p-3">
+                  <p className="text-[11px] font-medium text-[#71717A] uppercase tracking-wider mb-1">Adresse</p>
+                  <p className="text-[11px] font-mono text-[#09090B] break-all">{selectedWallet.address}</p>
+                </div>
+                <div className="bg-[#FAFAFA] rounded-md p-3">
+                  <p className="text-[11px] font-medium text-[#71717A] uppercase tracking-wider mb-1">Réseau</p>
+                  <p className="text-[13px] font-medium text-[#09090B]">{net(selectedWallet.network).name}</p>
+                </div>
+                <div className="bg-[#FAFAFA] rounded-md p-3">
+                  <p className="text-[11px] font-medium text-[#71717A] uppercase tracking-wider mb-1">Valeur nette</p>
+                  <p className="text-[16px] font-semibold text-[#09090B] tabular-nums">
+                    {assets?.netWorth?.USD ? `$${assets.netWorth.USD.toLocaleString()}` : '—'}
                   </p>
                 </div>
-                <Datum label="Réseau" value={net(selectedWallet.network).name} />
-                <Datum
-                  label="Valeur nette"
-                  value={assets?.netWorth?.USD ? `$${assets.netWorth.USD.toLocaleString()}` : '—'}
-                />
               </div>
 
               {assets?.assets?.length > 0 && (
-                <>
-                  <Rule className="mb-6">Actifs</Rule>
-                  <ul className="divide-y divide-[rgba(11,11,12,0.08)]">
+                <div>
+                  <p className="text-[11px] font-semibold text-[#71717A] uppercase tracking-wider mb-2">Actifs</p>
+                  <div className="space-y-1">
                     {assets.assets.map((a, i) => (
-                      <li key={i} className="py-4 flex items-baseline justify-between">
-                        <div className="flex items-baseline gap-4">
-                          <span className="font-display text-[18px] text-[#0B0B0C]">{a.symbol}</span>
-                          <span className="eyebrow">{a.kind}</span>
+                      <div key={i} className="flex items-center justify-between py-2 px-3 bg-[#FAFAFA] rounded-md">
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-[13px] font-semibold text-[#09090B]">{a.symbol}</span>
+                          <Badge>{a.kind}</Badge>
                         </div>
                         <div className="text-right">
-                          <p className="text-[15px] text-[#0B0B0C] tabular">{a.balance}</p>
-                          {a.quotes?.USD && (
-                            <p className="text-[11px] text-[#6B6B70] tabular mt-0.5">
-                              ${a.quotes.USD.toLocaleString()}
-                            </p>
-                          )}
+                          <p className="text-[13px] font-semibold text-[#09090B] tabular-nums">{a.balance}</p>
+                          {a.quotes?.USD && <p className="text-[11px] text-[#71717A] tabular-nums">${a.quotes.USD.toLocaleString()}</p>}
                         </div>
-                      </li>
+                      </div>
                     ))}
-                  </ul>
-                </>
+                  </div>
+                </div>
               )}
+            </Card>
+          )}
 
-              <div className="mt-10">
-                <WalletFreezePanel
-                  walletId={selectedWallet.id}
-                  salesforceAccountId={client.id}
-                  clientName={client.name || client.Name}
-                />
-              </div>
+          {selectedWallet && (
+            <div className="mt-5">
+              <WalletFreezePanel
+                walletId={selectedWallet.id}
+                salesforceAccountId={client.id}
+                clientName={client.name || client.Name}
+              />
             </div>
           )}
 
-          <div className="mt-16">
+          <div className="mt-5">
             <WhitelistPanel client={client} />
           </div>
         </div>
@@ -594,71 +619,105 @@ export default function ClientDetail({ client: initialClient, onBack }) {
       {/* ══════════ TRANSFERS ══════════ */}
       {tab === 'transfers' && selectedWallet && (
         <div className="animate-fade">
-          <div className="flex items-end justify-between mb-10">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="eyebrow mb-2">{selectedWallet.name}</p>
-              <h2 className="font-display text-[34px] leading-tight text-[#0B0B0C]">Transferts</h2>
+              <h2 className="text-[15px] font-semibold text-[#09090B]">Transferts — {selectedWallet.name}</h2>
+              <p className="text-[12px] text-[#71717A] mt-0.5">{history.length} opération{history.length > 1 ? 's' : ''}</p>
             </div>
-            <Button variant="primary" onClick={() => setShowTransfer(true)}>Nouveau transfert</Button>
+            <Button variant="primary" onClick={() => setShowTransfer(true)}>
+              Nouveau transfert
+            </Button>
           </div>
           {history.length === 0 ? (
-            <EmptyState title="Aucun transfert" description="L'historique du portefeuille apparaîtra ici." />
+            <Card>
+              <EmptyState title="Aucun transfert" description="Les transferts apparaîtront ici." />
+            </Card>
           ) : (
-            <ul className="divide-y divide-[rgba(11,11,12,0.08)]">
-              {history.map((tx, i) => (
-                <li key={tx.id || i} className="py-5 grid grid-cols-12 gap-4 items-baseline">
-                  <span className="col-span-2"><Badge variant={tx.direction === 'In' ? 'success' : 'info'}>{tx.direction || '—'}</Badge></span>
-                  <span className="col-span-4 text-[12px] text-[#6B6B70] font-mono truncate">{truncAddr(tx.to || tx.from, 8)}</span>
-                  <span className="col-span-2 text-right font-display text-[17px] text-[#0B0B0C] tabular">{tx.value || '—'}</span>
-                  <span className="col-span-2"><Badge variant={tx.status === 'Confirmed' ? 'success' : 'warning'}>{tx.status || 'Pending'}</Badge></span>
-                  <span className="col-span-2 text-[12px] text-[#6B6B70] text-right">
-                    {tx.timestamp ? new Date(tx.timestamp).toLocaleDateString('fr-FR') : '—'}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <Card className="overflow-hidden">
+              <table className="w-full text-[13px]">
+                <thead>
+                  <tr className="border-b border-[rgba(9,9,11,0.08)] bg-[#FAFAFA]">
+                    <th className="text-left px-4 h-9 text-[11px] font-semibold text-[#71717A] uppercase tracking-wider">Direction</th>
+                    <th className="text-left px-4 h-9 text-[11px] font-semibold text-[#71717A] uppercase tracking-wider">Adresse</th>
+                    <th className="text-right px-4 h-9 text-[11px] font-semibold text-[#71717A] uppercase tracking-wider">Montant</th>
+                    <th className="text-left px-4 h-9 text-[11px] font-semibold text-[#71717A] uppercase tracking-wider">Statut</th>
+                    <th className="text-left px-4 h-9 text-[11px] font-semibold text-[#71717A] uppercase tracking-wider">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map((tx, i) => (
+                    <tr key={tx.id || i} className="border-b border-[rgba(9,9,11,0.06)] last:border-0 hover:bg-[#FAFAFA]">
+                      <td className="px-4 py-2.5">
+                        <Badge variant={tx.direction === 'In' ? 'success' : 'info'}>{tx.direction || '—'}</Badge>
+                      </td>
+                      <td className="px-4 py-2.5 font-mono text-[11px] text-[#52525B]">
+                        {truncAddr(tx.to || tx.from, 8)}
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-semibold text-[#09090B] tabular-nums">
+                        {tx.value || '—'}
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <Badge variant={tx.status === 'Confirmed' ? 'success' : 'warning'}>{tx.status || 'Pending'}</Badge>
+                      </td>
+                      <td className="px-4 py-2.5 text-[12px] text-[#71717A]">
+                        {tx.timestamp ? new Date(tx.timestamp).toLocaleDateString('fr-FR') : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
           )}
         </div>
       )}
 
       {tab === 'transfers' && !selectedWallet && (
         <div className="animate-fade">
-          <EmptyState
-            title="Sélectionnez un portefeuille"
-            description="Choisissez un portefeuille dans l'onglet Portefeuilles pour consulter ses transferts."
-          />
+          <Card>
+            <EmptyState
+              title="Sélectionnez un wallet"
+              description="Choisissez un wallet dans l'onglet Wallets pour voir ses transferts."
+            />
+          </Card>
         </div>
       )}
 
       {/* ══════════ HISTORY ══════════ */}
       {tab === 'history' && (
         <div className="animate-fade">
-          <div className="mb-10">
-            <p className="eyebrow mb-2">Chronologie</p>
-            <h2 className="font-display text-[34px] leading-tight text-[#0B0B0C]">Historique</h2>
+          <div className="mb-4">
+            <h2 className="text-[15px] font-semibold text-[#09090B]">Historique global</h2>
+            <p className="text-[12px] text-[#71717A] mt-0.5">Tous les wallets du client</p>
           </div>
           {wallets.length === 0 ? (
-            <EmptyState title="Aucun portefeuille" description="Créez un portefeuille pour voir son historique." />
+            <Card>
+              <EmptyState title="Aucun wallet" description="Créez un wallet pour voir l'historique." />
+            </Card>
           ) : (
-            <ul className="divide-y divide-[rgba(11,11,12,0.08)]">
+            <Card className="divide-y divide-[rgba(9,9,11,0.06)]">
               {wallets.map(w => {
                 const n = net(w.network);
                 return (
-                  <li key={w.id} className="py-6 flex items-baseline justify-between">
-                    <div>
-                      <p className="font-display text-[20px] text-[#0B0B0C] leading-tight">{w.name}</p>
-                      <p className="text-[11px] text-[#6B6B70] font-mono mt-1">{truncAddr(w.address, 10)}</p>
+                  <div key={w.id} className="px-4 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-md flex items-center justify-center text-white text-[11px] font-bold" style={{ backgroundColor: n.color }}>
+                        {n.icon}
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-medium text-[#09090B]">{w.name}</p>
+                        <p className="font-mono text-[11px] text-[#71717A]">{truncAddr(w.address, 8)}</p>
+                      </div>
                     </div>
                     <div className="text-right">
                       <Badge variant={w.status === 'Active' ? 'success' : 'default'}>{w.status}</Badge>
-                      <p className="eyebrow mt-2">
+                      <p className="text-[11px] text-[#71717A] mt-0.5">
                         {w.dateCreated ? new Date(w.dateCreated).toLocaleDateString('fr-FR') : ''}
                       </p>
                     </div>
-                  </li>
+                  </div>
                 );
               })}
-            </ul>
+            </Card>
           )}
         </div>
       )}
@@ -667,15 +726,15 @@ export default function ClientDetail({ client: initialClient, onBack }) {
       <Modal
         isOpen={showCreate}
         onClose={() => setShowCreate(false)}
-        title="Nouveau portefeuille"
-        subtitle={`Le portefeuille sera lié au client ${client.name}. La clé privée est générée en MPC par DFNS.`}
+        title="Créer un wallet"
+        subtitle={`Le wallet sera lié au client ${client.name}. La clé privée est générée via MPC par DFNS.`}
       >
-        <div className="space-y-8">
+        <div className="space-y-4">
           <div>
-            <label className={labelCls}>Nom</label>
+            <label className={labelCls}>Nom du wallet</label>
             <input
               className={inputCls}
-              placeholder="Portefeuille Ethereum principal"
+              placeholder="Ex: Wallet ETH principal"
               value={newWallet.name}
               onChange={e => setNewWallet(p => ({ ...p, name: e.target.value }))}
             />
@@ -687,13 +746,13 @@ export default function ClientDetail({ client: initialClient, onBack }) {
               value={newWallet.network}
               onChange={e => setNewWallet(p => ({ ...p, network: e.target.value }))}
             >
-              {SUPPORTED_NETWORKS.map(n => <option key={n.id} value={n.id}>{n.name} · {n.symbol}</option>)}
+              {SUPPORTED_NETWORKS.map(n => <option key={n.id} value={n.id}>{n.name} ({n.symbol})</option>)}
             </select>
           </div>
-          <div className="flex justify-end gap-3 pt-4">
-            <Button variant="ghost" onClick={() => setShowCreate(false)}>Annuler</Button>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setShowCreate(false)}>Annuler</Button>
             <Button variant="primary" onClick={handleCreate} disabled={creating || !newWallet.name}>
-              {creating ? 'Création…' : 'Créer'}
+              {creating ? 'Création…' : 'Créer le wallet'}
             </Button>
           </div>
         </div>
@@ -704,9 +763,9 @@ export default function ClientDetail({ client: initialClient, onBack }) {
         isOpen={showTransfer}
         onClose={() => setShowTransfer(false)}
         title="Envoyer des fonds"
-        subtitle="La demande sera soumise à approbation selon le principe des quatre yeux."
+        subtitle="La demande sera soumise à approbation (principe 4-eye)."
       >
-        <div className="space-y-8">
+        <div className="space-y-4">
           <div>
             <label className={labelCls}>Adresse de destination</label>
             <input
@@ -720,7 +779,7 @@ export default function ClientDetail({ client: initialClient, onBack }) {
             <label className={labelCls}>Montant</label>
             <input
               className={inputCls}
-              type="number" step="any" placeholder="0,00"
+              type="number" step="any" placeholder="0.0"
               value={transfer.amount}
               onChange={e => setTransfer(p => ({ ...p, amount: e.target.value }))}
             />
@@ -736,8 +795,8 @@ export default function ClientDetail({ client: initialClient, onBack }) {
               <option value="Erc20">ERC-20</option>
             </select>
           </div>
-          <div className="flex justify-end gap-3 pt-4">
-            <Button variant="ghost" onClick={() => setShowTransfer(false)}>Annuler</Button>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setShowTransfer(false)}>Annuler</Button>
             <Button variant="primary" onClick={handleTransfer} disabled={sending || !transfer.to || !transfer.amount}>
               {sending ? 'Envoi…' : 'Soumettre'}
             </Button>
@@ -748,15 +807,33 @@ export default function ClientDetail({ client: initialClient, onBack }) {
   );
 }
 
-/* ─── Section — editorial block with eyebrow label ─── */
-function Section({ title, children }) {
+/* ─── Sub-components ─── */
+function SectionCard({ title, children }) {
   return (
-    <section>
-      <div className="flex items-center gap-4 mb-6">
-        <p className="eyebrow">{title}</p>
-        <div className="flex-1 border-t border-[rgba(11,11,12,0.08)]" />
-      </div>
+    <Card className="p-5">
+      <h3 className="text-[13px] font-semibold text-[#09090B] mb-4">{title}</h3>
       {children}
-    </section>
+    </Card>
+  );
+}
+
+function Field({ label, value, mono, link }) {
+  return (
+    <div>
+      <p className="text-[11px] font-medium text-[#71717A] uppercase tracking-wider mb-1">{label}</p>
+      {link && value ? (
+        <a
+          href={value.startsWith('http') ? value : `https://${value}`}
+          target="_blank" rel="noopener noreferrer"
+          className="text-[13px] font-medium text-[#09090B] hover:underline"
+        >
+          {value}
+        </a>
+      ) : (
+        <p className={`text-[13px] ${mono ? 'font-mono text-[#52525B]' : 'text-[#09090B] font-medium'}`}>
+          {value || '—'}
+        </p>
+      )}
+    </div>
   );
 }

@@ -1,17 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchClients } from '../services/salesforceApi';
-import { fmtEUR, EmptyState, Spinner } from './shared';
+import { fmtEUR, Badge, Card, EmptyState, Spinner } from './shared';
 
 /* ─────────────────────────────────────────────────────────
-   Client directory — editorial index
-   Names set in Fraunces · hairlines · whisper-in reveal
+   ClientList — compact fintech table
    ───────────────────────────────────────────────────────── */
 
 const typeLabel = (t) => {
-  if (t === 'Customer - Direct') return 'Personne physique';
-  if (t === 'Other') return 'Institutionnel';
-  if (t === 'Institutional') return 'Institutionnel';
-  return t || 'Client';
+  if (t === 'Customer - Direct') return 'UHNWI';
+  if (t === 'Other' || t === 'Institutional') return 'Institutionnel';
+  return t || '—';
+};
+const typeVariant = (t) => {
+  if (t === 'Customer - Direct') return 'success';
+  if (t === 'Other' || t === 'Institutional') return 'info';
+  return 'default';
 };
 
 export default function ClientList({ onSelectClient }) {
@@ -43,112 +46,94 @@ export default function ClientList({ onSelectClient }) {
 
   return (
     <div>
-      {/* ── Editorial header ─────────────────────────────── */}
-      <header className="mb-12">
-        <p className="eyebrow mb-4">Index · {clients.length.toString().padStart(2, '0')}</p>
-        <h1 className="font-display-tight text-[72px] leading-[0.92] text-[#0B0B0C]">
-          Clients
-        </h1>
-        <p className="mt-5 text-[15px] text-[#6B6B70] max-w-xl leading-relaxed">
-          Les personnes et institutions que vous accompagnez dans la conservation
-          de leurs actifs numériques.
-        </p>
-      </header>
-
-      {/* ── Search — bottom rule only ────────────────────── */}
-      <div className="flex items-center justify-between border-b border-[rgba(11,11,12,0.08)] pb-4 mb-2">
-        <div className="flex items-center gap-3 flex-1 max-w-md">
-          <svg className="w-4 h-4 text-[#A8A8AD]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.25}>
+      {/* ── Header ──────────────────────────────────────── */}
+      <div className="flex items-end justify-between mb-5">
+        <div>
+          <h1 className="text-[22px] font-semibold text-[#09090B] tracking-tight">Clients</h1>
+          <p className="text-[13px] text-[#71717A] mt-0.5">
+            {loading ? 'Chargement…' : `${clients.length} client${clients.length > 1 ? 's' : ''} Salesforce`}
+          </p>
+        </div>
+        <div className="relative">
+          <svg
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#A1A1AA] pointer-events-none"
+            fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}
+          >
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.2-5.2m2.2-5.3a7.5 7.5 0 11-15 0 7.5 7.5 0 0115 0z" />
           </svg>
           <input
             type="text"
             value={search}
             onChange={handleSearch}
-            placeholder="Rechercher par nom"
-            className="flex-1 bg-transparent border-0 outline-none text-[15px] text-[#0B0B0C] placeholder:text-[#A8A8AD] placeholder:font-light py-1"
+            placeholder="Rechercher un client…"
+            className="h-8 pl-8 pr-3 w-72 text-[13px] bg-white border border-[rgba(9,9,11,0.1)] rounded-md outline-none focus:border-[rgba(9,9,11,0.3)] focus:ring-2 focus:ring-[rgba(9,9,11,0.06)] placeholder:text-[#A1A1AA] transition-colors"
           />
         </div>
-        <span className="eyebrow">
-          {loading ? '···' : `${clients.length} résultats`}
-        </span>
       </div>
 
+      {/* ── Error ───────────────────────────────────────── */}
       {error && (
-        <div className="mt-6 py-4 px-5 border-l-2 border-[#7A2424] bg-[rgba(122,36,36,0.04)]">
-          <p className="text-[13px] text-[#7A2424]">{error}</p>
+        <div className="mb-4 px-4 py-2.5 bg-[#FEF2F2] border border-[rgba(239,68,68,0.2)] rounded-md">
+          <p className="text-[13px] text-[#B91C1C]">{error}</p>
         </div>
       )}
 
-      {/* ── Listing ──────────────────────────────────────── */}
+      {/* ── Table ───────────────────────────────────────── */}
       {loading ? (
-        <div className="flex items-center justify-center py-32"><Spinner /></div>
+        <div className="flex items-center justify-center py-20"><Spinner /></div>
       ) : clients.length === 0 ? (
-        <EmptyState
-          title="Aucun client"
-          description="Affinez votre recherche ou vérifiez la connexion Salesforce."
-        />
+        <Card>
+          <EmptyState
+            title="Aucun client"
+            description="Modifiez votre recherche ou vérifiez la connexion Salesforce."
+          />
+        </Card>
       ) : (
-        <ul className="stagger">
-          {clients.map((client, idx) => (
-            <li
-              key={client.id}
-              onClick={() => onSelectClient(client)}
-              className="group cursor-pointer border-b border-[rgba(11,11,12,0.08)] py-7 transition-colors hover:bg-[rgba(11,11,12,0.015)]"
-            >
-              <div className="flex items-baseline gap-6">
-                {/* Index number */}
-                <span className="eyebrow text-[#A8A8AD] tabular w-8 flex-shrink-0">
-                  {String(idx + 1).padStart(2, '0')}
-                </span>
-
-                {/* Name + meta */}
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-display text-[28px] leading-[1.1] text-[#0B0B0C] truncate">
-                    {client.name}
-                  </h3>
-                  <div className="mt-2 flex items-center gap-4 text-[12px] text-[#6B6B70]">
-                    <span>{typeLabel(client.type)}</span>
-                    {(client.city || client.country) && (
-                      <>
-                        <span className="text-[#CFCFD1]">·</span>
-                        <span>{[client.city, client.country].filter(Boolean).join(', ')}</span>
-                      </>
-                    )}
-                    {client.industry && (
-                      <>
-                        <span className="text-[#CFCFD1]">·</span>
-                        <span>{client.industry}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* AUM */}
-                <div className="text-right flex-shrink-0">
-                  {client.aum ? (
-                    <>
-                      <p className="font-display text-[22px] text-[#0B0B0C] tabular leading-none">
-                        {fmtEUR(client.aum)}
-                      </p>
-                      <p className="eyebrow mt-2">Actifs sous gestion</p>
-                    </>
-                  ) : (
-                    <p className="eyebrow text-[#A8A8AD]">Non renseigné</p>
-                  )}
-                </div>
-
-                {/* Chevron */}
-                <svg
-                  className="w-4 h-4 text-[#CFCFD1] group-hover:text-[#0B0B0C] transition-colors flex-shrink-0"
-                  fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.25}
+        <Card className="overflow-hidden">
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr className="border-b border-[rgba(9,9,11,0.08)] bg-[#FAFAFA]">
+                <th className="text-left px-4 h-9 text-[11px] font-semibold text-[#71717A] uppercase tracking-wider">Client</th>
+                <th className="text-left px-4 h-9 text-[11px] font-semibold text-[#71717A] uppercase tracking-wider">Type</th>
+                <th className="text-left px-4 h-9 text-[11px] font-semibold text-[#71717A] uppercase tracking-wider">Localisation</th>
+                <th className="text-right px-4 h-9 text-[11px] font-semibold text-[#71717A] uppercase tracking-wider">AUM</th>
+                <th className="text-left px-4 h-9 text-[11px] font-semibold text-[#71717A] uppercase tracking-wider">Industrie</th>
+                <th className="w-8"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {clients.map(client => (
+                <tr
+                  key={client.id}
+                  onClick={() => onSelectClient(client)}
+                  className="border-b border-[rgba(9,9,11,0.06)] last:border-0 hover:bg-[#FAFAFA] cursor-pointer transition-colors"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-            </li>
-          ))}
-        </ul>
+                  <td className="px-4 py-3">
+                    <div className="font-medium text-[#09090B]">{client.name}</div>
+                    {client.phone && (
+                      <div className="text-[12px] text-[#71717A] mt-0.5">{client.phone}</div>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge variant={typeVariant(client.type)}>{typeLabel(client.type)}</Badge>
+                  </td>
+                  <td className="px-4 py-3 text-[#71717A]">
+                    {[client.city, client.country].filter(Boolean).join(', ') || '—'}
+                  </td>
+                  <td className="px-4 py-3 text-right font-semibold text-[#09090B] tabular-nums">
+                    {client.aum ? fmtEUR(client.aum) : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-[#71717A]">{client.industry || '—'}</td>
+                  <td className="px-4 py-3">
+                    <svg className="w-3.5 h-3.5 text-[#A1A1AA]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
       )}
     </div>
   );

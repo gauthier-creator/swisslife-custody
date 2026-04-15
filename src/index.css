@@ -1,48 +1,41 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════════════════════
-   SWISSLIFE · CONSERVATION D'ACTIFS NUMÉRIQUES
-   ───────────────────────────────────────────────────────
-   Design philosophy — "quiet craft"
-     · Paper, ink, and patinated gold
-     · Editorial typography (Fraunces + Geist)
-     · Hairlines, not boxes
-     · Space is the primary material
+   SwissLife Custody — Design system
+   Linear-inspired · Inter · neutral monochrome
    ═══════════════════════════════════════════════════════ */
 
 @theme {
-  --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
-  --font-display: "Fraunces", "Times New Roman", serif;
-  --font-mono: "Geist Mono", ui-monospace, "SF Mono", monospace;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
-  /* Paper & ink — the only real colors */
-  --color-paper:        #FAFAF7;   /* warm paper, page background */
-  --color-paper-raised: #FFFFFF;   /* lifted surfaces */
-  --color-paper-sunken: #F4F3EE;   /* recessed surfaces */
+  /* Surfaces */
+  --color-bg:          #FAFAFA;
+  --color-bg-2:        #F4F4F5;
+  --color-surface:     #FFFFFF;
+  --color-surface-alt: #FAFAFA;
 
-  --color-ink:          #0B0B0C;   /* deepest ink, body text */
-  --color-ink-2:        #2C2C2E;   /* secondary text */
-  --color-ink-3:        #6B6B70;   /* tertiary, labels */
-  --color-ink-4:        #A8A8AD;   /* faint, metadata */
-  --color-ink-5:        #CFCFD1;   /* disabled, icons at rest */
+  /* Ink — neutral grayscale */
+  --color-ink:         #09090B;
+  --color-ink-2:       #18181B;
+  --color-ink-3:       #52525B;
+  --color-ink-4:       #71717A;
+  --color-ink-5:       #A1A1AA;
+  --color-ink-6:       #D4D4D8;
 
-  /* Hairlines — the architectural lines */
-  --color-rule:         rgba(11, 11, 12, 0.08);
-  --color-rule-soft:    rgba(11, 11, 12, 0.04);
-  --color-rule-strong:  rgba(11, 11, 12, 0.16);
+  /* Borders */
+  --color-border:        rgba(9, 9, 11, 0.08);
+  --color-border-strong: rgba(9, 9, 11, 0.12);
 
-  /* Patinated gold — the only accent. Used ceremonially. */
-  --color-gold:         #8A6F3D;
-  --color-gold-soft:    #B39764;
-  --color-gold-tint:    rgba(138, 111, 61, 0.06);
-
-  /* Signal states — quiet, never neon */
-  --color-verdigris:    #2E5D4F;   /* success / eligible */
-  --color-verdigris-tint: rgba(46, 93, 79, 0.06);
-  --color-oxblood:      #7A2424;   /* error / alert */
-  --color-oxblood-tint: rgba(122, 36, 36, 0.06);
-  --color-rust:         #8A4A1B;   /* warning */
-  --color-rust-tint:    rgba(138, 74, 27, 0.06);
+  /* Signal states */
+  --color-success:    #10B981;
+  --color-success-bg: #ECFDF5;
+  --color-warning:    #F59E0B;
+  --color-warning-bg: #FFFBEB;
+  --color-error:      #EF4444;
+  --color-error-bg:   #FEF2F2;
+  --color-info:       #3B82F6;
+  --color-info-bg:    #EFF6FF;
 }
 
 /* ═════════════════════════════════════════════════════
@@ -50,118 +43,68 @@
    ═════════════════════════════════════════════════════ */
 html, body {
   margin: 0;
-  background: #FAFAF7;
-  color: #0B0B0C;
-  font-family: "Geist", -apple-system, sans-serif;
+  background: #FAFAFA;
+  color: #09090B;
+  font-family: "Inter", -apple-system, sans-serif;
   font-weight: 400;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-feature-settings: "ss01", "ss02", "cv11";
-  font-synthesis: none;
+  font-feature-settings: "cv11", "ss01", "ss03";
   text-rendering: optimizeLegibility;
 }
 
 #root { min-height: 100vh; }
 
-/* Fraunces with optical sizing — editorial gravitas */
-.font-display {
-  font-family: "Fraunces", "Times New Roman", serif;
-  font-optical-sizing: auto;
-  font-variation-settings: "opsz" 96, "SOFT" 30;
-  letter-spacing: -0.02em;
-  font-weight: 400;
-}
-
-.font-display-tight {
-  font-family: "Fraunces", "Times New Roman", serif;
-  font-optical-sizing: auto;
-  font-variation-settings: "opsz" 144, "SOFT" 0;
-  letter-spacing: -0.035em;
-  font-weight: 400;
-}
-
 /* Tabular numerals for financial data */
-.tabular {
+.tabular,
+.tabular-nums {
   font-variant-numeric: tabular-nums lining-nums;
   font-feature-settings: "tnum", "lnum";
 }
 
-/* Small caps for labels */
-.eyebrow {
-  font-family: "Geist", sans-serif;
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #6B6B70;
-}
-
 /* Selection */
 ::selection {
-  background: rgba(138, 111, 61, 0.15);
-  color: #0B0B0C;
+  background: rgba(9, 9, 11, 0.12);
+  color: #09090B;
 }
 
-/* Scrollbar — barely there */
-::-webkit-scrollbar { width: 6px; height: 6px; }
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: transparent; border-radius: 6px; transition: background 0.2s; }
-*:hover > ::-webkit-scrollbar-thumb,
-*:hover::-webkit-scrollbar-thumb { background: rgba(11, 11, 12, 0.1); }
-::-webkit-scrollbar-thumb:hover { background: rgba(11, 11, 12, 0.2); }
-
-/* ═════════════════════════════════════════════════════
-   MOTION — slow, considered, never bouncy
-   ═════════════════════════════════════════════════════ */
-:root {
-  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in: cubic-bezier(0.6, 0, 0.85, 0.15);
-}
-
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes riseIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes whisperIn { from { opacity: 0; filter: blur(4px); } to { opacity: 1; filter: blur(0); } }
-@keyframes scaleIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
-
-.animate-fade { animation: fadeIn 0.4s var(--ease-out) both; }
-.animate-rise { animation: riseIn 0.5s var(--ease-out) both; }
-.animate-whisper { animation: whisperIn 0.6s var(--ease-out) both; }
-.animate-scale { animation: scaleIn 0.35s var(--ease-out) both; }
-
-.page-enter { animation: riseIn 0.5s var(--ease-out) both; }
-
-/* Staggered reveal — editorial pace */
-.stagger > * { opacity: 0; animation: riseIn 0.6s var(--ease-out) forwards; }
-.stagger > *:nth-child(1) { animation-delay: 40ms; }
-.stagger > *:nth-child(2) { animation-delay: 100ms; }
-.stagger > *:nth-child(3) { animation-delay: 160ms; }
-.stagger > *:nth-child(4) { animation-delay: 220ms; }
-.stagger > *:nth-child(5) { animation-delay: 280ms; }
-.stagger > *:nth-child(6) { animation-delay: 340ms; }
-.stagger > *:nth-child(7) { animation-delay: 400ms; }
-.stagger > *:nth-child(8) { animation-delay: 460ms; }
-.stagger > *:nth-child(9) { animation-delay: 520ms; }
-.stagger > *:nth-child(10) { animation-delay: 580ms; }
-
-/* Hairline rules */
-.rule-top    { border-top: 1px solid var(--color-rule); }
-.rule-bottom { border-bottom: 1px solid var(--color-rule); }
-.rule-left   { border-left: 1px solid var(--color-rule); }
-.rule-right  { border-right: 1px solid var(--color-rule); }
+::-webkit-scrollbar-thumb { background: rgba(9, 9, 11, 0.1); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(9, 9, 11, 0.2); }
 
 /* Form elements */
 input, select, textarea, button {
-  font-family: "Geist", sans-serif;
-  font-size: 14px;
-  color: #0B0B0C;
+  font-family: "Inter", sans-serif;
+  font-size: 13px;
+  color: #09090B;
 }
-
 input:focus, select:focus, textarea:focus { outline: none; }
 
-/* Print — for contract PDFs */
+/* ═════════════════════════════════════════════════════
+   MOTION — fast, functional, never decorative
+   ═════════════════════════════════════════════════════ */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-fade { animation: fadeIn 0.15s ease-out both; }
+.animate-slide-up { animation: slideUp 0.2s ease-out both; }
+.animate-scale { animation: scaleIn 0.18s ease-out both; }
+
+/* Print */
 @media print {
   body { background: white; }
 }

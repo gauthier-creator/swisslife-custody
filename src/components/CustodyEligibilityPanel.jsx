@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Badge, Modal, Spinner, Button, Rule, inputCls, labelCls } from './shared';
+import { Badge, Card, Modal, Spinner, Button, inputCls, textareaCls, labelCls, selectCls } from './shared';
 import { updateAccountFields } from '../services/salesforceApi';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE } from '../config/constants';
@@ -7,8 +7,8 @@ import { supabase } from '../lib/supabase';
 import CustodyContractModal from './CustodyContractModal';
 
 /* ─────────────────────────────────────────────────────────
-   Eligibility — the critical workflow, set as a ledger
-   Four conditions. One verdict. Patiently laid out.
+   CustodyEligibilityPanel — Linear-style checklist card
+   Four conditions, one verdict, tight density.
    ───────────────────────────────────────────────────────── */
 
 const KYC_STATUSES = ['Valide', 'En cours', 'Non verifie', 'Expire'];
@@ -22,7 +22,7 @@ const kycVariant = (s) => {
 };
 
 export default function CustodyEligibilityPanel({ client, onUpdate }) {
-  const { user, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const [updating, setUpdating] = useState(null);
   const [showAdequacy, setShowAdequacy] = useState(false);
   const [showContract, setShowContract] = useState(false);
@@ -140,18 +140,18 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
   const items = [
     {
       key: 'kyc',
-      roman: 'I',
+      idx: 1,
       title: 'Vérification KYC',
-      caption: 'Identité, domicile, origine des fonds.',
+      caption: 'Identité, domicile, origine des fonds',
       done: client.Custody_KYC_Status__c === 'Valide',
       action: (
-        <div className="flex items-center gap-3">
-          <Badge variant={kycVariant(client.Custody_KYC_Status__c)}>
+        <div className="flex items-center gap-2">
+          <Badge variant={kycVariant(client.Custody_KYC_Status__c)} dot>
             {client.Custody_KYC_Status__c || 'Non renseigné'}
           </Badge>
           {isAdmin && (
             <select
-              className="text-[12px] bg-transparent border-0 border-b border-[rgba(11,11,12,0.16)] focus:border-[#0B0B0C] py-1 outline-none cursor-pointer"
+              className="h-7 text-[12px] bg-white border border-[rgba(9,9,11,0.1)] rounded-md px-2 outline-none focus:border-[rgba(9,9,11,0.3)] focus:ring-2 focus:ring-[rgba(9,9,11,0.06)] cursor-pointer"
               value={client.Custody_KYC_Status__c || ''}
               onChange={(e) => changeKycStatus(e.target.value)}
               disabled={updating === 'Custody_KYC_Status__c'}
@@ -166,78 +166,73 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
     },
     {
       key: 'sanctions',
-      roman: 'II',
+      idx: 2,
       title: 'Screening sanctions',
-      caption: 'Listes EU, ONU, OFAC. Screening adverse media.',
+      caption: 'Listes EU, ONU, OFAC · adverse media',
       done: client.Custody_Sanctions_Clear__c === true,
       action: (
-        <div className="flex items-center gap-3">
-          <Badge variant={client.Custody_Sanctions_Clear__c ? 'success' : 'error'}>
+        <div className="flex items-center gap-2">
+          <Badge variant={client.Custody_Sanctions_Clear__c ? 'success' : 'error'} dot>
             {client.Custody_Sanctions_Clear__c ? 'Clear' : 'Non vérifié'}
           </Badge>
           {isAdmin && (
-            <button
+            <Button
+              size="sm"
+              variant={client.Custody_Sanctions_Clear__c ? 'ghost' : 'secondary'}
               onClick={toggleSanctions}
               disabled={updating === 'Custody_Sanctions_Clear__c'}
-              className="eyebrow text-[#8A6F3D] hover:text-[#0B0B0C] transition-colors"
             >
+              {updating === 'Custody_Sanctions_Clear__c' && <Spinner />}
               {client.Custody_Sanctions_Clear__c ? 'Révoquer' : 'Valider'}
-            </button>
+            </Button>
           )}
-          {updating === 'Custody_Sanctions_Clear__c' && <Spinner />}
         </div>
       ),
     },
     {
       key: 'adequacy',
-      roman: 'III',
+      idx: 3,
       title: 'Évaluation d\'adéquation',
-      caption: 'Questionnaire MiCA Art. 66 · signé par le client.',
+      caption: 'Questionnaire MiCA Art. 66 · signé par le client',
       done: client.Custody_Adequacy_Done__c === true,
       action: (
-        <div className="flex items-center gap-4">
-          <Badge variant={client.Custody_Adequacy_Done__c ? 'success' : 'default'}>
+        <div className="flex items-center gap-2">
+          <Badge variant={client.Custody_Adequacy_Done__c ? 'success' : 'default'} dot>
             {client.Custody_Adequacy_Done__c ? 'Complétée' : 'Non réalisée'}
           </Badge>
           {!client.Custody_Adequacy_Done__c && (
-            <button
-              onClick={() => setShowAdequacy(true)}
-              className="eyebrow text-[#8A6F3D] hover:text-[#0B0B0C] transition-colors"
-            >
-              Lancer →
-            </button>
+            <Button size="sm" variant="secondary" onClick={() => setShowAdequacy(true)}>
+              Lancer
+            </Button>
           )}
         </div>
       ),
     },
     {
       key: 'contract',
-      roman: 'IV',
+      idx: 4,
       title: 'Contrat de conservation',
-      caption: 'Convention signée par le client · Art. 1367 C. civ.',
+      caption: 'Convention signée · Art. 1367 C. civ.',
       done: client.Custody_Contract_Signed__c === true,
       action: (
-        <div className="flex items-center gap-4 flex-wrap">
-          <Badge variant={client.Custody_Contract_Signed__c ? 'success' : 'default'}>
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          <Badge variant={client.Custody_Contract_Signed__c ? 'success' : 'default'} dot>
             {client.Custody_Contract_Signed__c ? 'Signé' : 'Non signé'}
           </Badge>
           {!client.Custody_Contract_Signed__c && (
             <>
-              <button
-                onClick={() => setShowContract(true)}
-                className="eyebrow text-[#8A6F3D] hover:text-[#0B0B0C] transition-colors"
-              >
+              <Button size="sm" variant="secondary" onClick={() => setShowContract(true)}>
                 Signer ici
-              </button>
-              <span className="eyebrow text-[#CFCFD1]">·</span>
-              <button
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
                 onClick={generateSigningLink}
                 disabled={generatingLink}
-                className="eyebrow text-[#8A6F3D] hover:text-[#0B0B0C] transition-colors disabled:opacity-50 flex items-center gap-2"
               >
-                {generatingLink && <Spinner size="w-3 h-3" />}
-                Envoyer au client →
-              </button>
+                {generatingLink && <Spinner />}
+                Envoyer au client
+              </Button>
             </>
           )}
         </div>
@@ -248,87 +243,86 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
   const completedCount = items.filter(i => i.done).length;
 
   return (
-    <div>
-      {/* ── Editorial header ─────────────────────────────── */}
-      <header className="mb-12">
-        <p className="eyebrow mb-3">Conformité · MiCA Art. 60</p>
-        <div className="flex items-baseline justify-between gap-8">
-          <h2 className="font-display-tight text-[56px] leading-[0.96] text-[#0B0B0C]">
-            Éligibilité
-          </h2>
-          <div className="text-right flex-shrink-0">
-            <p className="eyebrow mb-2">Statut</p>
-            <div className="flex items-center gap-2">
-              <span
-                className="w-1.5 h-1.5 rounded-full"
-                style={{ background: isEligible ? '#2E5D4F' : '#A8A8AD' }}
-              />
-              <p className="font-display text-[28px] leading-none text-[#0B0B0C]">
+    <div className="space-y-4">
+      {/* ── Header card ─────────────────────────────────── */}
+      <Card className="p-5">
+        <div className="flex items-start justify-between gap-6">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="text-[15px] font-semibold text-[#09090B] tracking-tight">Éligibilité conservation</h2>
+              <Badge variant={isEligible ? 'success' : 'default'} dot>
                 {isEligible ? 'Éligible' : 'En attente'}
-              </p>
+              </Badge>
             </div>
-            <p className="eyebrow mt-2 text-[#A8A8AD]">
-              {completedCount} / {items.length} condition{items.length > 1 ? 's' : ''}
+            <p className="text-[12px] text-[#71717A]">
+              Conformité MiCA Art. 60 · quatre conditions doivent être satisfaites avant l'ouverture d'un portefeuille de conservation.
+            </p>
+          </div>
+          <div className="text-right flex-shrink-0">
+            <p className="text-[11px] font-medium text-[#71717A] uppercase tracking-wider">Progression</p>
+            <p className="text-[22px] font-semibold text-[#09090B] tabular-nums leading-none mt-1">
+              {completedCount}<span className="text-[#A1A1AA]">/{items.length}</span>
             </p>
           </div>
         </div>
-        <p className="mt-6 text-[14px] text-[#6B6B70] leading-relaxed max-w-2xl font-light">
-          Quatre conditions doivent être satisfaites avant qu'un portefeuille de conservation
-          puisse être ouvert pour ce client. Chaque étape génère une trace auditable.
-        </p>
 
         {client.Custody_Risk_Level__c && (
-          <div className="mt-8 pt-6 border-t border-[rgba(11,11,12,0.08)] flex items-baseline gap-6">
-            <p className="eyebrow">Niveau de risque</p>
+          <div className="mt-4 pt-4 border-t border-[rgba(9,9,11,0.06)] flex items-center gap-2">
+            <p className="text-[11px] font-medium text-[#71717A] uppercase tracking-wider">Niveau de risque</p>
             <Badge variant={
               client.Custody_Risk_Level__c === 'Faible' ? 'success' :
               client.Custody_Risk_Level__c === 'Moyen' ? 'warning' : 'error'
-            }>
+            } dot>
               {client.Custody_Risk_Level__c}
             </Badge>
           </div>
         )}
-      </header>
+      </Card>
 
-      {/* ── Ledger of conditions ────────────────────────── */}
-      <ol className="border-t border-[rgba(11,11,12,0.08)]">
-        {items.map(item => (
-          <li
-            key={item.key}
-            className="py-8 border-b border-[rgba(11,11,12,0.08)] grid grid-cols-12 gap-6 items-baseline"
-          >
-            {/* Numeral + check */}
-            <div className="col-span-1 flex items-baseline gap-3">
-              <span className="eyebrow text-[#A8A8AD] tabular">{item.roman}</span>
-              <span
-                className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                style={{ background: item.done ? '#2E5D4F' : '#CFCFD1' }}
-              />
-            </div>
-
-            {/* Title + caption */}
-            <div className="col-span-6">
-              <h3 className="font-display text-[24px] leading-tight text-[#0B0B0C]">
-                {item.title}
-              </h3>
-              <p className="mt-1 text-[13px] text-[#6B6B70] font-light">
-                {item.caption}
-              </p>
-            </div>
-
-            {/* Action / state */}
-            <div className="col-span-5 flex justify-end">
-              {item.action}
-            </div>
-          </li>
-        ))}
-      </ol>
+      {/* ── Checklist card ──────────────────────────────── */}
+      <Card>
+        <div className="px-5 py-3 border-b border-[rgba(9,9,11,0.06)] bg-[#FAFAFA]">
+          <p className="text-[11px] font-semibold text-[#71717A] uppercase tracking-wider">
+            Conditions
+          </p>
+        </div>
+        <ul>
+          {items.map((item, i) => (
+            <li
+              key={item.key}
+              className={`px-5 py-4 flex items-start justify-between gap-4 ${i < items.length - 1 ? 'border-b border-[rgba(9,9,11,0.06)]' : ''}`}
+            >
+              <div className="flex items-start gap-3 min-w-0 flex-1">
+                {/* Check indicator */}
+                <div className="flex-shrink-0 mt-0.5">
+                  {item.done ? (
+                    <div className="w-5 h-5 rounded-full bg-[#10B981] flex items-center justify-center">
+                      <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  ) : (
+                    <div className="w-5 h-5 rounded-full border border-[rgba(9,9,11,0.15)] bg-white flex items-center justify-center">
+                      <span className="text-[10px] font-semibold text-[#A1A1AA] tabular-nums">{item.idx}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-[13px] font-medium text-[#09090B]">{item.title}</h3>
+                  <p className="text-[12px] text-[#71717A] mt-0.5">{item.caption}</p>
+                </div>
+              </div>
+              <div className="flex-shrink-0">{item.action}</div>
+            </li>
+          ))}
+        </ul>
+      </Card>
 
       {/* ── Signing link — contract ─────────────────────── */}
       {signingLink && (
         <SigningLinkCard
           title="Lien de signature du contrat"
-          caption="Envoyez ce lien au client. Expiration dans sept jours. Le PDF signé est automatiquement versé au dossier Salesforce."
+          caption="Envoyez ce lien au client. Expiration dans 7 jours. Le PDF signé est automatiquement versé au dossier Salesforce."
           link={signingLink}
           copied={linkCopied}
           onCopy={copyLink}
@@ -352,29 +346,29 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
         onClose={() => setShowAdequacy(false)}
         title="Questionnaire d'adéquation"
         subtitle="Article 66 du règlement MiCA. Préparez le questionnaire ; le client le signera via un lien dédié."
-        maxWidth="max-w-2xl"
+        maxWidth="max-w-xl"
       >
-        <div className="space-y-8">
+        <div className="space-y-5">
           <AdequacyQuestion
-            n="01"
+            n={1}
             question="Le client comprend-il la nature volatile des actifs numériques ?"
             value={adequacy.q1}
             onChange={(v) => setAdequacy(p => ({ ...p, q1: v }))}
           />
           <AdequacyQuestion
-            n="02"
+            n={2}
             question="A-t-il une expérience préalable avec les cryptomonnaies ?"
             value={adequacy.q2}
             onChange={(v) => setAdequacy(p => ({ ...p, q2: v }))}
           />
           <AdequacyQuestion
-            n="03"
+            n={3}
             question="L'allocation envisagée est-elle cohérente avec son profil de risque ?"
             value={adequacy.q3}
             onChange={(v) => setAdequacy(p => ({ ...p, q3: v }))}
           />
           <AdequacyQuestion
-            n="04"
+            n={4}
             question="A-t-il été informé des risques de perte en capital ?"
             value={adequacy.q4}
             onChange={(v) => setAdequacy(p => ({ ...p, q4: v }))}
@@ -383,7 +377,7 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
           <div>
             <label className={labelCls}>Notes complémentaires</label>
             <textarea
-              className={inputCls + ' min-h-[80px] resize-none'}
+              className={textareaCls + ' min-h-[70px]'}
               placeholder="Observations, remarques…"
               value={adequacy.notes}
               onChange={(e) => setAdequacy(p => ({ ...p, notes: e.target.value }))}
@@ -391,21 +385,21 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
           </div>
 
           {!allAdequacyOui && adequacy.q1 !== null && (
-            <div className="py-4 px-5 border-l-2 border-[#7A2424] bg-[rgba(122,36,36,0.04)]">
-              <p className="text-[13px] text-[#7A2424] font-light leading-relaxed">
-                Toutes les réponses doivent être « Oui » pour proposer la conservation.
-                Si le client ne remplit pas les conditions, le service ne peut pas lui être offert.
+            <div className="px-3 py-2.5 bg-[#FEF2F2] border border-[rgba(239,68,68,0.2)] rounded-md">
+              <p className="text-[12px] text-[#B91C1C] leading-relaxed">
+                Toutes les réponses doivent être « Oui » pour proposer la conservation. Si le client ne remplit pas les conditions, le service ne peut pas lui être offert.
               </p>
             </div>
           )}
 
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex justify-end gap-2 pt-2 border-t border-[rgba(9,9,11,0.06)]">
             <Button variant="ghost" onClick={() => setShowAdequacy(false)}>Annuler</Button>
             <Button
               variant="primary"
               onClick={submitAdequacy}
               disabled={!allAdequacyOui || submittingAdequacy}
             >
+              {submittingAdequacy && <Spinner />}
               {submittingAdequacy ? 'Génération…' : 'Générer le lien client'}
             </Button>
           </div>
@@ -426,44 +420,54 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
 /* ─── Sub · signing link card ─── */
 function SigningLinkCard({ title, caption, link, copied, onCopy }) {
   return (
-    <div className="mt-12 py-8 px-8 border border-[rgba(11,11,12,0.08)]" style={{ borderRadius: '2px' }}>
-      <p className="eyebrow text-[#8A6F3D] mb-3">Lien prêt</p>
-      <h3 className="font-display text-[24px] leading-tight text-[#0B0B0C]">{title}</h3>
-      <p className="mt-2 text-[13px] text-[#6B6B70] max-w-xl font-light leading-relaxed">
-        {caption}
-      </p>
-      <div className="mt-6 flex items-center gap-3 pt-5 border-t border-[rgba(11,11,12,0.08)]">
-        <div className="flex-1 min-w-0 text-[12px] text-[#0B0B0C] font-mono truncate">
+    <Card className="p-5">
+      <div className="flex items-start justify-between gap-4 mb-3">
+        <div>
+          <h3 className="text-[13px] font-semibold text-[#09090B]">{title}</h3>
+          <p className="text-[12px] text-[#71717A] mt-1 max-w-xl leading-relaxed">{caption}</p>
+        </div>
+        <Badge variant="success" dot>Prêt</Badge>
+      </div>
+      <div className="flex items-center gap-2 mt-3 p-2 bg-[#FAFAFA] border border-[rgba(9,9,11,0.06)] rounded-md">
+        <div className="flex-1 min-w-0 text-[12px] text-[#09090B] font-mono truncate px-2">
           {link}
         </div>
-        <Button variant={copied ? 'primary' : 'outline'} onClick={onCopy}>
-          {copied ? 'Copié' : 'Copier le lien'}
+        <Button size="sm" variant={copied ? 'primary' : 'secondary'} onClick={onCopy}>
+          {copied ? 'Copié ✓' : 'Copier'}
         </Button>
       </div>
-    </div>
+    </Card>
   );
 }
 
 /* ─── Sub · adequacy question ─── */
 function AdequacyQuestion({ n, question, value, onChange }) {
   return (
-    <div className="border-b border-[rgba(11,11,12,0.08)] pb-6">
-      <div className="flex items-baseline gap-4">
-        <span className="eyebrow text-[#A8A8AD] tabular">{n}</span>
-        <p className="flex-1 text-[15px] text-[#0B0B0C] leading-relaxed">{question}</p>
+    <div>
+      <div className="flex items-start gap-3 mb-2">
+        <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#F4F4F5] text-[11px] font-semibold text-[#52525B] flex items-center justify-center tabular-nums mt-0.5">
+          {n}
+        </span>
+        <p className="flex-1 text-[13px] text-[#09090B] leading-relaxed">{question}</p>
       </div>
-      <div className="mt-4 ml-10 flex gap-6">
+      <div className="ml-8 flex gap-2">
         {['Oui', 'Non'].map(opt => {
           const active = value === opt;
+          const isOui = opt === 'Oui';
           return (
             <button
               key={opt}
+              type="button"
               onClick={() => onChange(opt)}
-              className="relative py-2 text-[13px] tracking-tight transition-colors"
-              style={{ color: active ? '#0B0B0C' : '#6B6B70' }}
+              className={`h-7 px-3 text-[12px] font-medium rounded-md border transition-colors ${
+                active
+                  ? isOui
+                    ? 'bg-[#ECFDF5] text-[#047857] border-[rgba(16,185,129,0.3)]'
+                    : 'bg-[#FEF2F2] text-[#B91C1C] border-[rgba(239,68,68,0.3)]'
+                  : 'bg-white text-[#52525B] border-[rgba(9,9,11,0.1)] hover:bg-[#FAFAFA]'
+              }`}
             >
               {opt}
-              {active && <span className="absolute left-0 right-0 -bottom-px h-px bg-[#0B0B0C]" />}
             </button>
           );
         })}
