@@ -4,7 +4,7 @@ import {
   Badge, Modal, Spinner, EmptyState, useToast, ToastContainer,
   inputCls, selectCls, labelCls,
   PageHeader, Metric, MetricRow, UnderlineTabs, Card, Button,
-  FooterDisclosure, useCountUp, Skeleton, SkeletonRow,
+  FooterDisclosure, useCountUp, Skeleton, SkeletonRow, MarbleCard,
 } from './shared';
 import { LiveIndicator } from './brand';
 import {
@@ -411,11 +411,8 @@ export default function ComplianceDashboard() {
     <div className="space-y-10">
       {/* ── Header ─────────────────────────────────────── */}
       <PageHeader
-        icon={
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.306a11.95 11.95 0 015.814-5.518l2.74-1.22m0 0l-5.94-2.281m5.94 2.28l-2.28 5.941" />
-          </svg>
-        }
+        duoIcon={{ name: 'compliance', tone: 'bronze' }}
+        eyebrow="Surveillance temps réel"
         title="Compliance"
         trailing={
           <>
@@ -431,6 +428,16 @@ export default function ComplianceDashboard() {
           </>
         }
       />
+
+      {/* ── Marble hero ───────────────────────────────── */}
+      <div className="animate-slide-up stagger-1">
+        <MarbleCard
+          variant="peach"
+          eyebrow="Conformité AMF · ACPR · Tracfin"
+          title="Le cockpit conformité, sans angle mort."
+          description="Chaque transaction, chaque adresse, chaque approbation passe par un quintuple contrôle : Chainalysis KYT, sanctions OFAC/UE, screening PPE, Travel Rule Art. 7b et approbation quatre yeux."
+        />
+      </div>
 
       {/* ── Stat tiles ───────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-5 animate-slide-up stagger-2">

@@ -310,6 +310,196 @@ export function IconButton({
   );
 }
 
+// ─── DuoIcon ──────────────────────────────────────────
+// Duotone-style icon set: softly-tinted rounded square background + dark
+// line glyph on top. Feels premium like Phosphor duotone / Ramify accents.
+// Use inside PageHeader icon slot, metric cards, feature cards.
+// Props: name (clients|wallets|compliance|policies|config|lock|shield|chart|sparkle|coin|bolt|building|document|check)
+//        tone (bronze|ink|sage|blue|lavender), size (default 22)
+export function DuoIcon({ name = 'sparkle', tone = 'bronze', size = 22, className = '' }) {
+  const tones = {
+    bronze:   { bg: '#F5EEE0', fg: '#7C5E3C', tint: '#C8924B' },
+    ink:      { bg: '#F5F3EE', fg: '#0A0A0A', tint: '#4A4A4A' },
+    sage:     { bg: '#EDF3EB', fg: '#3F6B4A', tint: '#7FA68A' },
+    blue:     { bg: '#EEF2F8', fg: '#2A3F6B', tint: '#6B85B0' },
+    lavender: { bg: '#EFEAFE', fg: '#5B4FD1', tint: '#8A80E8' },
+    peach:    { bg: '#FDF0DC', fg: '#9A5A1A', tint: '#E8A878' },
+  };
+  const t = tones[tone] || tones.bronze;
+
+  const paths = {
+    clients: (
+      <>
+        <circle cx="9" cy="8" r="3" fill={t.tint} fillOpacity="0.45" />
+        <circle cx="16" cy="10" r="2.2" fill={t.tint} fillOpacity="0.3" />
+        <path d="M3 19c0-3 3-5 6-5s6 2 6 5" stroke={t.fg} strokeWidth="1.6" strokeLinecap="round" fill="none" />
+        <path d="M14 14c2 0 5 1.4 5 4" stroke={t.fg} strokeWidth="1.6" strokeLinecap="round" fill="none" />
+      </>
+    ),
+    wallets: (
+      <>
+        <rect x="2.5" y="6" width="19" height="13" rx="2.5" fill={t.tint} fillOpacity="0.35" />
+        <rect x="2.5" y="6" width="19" height="13" rx="2.5" stroke={t.fg} strokeWidth="1.6" fill="none" />
+        <path d="M2.5 10.5h19" stroke={t.fg} strokeWidth="1.4" />
+        <circle cx="17" cy="14.5" r="1.2" fill={t.fg} />
+      </>
+    ),
+    compliance: (
+      <>
+        <path d="M4 18l5-5 3 3 5-6 3 3" stroke={t.fg} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <circle cx="4" cy="18" r="1.6" fill={t.tint} fillOpacity="0.55" />
+        <circle cx="9" cy="13" r="1.4" fill={t.tint} fillOpacity="0.55" />
+        <circle cx="12" cy="16" r="1.3" fill={t.tint} fillOpacity="0.55" />
+        <circle cx="17" cy="10" r="1.5" fill={t.tint} fillOpacity="0.55" />
+        <circle cx="20" cy="13" r="1.3" fill={t.tint} fillOpacity="0.55" />
+      </>
+    ),
+    policies: (
+      <>
+        <path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6l8-3z" fill={t.tint} fillOpacity="0.4" stroke={t.fg} strokeWidth="1.6" strokeLinejoin="round" />
+        <path d="M8.5 12l2.5 2.5L16 10" stroke={t.fg} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      </>
+    ),
+    config: (
+      <>
+        <circle cx="12" cy="12" r="3.2" fill={t.tint} fillOpacity="0.45" stroke={t.fg} strokeWidth="1.6" />
+        <path d="M12 3.2v2.3M12 18.5v2.3M20.8 12h-2.3M5.5 12H3.2M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6M18.4 18.4l-1.6-1.6M7.2 7.2L5.6 5.6" stroke={t.fg} strokeWidth="1.6" strokeLinecap="round" />
+      </>
+    ),
+    lock: (
+      <>
+        <rect x="4.5" y="10.5" width="15" height="10" rx="2.2" fill={t.tint} fillOpacity="0.42" stroke={t.fg} strokeWidth="1.6" />
+        <path d="M7.5 10.5V7.5a4.5 4.5 0 019 0v3" stroke={t.fg} strokeWidth="1.6" strokeLinecap="round" fill="none" />
+        <circle cx="12" cy="15.5" r="1.2" fill={t.fg} />
+      </>
+    ),
+    shield: (
+      <>
+        <path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6l8-3z" fill={t.tint} fillOpacity="0.42" stroke={t.fg} strokeWidth="1.6" strokeLinejoin="round" />
+        <path d="M12 9v5M12 17v.5" stroke={t.fg} strokeWidth="1.8" strokeLinecap="round" />
+      </>
+    ),
+    chart: (
+      <>
+        <path d="M4 20V8M10 20v-6M16 20v-9M22 20v-4" stroke={t.fg} strokeWidth="1.8" strokeLinecap="round" />
+        <circle cx="4" cy="8" r="1.6" fill={t.tint} fillOpacity="0.6" />
+        <circle cx="10" cy="14" r="1.6" fill={t.tint} fillOpacity="0.6" />
+        <circle cx="16" cy="11" r="1.6" fill={t.tint} fillOpacity="0.6" />
+        <circle cx="22" cy="16" r="1.6" fill={t.tint} fillOpacity="0.6" />
+      </>
+    ),
+    sparkle: (
+      <>
+        <path d="M12 3v6M12 15v6M3 12h6M15 12h6" stroke={t.fg} strokeWidth="1.8" strokeLinecap="round" />
+        <circle cx="12" cy="12" r="2.8" fill={t.tint} fillOpacity="0.55" stroke={t.fg} strokeWidth="1.6" />
+      </>
+    ),
+    coin: (
+      <>
+        <ellipse cx="12" cy="7" rx="8" ry="3" fill={t.tint} fillOpacity="0.4" stroke={t.fg} strokeWidth="1.6" />
+        <path d="M4 7v6c0 1.7 3.6 3 8 3s8-1.3 8-3V7" stroke={t.fg} strokeWidth="1.6" fill="none" />
+        <path d="M4 13v4c0 1.7 3.6 3 8 3s8-1.3 8-3v-4" stroke={t.fg} strokeWidth="1.6" fill="none" />
+      </>
+    ),
+    bolt: (
+      <>
+        <path d="M13 3L5 13h6l-2 8 9-11h-7l2-7z" fill={t.tint} fillOpacity="0.5" stroke={t.fg} strokeWidth="1.6" strokeLinejoin="round" />
+      </>
+    ),
+    building: (
+      <>
+        <rect x="5" y="4" width="14" height="17" rx="1.6" fill={t.tint} fillOpacity="0.4" stroke={t.fg} strokeWidth="1.6" />
+        <path d="M9 8h2M13 8h2M9 12h2M13 12h2M9 16h2M13 16h2" stroke={t.fg} strokeWidth="1.4" strokeLinecap="round" />
+      </>
+    ),
+    document: (
+      <>
+        <path d="M6 3h8l4 4v13a1.6 1.6 0 01-1.6 1.6H6A1.6 1.6 0 014.4 20V4.6A1.6 1.6 0 016 3z" fill={t.tint} fillOpacity="0.4" stroke={t.fg} strokeWidth="1.6" strokeLinejoin="round" />
+        <path d="M14 3v4h4M8 12h8M8 16h6" stroke={t.fg} strokeWidth="1.6" strokeLinecap="round" />
+      </>
+    ),
+    check: (
+      <>
+        <circle cx="12" cy="12" r="9" fill={t.tint} fillOpacity="0.45" stroke={t.fg} strokeWidth="1.6" />
+        <path d="M8 12l3 3 5-6" stroke={t.fg} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      </>
+    ),
+  };
+
+  return (
+    <span
+      className={`inline-flex items-center justify-center flex-shrink-0 rounded-[11px] ${className}`}
+      style={{
+        width: size + 14,
+        height: size + 14,
+        background: t.bg,
+        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.6), inset 0 0 0 1px ${t.fg}15`,
+      }}
+      aria-hidden="true"
+    >
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        {paths[name] || paths.sparkle}
+      </svg>
+    </span>
+  );
+}
+
+// ─── StatCard ─────────────────────────────────────────
+// Standalone KPI tile (not inside MetricRow). White card, hairline border,
+// layered card-button shadow, optional DuoIcon badge, big display number,
+// trend pill. Ramify "Allocation" style.
+export function StatCard({
+  icon,      // DuoIcon element
+  label,
+  value,
+  caption,
+  delta,     // string like "+2.4%"
+  deltaPositive = true,
+  trend,     // optional sparkline node
+  progress,  // 0..100
+  className = '',
+}) {
+  return (
+    <div
+      className={`relative bg-white rounded-[16px] border border-[rgba(10,10,10,0.08)]
+                  p-5 shadow-button-card hover:shadow-button-card-hover
+                  transition-all duration-300 group ${className}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        {icon}
+        {delta && (
+          <span
+            className={`inline-flex items-center gap-1 h-6 px-2 rounded-full text-[11px] font-semibold tabular-nums tracking-[-0.003em]
+              ${deltaPositive
+                ? 'bg-[#EDF6EE] text-[#15803D] border border-[rgba(22,163,74,0.2)]'
+                : 'bg-[#FDECEC] text-[#991B1B] border border-[rgba(220,38,38,0.2)]'}`}
+          >
+            <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 12 12">
+              {deltaPositive
+                ? <path d="M6 2l4 5H2z" />
+                : <path d="M6 10L2 5h8z" />}
+            </svg>
+            {delta}
+          </span>
+        )}
+      </div>
+      <p className="mt-4 text-[11px] font-medium text-[#6B6B6B] uppercase tracking-[0.08em]">
+        {label}
+      </p>
+      <p className="mt-1.5 font-display text-[28px] text-[#0A0A0A] leading-[1.05] tabular-nums" style={{ letterSpacing: '-0.028em' }}>
+        {value}
+      </p>
+      {caption && (
+        <p className="mt-1.5 text-[12px] text-[#6B6B6B] tracking-[-0.003em]">{caption}</p>
+      )}
+      {trend && <div className="mt-3 h-8 -mx-1">{trend}</div>}
+      {typeof progress === 'number' && (
+        <div className="progress-bronze mt-4 w-full" style={{ '--value': `${Math.max(0, Math.min(100, progress))}%` }} />
+      )}
+    </div>
+  );
+}
+
 // ─── Fleuron ──────────────────────────────────────────
 // Editorial decorative glyph — small four-point star/cross for
 // section breaks, page dividers, luxury accents (à la Phosphor fleuron).
@@ -742,19 +932,27 @@ export function Divider({ className = '' }) {
 // Props: icon (SVG node) · title · trailing · banner ({ avatar, text, subtext, cta, onCtaClick })
 // Legacy props (eyebrow/accent/description) are accepted but ignored in favor
 // of the simpler Ramify aesthetic.
-export function PageHeader({ icon, title, eyebrow, trailing, banner, className = '' }) {
+export function PageHeader({ icon, duoIcon, title, eyebrow, trailing, banner, className = '' }) {
+  // If `duoIcon` object is provided, render a DuoIcon directly. Otherwise
+  // wrap raw `icon` SVG in the card-style chrome.
+  const iconNode = duoIcon
+    ? <DuoIcon name={duoIcon.name} tone={duoIcon.tone || 'bronze'} size={duoIcon.size || 22} />
+    : icon
+      ? (
+        <span
+          className="flex-shrink-0 w-11 h-11 rounded-[12px] bg-white border border-[rgba(10,10,10,0.08)] text-[#2A2A2A] flex items-center justify-center
+                     shadow-[0_1px_0_rgba(255,255,255,0.95)_inset,0_1px_2px_rgba(10,10,10,0.05),0_6px_14px_-6px_rgba(10,10,10,0.12)]"
+        >
+          {icon}
+        </span>
+      )
+      : null;
+
   return (
     <header className={`space-y-6 animate-slide-up ${className}`}>
       <div className="flex items-end justify-between gap-6 flex-wrap">
         <div className="flex items-center gap-4 min-w-0">
-          {icon && (
-            <span
-              className="flex-shrink-0 w-11 h-11 rounded-[12px] bg-white border border-[rgba(10,10,10,0.08)] text-[#2A2A2A] flex items-center justify-center
-                         shadow-[0_1px_0_rgba(255,255,255,0.95)_inset,0_1px_2px_rgba(10,10,10,0.05),0_6px_14px_-6px_rgba(10,10,10,0.12)]"
-            >
-              {icon}
-            </span>
-          )}
+          {iconNode}
           <div className="min-w-0">
             {eyebrow && (
               <p className="text-[10.5px] font-medium text-[#7C5E3C] uppercase tracking-[0.12em] mb-1.5 flex items-center gap-1.5">

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Avatar, Kbd, IconButton } from './shared';
+import { Avatar, Kbd, IconButton, DuoIcon } from './shared';
 import CommandPalette from './CommandPalette';
 
 /* ─────────────────────────────────────────────────────────

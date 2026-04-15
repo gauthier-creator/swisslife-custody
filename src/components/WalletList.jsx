@@ -4,7 +4,7 @@ import { SUPPORTED_NETWORKS } from '../config/constants';
 import {
   Badge, EmptyState, Card, SectionCard, PageHeader, StatusDot,
   Metric, MetricRow, Table, tdCls, tdMuted, trCls, FooterDisclosure,
-  Skeleton, SkeletonRow, CopyButton, useCountUp,
+  Skeleton, SkeletonRow, CopyButton, useCountUp, MarbleCard,
 } from './shared';
 
 function CountUpNumber({ value, format = (v) => v }) {
@@ -60,11 +60,8 @@ export default function WalletList() {
     <div className="space-y-10">
       {/* ── Header ─────────────────────────────────────── */}
       <PageHeader
-        icon={
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9v3m13.5 3h.008v.008H16.5V15z" />
-          </svg>
-        }
+        duoIcon={{ name: 'wallets', tone: 'bronze' }}
+        eyebrow="Chambre forte DFNS"
         title="Wallets"
         trailing={
           <>
@@ -88,14 +85,38 @@ export default function WalletList() {
         }
       />
 
+      {/* ── Marble hero ───────────────────────────────── */}
+      {!loading && wallets.length > 0 && (
+        <div className="animate-slide-up stagger-1">
+          <MarbleCard
+            variant="peach"
+            eyebrow="Conservation multi-chain"
+            title="Chaque wallet, signé par quorum MPC."
+            description="Threshold cryptography 2-sur-3 · ségrégation stricte des clés · audit trail on-chain. Aucune clé privée stockée en clair, aucune signature sans consentement."
+          >
+            <div className="mt-6 flex items-center gap-3 flex-wrap">
+              <span className="inline-flex items-center gap-2 h-9 px-4 rounded-full bg-[#0A0A0A] text-white text-[12.5px] font-medium tracking-[-0.003em]">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                Provisionner un wallet
+              </span>
+              <span className="inline-flex items-center gap-2 h-9 px-4 rounded-full bg-white/70 backdrop-blur border border-[rgba(10,10,10,0.1)] text-[#2A1F12] text-[12.5px] font-medium tracking-[-0.003em]">
+                Règlement MiCA · Art. 60
+              </span>
+            </div>
+          </MarbleCard>
+        </div>
+      )}
+
       {/* ── Metric row ────────────────────────────────── */}
       {!loading && wallets.length > 0 && (
         <div className="animate-slide-up stagger-2">
           <MetricRow>
-            <Metric label="Wallets totaux" value={<CountUpNumber value={wallets.length} />} caption={`${activeCount} actifs`} />
-            <Metric label="Réseaux actifs" value={<CountUpNumber value={networkCount} />} caption="Multi-chain" />
-            <Metric label="Clients liés"   value={<CountUpNumber value={clientCount} />} caption="Mandats de conservation" />
-            <Metric label="Signatures MPC" value="2 / 3" caption="Threshold cryptography" />
+            <Metric label="Wallets totaux" value={<CountUpNumber value={wallets.length} />} caption={`${activeCount} actifs`} progress={Math.min(100, wallets.length * 12)} />
+            <Metric label="Réseaux actifs" value={<CountUpNumber value={networkCount} />} caption="Multi-chain" progress={Math.min(100, networkCount * 16)} />
+            <Metric label="Clients liés"   value={<CountUpNumber value={clientCount} />} caption="Mandats de conservation" progress={Math.min(100, clientCount * 10)} />
+            <Metric label="Signatures MPC" value="2 / 3" caption="Threshold cryptography" progress={66} />
           </MetricRow>
         </div>
       )}

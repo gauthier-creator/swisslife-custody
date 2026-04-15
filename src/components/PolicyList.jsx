@@ -3,6 +3,7 @@ import { listPolicies, createPolicy } from '../services/dfnsApi';
 import {
   Badge, Modal, Spinner, EmptyState, inputCls, selectCls, labelCls,
   PageHeader, Metric, MetricRow, Card, Button, FooterDisclosure, StatusDot,
+  MarbleCard,
 } from './shared';
 
 /* ─────────────────────────────────────────────────────────
@@ -64,11 +65,8 @@ export default function PolicyList() {
     <div className="space-y-10">
       {/* ── Header ─────────────────────────────────────── */}
       <PageHeader
-        icon={
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-          </svg>
-        }
+        duoIcon={{ name: 'policies', tone: 'bronze' }}
+        eyebrow="Gouvernance DFNS"
         title="Policies"
         trailing={
           <>
@@ -83,14 +81,26 @@ export default function PolicyList() {
         }
       />
 
+      {/* ── Marble hero ───────────────────────────────── */}
+      {!loading && (
+        <div className="animate-slide-up stagger-1">
+          <MarbleCard
+            variant="peach"
+            eyebrow="Quatre yeux · Horodatage ACPR"
+            title="Les règles qui encadrent chaque signature."
+            description="Chaque politique est auditée, horodatée, versionnée. Rien n'est signé en dehors de ces rails — transferts, whitelistings, rotations de clé."
+          />
+        </div>
+      )}
+
       {/* ── Metrics ───────────────────────────────────── */}
       {!loading && (
         <div className="animate-slide-up stagger-2">
           <MetricRow>
-            <Metric label="Politiques actives" value={activeCount} caption="Appliquées en temps réel" />
-            <Metric label="En attente" value={pendingCount} caption="Approbation admin requise" />
-            <Metric label="Couverture" value={policies.length} caption="Règles définies" />
-            <Metric label="Signataires" value="2/3" caption="Quorum MPC threshold" />
+            <Metric label="Politiques actives" value={activeCount} caption="Appliquées en temps réel" progress={Math.min(100, activeCount * 25)} />
+            <Metric label="En attente" value={pendingCount} caption="Approbation admin requise" progress={Math.min(100, pendingCount * 20)} />
+            <Metric label="Couverture" value={policies.length} caption="Règles définies" progress={Math.min(100, policies.length * 15)} />
+            <Metric label="Signataires" value="2/3" caption="Quorum MPC threshold" progress={66} />
           </MetricRow>
         </div>
       )}
