@@ -58,31 +58,94 @@ const IconLogout = (props) => (
 );
 
 const NAV_ITEMS = [
-  { id: 'clients',    label: 'Clients',       Icon: IconClients },
-  { id: 'wallets',    label: 'Wallets',       Icon: IconWallets },
-  { id: 'compliance', label: 'Compliance',    Icon: IconCompliance },
-  { id: 'policies',   label: 'Policies',      Icon: IconPolicies },
+  { id: 'clients',    label: 'Clients',       Icon: IconClients,    shortcut: '1' },
+  { id: 'wallets',    label: 'Wallets',       Icon: IconWallets,    shortcut: '2' },
+  { id: 'compliance', label: 'Compliance',    Icon: IconCompliance, shortcut: '3' },
+  { id: 'policies',   label: 'Policies',      Icon: IconPolicies,   shortcut: '4' },
 ];
+
+/* ── NavButton — refined sidebar item with active bronze ruler ── */
+function NavButton({ item, active, onClick }) {
+  const { Icon, label, shortcut, id } = item;
+  return (
+    <button
+      onClick={onClick}
+      className={`group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-[13.5px] font-medium tracking-[-0.006em] transition-all duration-200 ${
+        active
+          ? 'bg-[#F5EEE0] text-[#0A0A0A]'
+          : 'text-[#6B6B6B] hover:text-[#0A0A0A] hover:bg-[#FAFAF8]'
+      }`}
+    >
+      {/* Bronze active ruler (absolute, centered vertically) */}
+      <span
+        aria-hidden="true"
+        className={`absolute left-0 top-1/2 -translate-y-1/2 w-[2.5px] rounded-full transition-all duration-300 ${
+          active
+            ? 'h-4 bg-gradient-to-b from-[#D4A574] via-[#9A7A51] to-[#7C5E3C] opacity-100'
+            : 'h-0 bg-[#C8924B] opacity-0 group-hover:h-3 group-hover:opacity-40'
+        }`}
+      />
+      <Icon className="w-[18px] h-[18px] flex-shrink-0" />
+      <span className="flex-1 text-left">{label}</span>
+      {id === 'compliance' && (
+        <span className="text-[9.5px] font-semibold uppercase tracking-[0.08em] px-1.5 py-0.5 rounded-[5px] bg-[#EFEAFE] text-[#5B4FD1]">
+          Live
+        </span>
+      )}
+      {shortcut && id !== 'compliance' && (
+        <span
+          className={`text-[10px] font-mono tabular-nums transition-opacity ${
+            active ? 'text-[#7C5E3C] opacity-70' : 'text-[#BFBFBF] opacity-0 group-hover:opacity-100'
+          }`}
+        >
+          {shortcut}
+        </span>
+      )}
+    </button>
+  );
+}
 
 export default function Layout({ children, section, onNavigate }) {
   const { signOut, profile, isAdmin } = useAuth();
   const [paletteOpen, setPaletteOpen] = useState(false);
 
-  // ⌘K / Ctrl+K — open palette
+  // ⌘K / Ctrl+K — open palette  ·  G + 1..5 — jump between sections
   useEffect(() => {
+    let gPressed = false;
+    let gTimer = null;
+    const sectionByShortcut = { '1': 'clients', '2': 'wallets', '3': 'compliance', '4': 'policies', '5': 'config' };
+
     const onKey = (e) => {
       const mod = e.metaKey || e.ctrlKey;
       if (mod && (e.key === 'k' || e.key === 'K')) {
         e.preventDefault();
         setPaletteOpen(o => !o);
+        return;
+      }
+      // Skip number shortcuts while typing in inputs
+      const tag = (e.target && e.target.tagName) || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      if (e.key === 'g' || e.key === 'G') {
+        gPressed = true;
+        clearTimeout(gTimer);
+        gTimer = setTimeout(() => { gPressed = false; }, 900);
+        return;
+      }
+      if (gPressed && sectionByShortcut[e.key]) {
+        const target = sectionByShortcut[e.key];
+        if (target === 'config' && !isAdmin) return;
+        e.preventDefault();
+        onNavigate(target);
+        gPressed = false;
       }
     };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
+    return () => { window.removeEventListener('keydown', onKey); clearTimeout(gTimer); };
+  }, [isAdmin, onNavigate]);
 
-  const items = [...NAV_ITEMS];
-  if (isAdmin) items.push({ id: 'config', label: 'Configuration', Icon: IconConfig });
+  const navItems = [...NAV_ITEMS];
+  const adminItems = isAdmin ? [{ id: 'config', label: 'Configuration', Icon: IconConfig, shortcut: '5' }] : [];
 
   const displayName = profile?.full_name || profile?.email || '?';
   const roleLabel = profile?.role === 'admin' ? 'Admin · SwissLife' : 'Banquier privé';
@@ -108,30 +171,43 @@ export default function Layout({ children, section, onNavigate }) {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto px-4 py-5 space-y-0.5">
-          {items.map((item) => {
-            const active = section === item.id;
-            const { Icon } = item;
-            return (
-              <button
+        <nav className="flex-1 overflow-y-auto px-4 py-5">
+          {/* Section label · Produit */}
+          <p className="px-3 mb-2 text-[9.5px] font-medium uppercase tracking-[0.14em] text-[#9B9B9B] flex items-center gap-2">
+            <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
+            Produit
+          </p>
+          <div className="space-y-0.5">
+            {navItems.map((item) => (
+              <NavButton
                 key={item.id}
+                item={item}
+                active={section === item.id}
                 onClick={() => onNavigate(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-[13.5px] font-medium tracking-[-0.006em] transition-colors ${
-                  active
-                    ? 'bg-[#F5EEE0] text-[#0A0A0A]'
-                    : 'text-[#6B6B6B] hover:text-[#0A0A0A] hover:bg-[#FAFAF8]'
-                }`}
-              >
-                <Icon className="w-[18px] h-[18px] flex-shrink-0" />
-                <span className="flex-1 text-left">{item.label}</span>
-                {item.id === 'compliance' && (
-                  <span className="text-[9.5px] font-semibold uppercase tracking-[0.08em] px-1.5 py-0.5 rounded-[5px] bg-[#EFEAFE] text-[#5B4FD1]">
-                    Live
-                  </span>
-                )}
-              </button>
-            );
-          })}
+              />
+            ))}
+          </div>
+
+          {adminItems.length > 0 && (
+            <>
+              {/* Hairline separator */}
+              <div className="mx-3 my-5 h-px bg-gradient-to-r from-transparent via-[rgba(10,10,10,0.08)] to-transparent" />
+              <p className="px-3 mb-2 text-[9.5px] font-medium uppercase tracking-[0.14em] text-[#9B9B9B] flex items-center gap-2">
+                <span className="w-1 h-1 rounded-full bg-[#7C5E3C]" />
+                Administration
+              </p>
+              <div className="space-y-0.5">
+                {adminItems.map((item) => (
+                  <NavButton
+                    key={item.id}
+                    item={item}
+                    active={section === item.id}
+                    onClick={() => onNavigate(item.id)}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </nav>
 
         {/* Command palette trigger */}

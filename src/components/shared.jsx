@@ -543,26 +543,106 @@ export function FleuronRule({ className = '', tone = 'bronze' }) {
 
 // ─── Avatar ───────────────────────────────────────────
 // Monochrome — warm paper bg, dark initials, hairline inner border. Private-bank refined.
-export function Avatar({ name = '', src, size = 40, ring = false, status, tone = 'default' }) {
+// tone='verified' adds a bronze gradient ring + tiny seal glyph bottom-right (UHNWI mark).
+export function Avatar({ name = '', src, size = 40, ring = false, status, tone = 'default', verified = false }) {
   const dim = typeof size === 'number' ? `${size}px` : size;
-  const fontSize = Math.round((typeof size === 'number' ? size : 40) * 0.36);
+  const numSize = typeof size === 'number' ? size : 40;
+  const fontSize = Math.round(numSize * 0.36);
   const bg = tone === 'dark' ? '#0A0A0A' : tone === 'accent' ? '#7C5E3C' : '#F5F3EE';
   const fg = tone === 'dark' || tone === 'accent' ? '#FFFFFF' : '#0A0A0A';
   const border = tone === 'default' ? '1px solid rgba(10, 10, 10, 0.08)' : 'none';
+
+  // Verified wrap: bronze gradient ring with a hairline inset — jeweller's bezel feel.
+  const wrap = verified ? { padding: 2, background: 'conic-gradient(from 210deg, #D4A574, #9A7A51, #7C5E3C, #D4A574)', borderRadius: '9999px', boxShadow: '0 0 0 1px rgba(255,255,255,0.9) inset, 0 1px 3px rgba(124,94,60,0.35)' } : null;
+
+  const inner = (
+    <div
+      className={`${verified ? '' : 'w-full h-full'} rounded-full flex items-center justify-center font-medium overflow-hidden tracking-[-0.02em] ${ring ? 'ring-[3px] ring-white' : ''}`}
+      style={{ background: src ? undefined : bg, color: fg, fontSize: `${fontSize}px`, border, width: verified ? numSize - 4 : undefined, height: verified ? numSize - 4 : undefined }}
+    >
+      {src ? <img src={src} alt={name} className="w-full h-full object-cover" /> : initials(name)}
+    </div>
+  );
+
   return (
     <div className="relative inline-flex flex-shrink-0" style={{ width: dim, height: dim }}>
-      <div
-        className={`w-full h-full rounded-full flex items-center justify-center font-medium overflow-hidden tracking-[-0.02em] ${ring ? 'ring-[3px] ring-white' : ''}`}
-        style={{ background: src ? undefined : bg, color: fg, fontSize: `${fontSize}px`, border }}
-      >
-        {src ? <img src={src} alt={name} className="w-full h-full object-cover" /> : initials(name)}
-      </div>
+      {verified ? (
+        <div style={wrap} className="w-full h-full flex items-center justify-center">
+          {inner}
+        </div>
+      ) : inner}
       {status && (
         <span
           className="absolute bottom-0 right-0 w-[28%] h-[28%] rounded-full border-2 border-white"
           style={{ background: status === 'online' ? '#16A34A' : status === 'busy' ? '#DC2626' : '#9B9B9B' }}
         />
       )}
+      {verified && (
+        <span
+          aria-hidden="true"
+          className="absolute -bottom-0.5 -right-0.5 rounded-full bg-white flex items-center justify-center"
+          style={{ width: Math.max(12, numSize * 0.32), height: Math.max(12, numSize * 0.32), boxShadow: '0 1px 2px rgba(124,94,60,0.45)' }}
+        >
+          <svg viewBox="0 0 12 12" width={Math.max(8, numSize * 0.2)} height={Math.max(8, numSize * 0.2)} fill="none">
+            <path d="M3 6.2 L5.1 8.2 L9 4" stroke="#7C5E3C" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ─── Timestamp ────────────────────────────────────────
+// Hairline tabular time chip with a refined clock glyph and relative label.
+// <Timestamp date={Date} label="Mis à jour" />  → "Mis à jour · il y a 3 min"
+export function Timestamp({ date, label = 'Mis à jour', tone = 'muted', className = '' }) {
+  const d = date instanceof Date ? date : date ? new Date(date) : new Date();
+  const now = new Date();
+  const diffSec = Math.max(0, Math.floor((now.getTime() - d.getTime()) / 1000));
+  let rel = '';
+  if (diffSec < 45) rel = 'à l’instant';
+  else if (diffSec < 3600) rel = `il y a ${Math.round(diffSec / 60)} min`;
+  else if (diffSec < 86400) rel = `il y a ${Math.round(diffSec / 3600)} h`;
+  else rel = d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+  const color = tone === 'bronze' ? '#7C5E3C' : '#9B9B9B';
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium tracking-[0.01em] tabular-nums ${className}`} style={{ color }}>
+      <svg viewBox="0 0 14 14" width="11" height="11" fill="none" aria-hidden="true">
+        <circle cx="7" cy="7" r="5.25" stroke="currentColor" strokeWidth="1.1" />
+        <path d="M7 4.2 V7 L8.8 8.4" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <span>{label} · {rel}</span>
+    </span>
+  );
+}
+
+// ─── SignatureMark ────────────────────────────────────
+// Editorial page signature — Sℓ monogram, hand-ruled flourish, "signé" eyebrow.
+// Used at the bottom of pages as an authorship / provenance mark.
+export function SignatureMark({ name = 'G. Alexandrian', role = 'Banquier privé', location = 'Paris', className = '' }) {
+  return (
+    <div className={`flex items-center gap-4 ${className}`}>
+      <div
+        className="flex-shrink-0 w-9 h-9 rounded-[9px] bg-white border border-[rgba(10,10,10,0.08)] flex items-center justify-center"
+        style={{ boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 1px 2px rgba(10,10,10,0.05), 0 4px 12px -8px rgba(124,94,60,0.35)' }}
+      >
+        <span className="font-display text-[14px] text-[#0A0A0A] leading-none" style={{ letterSpacing: '-0.04em' }}>Sℓ</span>
+      </div>
+      <div className="leading-tight">
+        <p className="text-[9.5px] font-medium uppercase tracking-[0.14em] text-[#9B9B9B] flex items-center gap-1.5">
+          <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
+          Signé · scellé
+        </p>
+        <p className="font-display text-[15px] text-[#0A0A0A] mt-1" style={{ letterSpacing: '-0.015em' }}>
+          <span className="italic text-[#7C5E3C]">{name}</span>
+          <span className="text-[#9B9B9B] text-[12px] not-italic font-sans font-normal ml-2">— {role} · {location}</span>
+        </p>
+      </div>
+      {/* Flourish — a thin bronze ruled line ending in a small seal dot */}
+      <div className="hidden md:flex items-center gap-2 flex-1 ml-2">
+        <span className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, rgba(124,94,60,0.28), transparent)' }} />
+        <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#9A7A51', boxShadow: '0 0 0 2px rgba(154,122,81,0.15)' }} />
+      </div>
     </div>
   );
 }

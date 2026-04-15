@@ -3,7 +3,7 @@ import { fetchClients } from '../services/salesforceApi';
 import {
   fmtEUR, fmtCompactEUR, Badge, Card, EmptyState, Avatar,
   Metric, MetricRow, Delta, SkeletonCircle, Skeleton, useCountUp,
-  PageHeader, StatusDot, MarbleCard,
+  PageHeader, StatusDot, MarbleCard, Timestamp, SignatureMark, FleuronRule,
 } from './shared';
 import {
   ProductCard, ProductCarousel,
@@ -89,7 +89,11 @@ export default function ClientList({ onSelectClient }) {
                 className="h-10 pl-10 pr-4 w-[300px] text-[13.5px] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none focus:border-[rgba(10,10,10,0.35)] focus:ring-4 focus:ring-[rgba(10,10,10,0.04)] placeholder:text-[#9B9B9B] tracking-[-0.006em] transition-all"
               />
             </div>
-            <StatusDot tone="success" label="Salesforce sync" />
+            <div className="flex items-center gap-3">
+              <StatusDot tone="success" label="Salesforce sync" />
+              <span className="h-4 w-px bg-[rgba(10,10,10,0.1)]" />
+              <Timestamp label="Registre" />
+            </div>
           </>
         }
       />
@@ -149,6 +153,11 @@ export default function ClientList({ onSelectClient }) {
             />
           </MetricRow>
         </div>
+      )}
+
+      {/* ── Editorial hairline break ────────────────────── */}
+      {!loading && clients.length > 0 && (
+        <FleuronRule className="max-w-md mx-auto opacity-90" />
       )}
 
       {/* ── Product carousel — editorial product tiles ── */}
@@ -287,7 +296,7 @@ export default function ClientList({ onSelectClient }) {
                   style={{ '--i': i }}
                   className={`row-stagger flex items-center gap-5 px-6 py-5 cursor-pointer hover:bg-[#FBFAF7] transition-colors group ${i < clients.length - 1 ? 'border-b border-[rgba(10,10,10,0.06)]' : ''}`}
                 >
-                  <Avatar name={client.name} size={44} />
+                  <Avatar name={client.name} size={44} verified={client.type === 'Customer - Direct'} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2.5 flex-wrap">
                       <p className="text-[15px] font-medium text-[#0A0A0A] tracking-[-0.015em] truncate">
@@ -320,10 +329,13 @@ export default function ClientList({ onSelectClient }) {
         </div>
       )}
 
-      {/* ── Footer note ────────────────────────────────── */}
-      <footer className="pt-8 border-t border-[rgba(10,10,10,0.06)] flex items-center justify-between text-[11px] text-[#9B9B9B] tracking-[0.02em] uppercase font-medium">
-        <span>SwissLife Banque Privée · Paris</span>
-        <span>AMF · ACPR · Tracfin · MiCA Art. 60</span>
+      {/* ── Editorial signature footer ─────────────────── */}
+      <footer className="pt-10 mt-4 border-t border-[rgba(10,10,10,0.06)] space-y-4">
+        <SignatureMark name="G. Alexandrian" role="Banquier privé" location="Paris" />
+        <div className="flex items-center justify-between text-[10.5px] text-[#9B9B9B] tracking-[0.06em] uppercase font-medium">
+          <span>SwissLife Banque Privée · 7 rue Boudreau, 75009 Paris</span>
+          <span>AMF · ACPR · Tracfin · MiCA Art. 60</span>
+        </div>
       </footer>
     </div>
   );
