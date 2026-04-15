@@ -1,91 +1,99 @@
 import { useAuth } from '../context/AuthContext';
 
-const roleBadge = {
-  admin: { label: 'Admin', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
-  banquier: { label: 'Banquier', cls: 'bg-blue-50 text-blue-700 border-blue-200' },
-};
+/* ─────────────────────────────────────────────────────────
+   Layout — the persistent editorial frame
+   Typographic masthead · hairline navigation · paper ground
+   ───────────────────────────────────────────────────────── */
 
 export default function Layout({ children, section, onNavigate }) {
   const { signOut, profile, isAdmin } = useAuth();
 
   const tabs = [
     { id: 'clients', label: 'Clients' },
-    { id: 'wallets', label: 'Wallets' },
-    { id: 'compliance', label: 'Compliance' },
-    { id: 'policies', label: 'Policies' },
+    { id: 'wallets', label: 'Portefeuilles' },
+    { id: 'compliance', label: 'Conformité' },
+    { id: 'policies', label: 'Politiques' },
   ];
+  if (isAdmin) tabs.push({ id: 'config', label: 'Configuration' });
 
-  // Admin-only tab
-  if (isAdmin) {
-    tabs.push({ id: 'config', label: 'Configuration' });
-  }
-
-  const badge = roleBadge[profile?.role] || roleBadge.banquier;
+  const initials = (profile?.full_name || profile?.email || '·').slice(0, 2).toUpperCase();
+  const roleLabel = profile?.role === 'admin' ? 'Administrateur' : 'Banquier privé';
 
   return (
-    <div className="min-h-screen bg-[#FAFAF9]">
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-[rgba(0,0,29,0.06)]">
-        <div className="max-w-[1200px] mx-auto px-6 h-14 flex items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-[#0F0F10] rounded-lg flex items-center justify-center">
-              <span className="text-white text-[11px] font-bold">SL</span>
-            </div>
-            <div>
-              <span className="text-[14px] font-semibold text-[#0F0F10]">SwissLife Custody</span>
-              <span className="text-[11px] text-[#A8A29E] ml-2">Banque Privee</span>
-            </div>
-          </div>
+    <div className="min-h-screen bg-[#FAFAF7] text-[#0B0B0C]">
+      {/* ── Masthead ─────────────────────────────────────── */}
+      <header className="sticky top-0 z-30 bg-[rgba(250,250,247,0.82)] border-b border-[rgba(11,11,12,0.08)]"
+              style={{ backdropFilter: 'blur(12px) saturate(1.2)', WebkitBackdropFilter: 'blur(12px) saturate(1.2)' }}>
+        <div className="max-w-[1240px] mx-auto px-10 h-16 flex items-center justify-between">
+          {/* Wordmark */}
+          <button
+            onClick={() => onNavigate('clients')}
+            className="flex items-baseline gap-3 group"
+            aria-label="Accueil"
+          >
+            <span className="font-display text-[22px] text-[#0B0B0C] leading-none tracking-[-0.03em]">
+              SwissLife
+            </span>
+            <span className="eyebrow text-[#8A6F3D]">Conservation</span>
+          </button>
 
-          {/* Nav tabs */}
-          <div className="flex items-center gap-1 bg-[rgba(0,0,23,0.03)] rounded-lg p-0.5">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => onNavigate(tab.id)}
-                className={`px-4 py-1.5 text-[13px] font-medium rounded-md transition-all ${
-                  section === tab.id
-                    ? 'bg-white text-[#0F0F10] shadow-[0_1px_3px_rgba(0,0,0,0.06)]'
-                    : 'text-[#787881] hover:text-[#0F0F10]'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
+          {/* Navigation — ghost tabs with ink underline */}
+          <nav className="flex items-center gap-8">
+            {tabs.map(tab => {
+              const active = section === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => onNavigate(tab.id)}
+                  className="relative py-5 text-[13px] tracking-tight transition-colors"
+                  style={{ color: active ? '#0B0B0C' : '#6B6B70' }}
+                >
+                  {tab.label}
+                  {active && (
+                    <span className="absolute left-0 right-0 -bottom-px h-px bg-[#0B0B0C]" />
+                  )}
+                </button>
+              );
+            })}
+          </nav>
 
-          {/* Right — user info */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-[#0F0F10] flex items-center justify-center">
-                <span className="text-white text-[10px] font-bold">
-                  {(profile?.full_name || profile?.email || '?').slice(0, 2).toUpperCase()}
-                </span>
-              </div>
-              <div className="hidden sm:block">
-                <p className="text-[12px] font-medium text-[#0F0F10] leading-tight">
-                  {profile?.full_name || profile?.email}
-                </p>
-                <span className={`inline-block text-[10px] font-medium px-1.5 py-0.5 rounded border ${badge.cls}`}>
-                  {badge.label}
-                </span>
-              </div>
+          {/* Identity */}
+          <div className="flex items-center gap-5">
+            <div className="hidden sm:flex flex-col items-end">
+              <span className="text-[12px] text-[#0B0B0C] tracking-tight leading-tight">
+                {profile?.full_name || profile?.email}
+              </span>
+              <span className="eyebrow mt-0.5">{roleLabel}</span>
+            </div>
+            <div className="w-9 h-9 border border-[rgba(11,11,12,0.16)] flex items-center justify-center"
+                 style={{ borderRadius: '2px' }}>
+              <span className="text-[10px] font-medium tracking-[0.12em] text-[#0B0B0C]">
+                {initials}
+              </span>
             </div>
             <button
               onClick={signOut}
-              className="text-[12px] text-[#A8A29E] hover:text-[#DC2626] transition-colors"
+              className="eyebrow text-[#6B6B70] hover:text-[#0B0B0C] transition-colors"
+              aria-label="Déconnexion"
             >
-              Deconnexion
+              Sortir
             </button>
           </div>
         </div>
       </header>
 
-      {/* Content */}
-      <main className="max-w-[1200px] mx-auto px-6 py-8">
+      {/* ── Content ──────────────────────────────────────── */}
+      <main className="max-w-[1240px] mx-auto px-10 py-14 page-enter">
         {children}
       </main>
+
+      {/* ── Colophon ─────────────────────────────────────── */}
+      <footer className="max-w-[1240px] mx-auto px-10 py-10 mt-10 border-t border-[rgba(11,11,12,0.08)]">
+        <div className="flex items-center justify-between">
+          <p className="eyebrow">SwissLife Banque Privée · Paris</p>
+          <p className="eyebrow text-[#A8A8AD]">AMF · ACPR · MiCA Art. 60</p>
+        </div>
+      </footer>
     </div>
   );
 }

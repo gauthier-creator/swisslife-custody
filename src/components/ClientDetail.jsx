@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { listWallets, createWallet, getWalletAssets, transferAsset, getWalletHistory } from '../services/dfnsApi';
 import { fetchContacts, fetchClientById, parseDescription } from '../services/salesforceApi';
-// DocumentsPanel removed — documents are managed directly in Salesforce
 import WhitelistPanel from './WhitelistPanel';
 import RiskConfigPanel from './RiskConfigPanel';
 import KYCFlow from './KYCFlow';
@@ -13,11 +12,21 @@ import { SUPPORTED_NETWORKS } from '../config/constants';
 import { createApproval, checkTransferRisk, checkWalletFreeze } from '../services/complianceApi';
 import { getKycStatus } from '../services/kycService';
 import { useAuth } from '../context/AuthContext';
-import { fmtEUR, Badge, Modal, Spinner, EmptyState, inputCls, selectCls, labelCls } from './shared';
+import { fmtEUR, Badge, Modal, Spinner, EmptyState, Button, Rule, Datum, inputCls, selectCls, labelCls } from './shared';
 import { API_BASE } from '../config/constants';
 
-const truncAddr = (a, n = 8) => a ? `${a.slice(0, n)}...${a.slice(-n)}` : '—';
+/* ─────────────────────────────────────────────────────────
+   Client detail — editorial monograph
+   One client, patiently set. Navigation as quiet labels.
+   ───────────────────────────────────────────────────────── */
+
+const truncAddr = (a, n = 8) => a ? `${a.slice(0, n)}···${a.slice(-n)}` : '—';
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
+const typeLabel = (t) => {
+  if (t === 'Customer - Direct') return 'Personne physique';
+  if (t === 'Other' || t === 'Institutional') return 'Institutionnel';
+  return t || '—';
+};
 
 export default function ClientDetail({ client: initialClient, onBack }) {
   const [client, setClient] = useState(initialClient);
@@ -36,25 +45,19 @@ export default function ClientDetail({ client: initialClient, onBack }) {
   const [contacts, setContacts] = useState([]);
   const [loadingContacts, setLoadingContacts] = useState(true);
   const [error, setError] = useState(null);
-  const [kycLive, setKycLive] = useState(null); // live KYC status from Supabase
+  const [kycLive, setKycLive] = useState(null);
   const [kycModuleEnabled, setKycModuleEnabled] = useState(false);
-  const [frozenWallets, setFrozenWallets] = useState({}); // { walletId: true/false }
+  const [frozenWallets, setFrozenWallets] = useState({});
   const { user, isAdmin } = useAuth();
 
   const reloadClient = async () => {
     try {
       const updated = await fetchClientById(client.id);
       setClient(updated);
-    } catch (err) {
-      console.error('reloadClient error:', err);
-    }
+    } catch (err) { console.error('reloadClient error:', err); }
   };
 
   const parsed = parseDescription(client.description);
-  // KYC is valid if:
-  // 1. KYC module is disabled (bank handles KYC externally) → always valid
-  // 2. OR Salesforce description says so
-  // 3. OR live KYC checks are validated in Supabase
   const kycValid = !kycModuleEnabled || kycLive?.overallStatus === 'validated' || parsed.kyc?.toLowerCase().includes('valid');
 
   useEffect(() => {
@@ -63,52 +66,40 @@ export default function ClientDetail({ client: initialClient, onBack }) {
   }, []);
 
   const loadKycStatus = async () => {
-    try {
-      const data = await getKycStatus(client.id);
-      setKycLive(data);
-    } catch { /* ignore */ }
+    try { const data = await getKycStatus(client.id); setKycLive(data); }
+    catch { /* ignore */ }
   };
 
   const loadWallets = async () => {
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     try {
       const all = await listWallets(client.id);
       setWallets(all);
-      // Check freeze status for each wallet
       const freezeMap = {};
       await Promise.all(all.map(async (w) => {
-        try {
-          const result = await checkWalletFreeze(w.id);
-          freezeMap[w.id] = result.frozen;
-        } catch { freezeMap[w.id] = false; }
+        try { const result = await checkWalletFreeze(w.id); freezeMap[w.id] = result.frozen; }
+        catch { freezeMap[w.id] = false; }
       }));
       setFrozenWallets(freezeMap);
     } catch (err) {
-      console.error('loadWallets error:', err);
-      setError(err.message);
-      setWallets([]);
+      console.error('loadWallets error:', err); setError(err.message); setWallets([]);
     }
     setLoading(false);
   };
 
   const loadContacts = async () => {
     setLoadingContacts(true);
-    try {
-      const data = await fetchContacts(client.id);
-      setContacts(data);
-    } catch { setContacts([]); }
+    try { const data = await fetchContacts(client.id); setContacts(data); }
+    catch { setContacts([]); }
     setLoadingContacts(false);
   };
 
   const handleCreate = async () => {
-    // Compliance check: client must be eligible for custody before creating wallets
     if (client.Custody_Eligible__c !== true && !kycValid) {
-      alert('Compliance: Le client doit etre eligible a la custody avant de creer un wallet. Veuillez completer les etapes dans l\'onglet Eligibilite.');
+      alert('Conformité : le client doit être éligible à la conservation avant toute création de portefeuille. Complétez l\'onglet Éligibilité.');
       return;
     }
-    setCreating(true);
-    setError(null);
+    setCreating(true); setError(null);
     try {
       await createWallet({
         network: newWallet.network,
@@ -120,32 +111,24 @@ export default function ClientDetail({ client: initialClient, onBack }) {
       setShowCreate(false);
       setNewWallet({ name: '', network: 'EthereumSepolia' });
     } catch (err) {
-      console.error('createWallet error:', err);
-      setError(err.message);
-      alert('Erreur creation wallet: ' + err.message);
+      console.error('createWallet error:', err); setError(err.message);
+      alert('Erreur création portefeuille : ' + err.message);
     }
     setCreating(false);
   };
 
   const selectWallet = async (w) => {
-    setSelectedWallet(w);
-    setAssets(null);
-    setHistory([]);
+    setSelectedWallet(w); setAssets(null); setHistory([]);
     try {
       const [a, h] = await Promise.all([getWalletAssets(w.id), getWalletHistory(w.id)]);
-      setAssets(a);
-      setHistory(h.items || []);
-    } catch (err) {
-      console.error('selectWallet error:', err);
-    }
+      setAssets(a); setHistory(h.items || []);
+    } catch (err) { console.error('selectWallet error:', err); }
   };
 
   const handleTransfer = async () => {
     if (!selectedWallet) return;
-    setSending(true);
-    setError(null);
+    setSending(true); setError(null);
     try {
-      // 1. Pre-flight risk check
       const riskCheck = await checkTransferRisk({
         salesforceAccountId: client.id,
         amount: transfer.amount,
@@ -154,26 +137,20 @@ export default function ClientDetail({ client: initialClient, onBack }) {
       }).catch(() => ({ allowed: true, warnings: [], blocks: [] }));
 
       if (riskCheck.blocks && riskCheck.blocks.length > 0) {
-        alert('TRANSFERT BLOQUE PAR LA COMPLIANCE\n\n' + riskCheck.blocks.join('\n'));
-        setSending(false);
-        return;
+        alert('Transfert bloqué par la conformité\n\n' + riskCheck.blocks.join('\n'));
+        setSending(false); return;
       }
 
       let warningMsg = '';
       if (riskCheck.warnings && riskCheck.warnings.length > 0) {
-        warningMsg = '\n\nAvertissements compliance:\n- ' + riskCheck.warnings.join('\n- ');
+        warningMsg = '\n\nAvertissements :\n· ' + riskCheck.warnings.join('\n· ');
       }
 
-      // 2. Double confirmation
       const netInfo = SUPPORTED_NETWORKS.find(n => n.id === selectedWallet.network);
-      const confirmMsg = `DEMANDE DE TRANSFERT\n\nDepuis: ${selectedWallet.name}\nVers: ${transfer.to}\nMontant: ${transfer.amount} ${netInfo?.symbol || ''}\nType: ${transfer.kind}${warningMsg}\n\nLe transfert sera soumis a approbation (principe des 4 yeux).\nConfirmez-vous cette demande ?`;
-      if (!confirm(confirmMsg)) {
-        setSending(false);
-        return;
-      }
+      const confirmMsg = `Demande de transfert\n\nDepuis : ${selectedWallet.name}\nVers : ${transfer.to}\nMontant : ${transfer.amount} ${netInfo?.symbol || ''}${warningMsg}\n\nLe transfert sera soumis à approbation (principe des quatre yeux). Confirmez-vous ?`;
+      if (!confirm(confirmMsg)) { setSending(false); return; }
 
-      // 3. Create approval request (4-eye principle) — DFNS handles Travel Rule (Notabene) and monitoring (Chainalysis KYT)
-      const approval = await createApproval({
+      await createApproval({
         walletId: selectedWallet.id,
         walletName: selectedWallet.name,
         walletNetwork: selectedWallet.network,
@@ -186,619 +163,600 @@ export default function ClientDetail({ client: initialClient, onBack }) {
         requestedByEmail: user?.email || 'unknown',
       });
 
-      alert('Demande de transfert soumise avec succes.\n\nUn administrateur doit approuver la demande dans l\'onglet Compliance avant execution.');
+      alert('Demande soumise. Un administrateur doit approuver la demande dans l\'onglet Conformité.');
       setShowTransfer(false);
       setTransfer({ to: '', amount: '', kind: 'Native' });
     } catch (err) {
-      console.error('transfer error:', err);
-      setError(err.message);
-      alert('Erreur: ' + err.message);
+      console.error('transfer error:', err); setError(err.message);
+      alert('Erreur : ' + err.message);
     }
     setSending(false);
   };
 
-  const net = (id) => SUPPORTED_NETWORKS.find(n => n.id === id) || { icon: '?', color: '#999', name: id };
+  const net = (id) => SUPPORTED_NETWORKS.find(n => n.id === id) || { icon: '?', color: '#8A6F3D', name: id };
 
-  // KYC status badge
-  const kycVariant = parsed.kyc
-    ? parsed.kyc.toLowerCase().includes('valid') ? 'success'
-    : parsed.kyc.toLowerCase().includes('cours') ? 'warning'
-    : 'error'
-    : 'default';
+  const kycStatusText = kycValid ? 'Validé'
+    : kycLive?.overallStatus === 'in_progress' ? 'En cours'
+    : kycLive?.overallStatus === 'ready_for_validation' ? 'À valider'
+    : kycLive?.overallStatus === 'attention_required' ? 'Attention requise'
+    : parsed.kyc?.toLowerCase().includes('cours') ? 'En cours'
+    : 'Non vérifié';
 
-  // Risk profile color
-  const riskColor = parsed.risk
-    ? parsed.risk.toLowerCase().includes('agressif') ? 'text-[#DC2626]'
-    : parsed.risk.toLowerCase().includes('conservateur') ? 'text-[#059669]'
-    : 'text-[#D97706]'
-    : 'text-[#787881]';
+  const tabs = [
+    { id: 'profile', label: 'Fiche' },
+    { id: 'eligibility', label: 'Éligibilité' },
+    ...(kycModuleEnabled ? [{ id: 'kyc', label: 'KYC / KYB' }] : []),
+    { id: 'wallets', label: 'Portefeuilles' },
+    { id: 'delegations', label: 'Délégations' },
+    ...(client.type !== 'Customer - Direct' ? [{ id: 'ubo', label: 'Bénéficiaires effectifs' }] : []),
+    { id: 'transfers', label: 'Transferts' },
+    { id: 'history', label: 'Historique' },
+  ];
 
   return (
-    <div className="page-slide-in">
-      {/* Back */}
-      <button onClick={onBack} className="flex items-center gap-2 text-[13px] text-[#787881] hover:text-[#0F0F10] transition-colors font-medium group mb-6">
-        <svg className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-        Retour aux clients
+    <div>
+      {/* ── Back ─────────────────────────────────────────── */}
+      <button
+        onClick={onBack}
+        className="group flex items-center gap-2 eyebrow text-[#6B6B70] hover:text-[#0B0B0C] transition-colors mb-10"
+      >
+        <svg className="w-3 h-3 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+        Retour à l'index
       </button>
 
-      {/* Client Header Card */}
-      <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-6 mb-6">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-gradient-to-br from-[#0F0F10] to-[#374151] rounded-2xl flex items-center justify-center text-white text-[20px] font-bold shadow-sm">
-              {client.name.charAt(0)}
-            </div>
-            <div>
-              <h2 className="text-[22px] font-bold text-[#0F0F10] tracking-tight">{client.name}</h2>
-              <div className="flex items-center gap-3 mt-1">
-                <span className="text-[13px] text-[#787881]">
-                  {[client.street, client.postalCode, client.city, client.country].filter(Boolean).join(', ') || [client.city, client.country].filter(Boolean).join(', ') || '—'}
-                </span>
-                {client.type && (
-                  <Badge variant={client.type === 'Other' ? 'info' : client.type === 'Customer - Direct' ? 'success' : 'default'}>
-                    {client.type === 'Customer - Direct' ? 'UHNWI' : client.type === 'Other' ? 'Institutionnel' : client.type}
-                  </Badge>
-                )}
-              </div>
-            </div>
+      {/* ── Editorial header ─────────────────────────────── */}
+      <header className="mb-12">
+        <div className="flex items-start justify-between gap-10">
+          <div className="flex-1 min-w-0">
+            <p className="eyebrow mb-4">{typeLabel(client.type)}</p>
+            <h1 className="font-display-tight text-[68px] leading-[0.94] text-[#0B0B0C]">
+              {client.name}
+            </h1>
+            <p className="mt-5 text-[14px] text-[#6B6B70] leading-relaxed max-w-xl">
+              {[client.street, client.postalCode, client.city, client.country].filter(Boolean).join(' · ') || '—'}
+            </p>
           </div>
-          <div className="text-right">
-            <p className="text-[11px] text-[#A8A29E] font-medium uppercase tracking-wider">AUM</p>
-            <p className="text-[26px] font-bold text-[#0F0F10] tabular-nums tracking-tight">{client.aum ? fmtEUR(client.aum) : '—'}</p>
-            {client.accountNumber && (
-              <p className="text-[12px] text-[#787881] mt-1 font-mono">N° {client.accountNumber}</p>
-            )}
-            <p className="text-[12px] text-[#A8A29E] mt-0.5">{wallets.length} wallet{wallets.length !== 1 ? 's' : ''} crypto</p>
-          </div>
+
+          {client.aum && (
+            <div className="text-right flex-shrink-0">
+              <p className="eyebrow mb-3">Actifs sous gestion</p>
+              <p className="font-display text-[42px] text-[#0B0B0C] tabular leading-none">
+                {fmtEUR(client.aum)}
+              </p>
+              {client.accountNumber && (
+                <p className="eyebrow mt-3 text-[#A8A8AD]">№ {client.accountNumber}</p>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Quick stats bar */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-5 pt-5 border-t border-[rgba(0,0,29,0.06)]">
-          <InfoPill label="Industrie" value={client.industry || '—'} />
-          <InfoPill label="Telephone" value={client.phone || '—'} />
-          <InfoPill label="KYC" value={parsed.kyc || 'Non renseigne'} badge badgeVariant={kycVariant} />
-          <InfoPill label="Profil de risque" value={parsed.risk || 'Non defini'} className={riskColor} />
-          <InfoPill label="Client depuis" value={fmtDate(client.createdDate)} />
+        {/* ── Datum strip ─────────────────────────────── */}
+        <div className="mt-12 pt-8 border-t border-[rgba(11,11,12,0.08)] grid grid-cols-5 gap-8">
+          <Datum label="Conformité KYC" value={kycStatusText} />
+          <Datum label="Profil de risque" value={parsed.risk || 'Non défini'} />
+          <Datum label="Industrie" value={client.industry || '—'} />
+          <Datum label="Portefeuilles" value={String(wallets.length).padStart(2, '0')} />
+          <Datum label="Client depuis" value={fmtDate(client.createdDate)} />
         </div>
-      </div>
+      </header>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-1 bg-[rgba(0,0,23,0.03)] rounded-lg p-0.5 mb-6 w-fit">
-        {[
-          { id: 'profile', label: 'Fiche client' },
-          { id: 'eligibility', label: 'Eligibilite' },
-          ...(kycModuleEnabled ? [{ id: 'kyc', label: 'KYC / KYB' }] : []),
-          { id: 'wallets', label: `Wallets (${wallets.length})` },
-          { id: 'delegations', label: 'Delegations' },
-          ...(client.type !== 'Customer - Direct' ? [{ id: 'ubo', label: 'UBO' }] : []),
-          { id: 'transfers', label: 'Transferts' },
-          { id: 'history', label: 'Historique' },
-        ].map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={`px-4 py-1.5 text-[13px] font-medium rounded-md transition-all ${tab === t.id ? 'bg-white text-[#0F0F10] shadow-[0_1px_3px_rgba(0,0,0,0.06)]' : 'text-[#787881] hover:text-[#0F0F10]'}`}>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* ── Navigation ──────────────────────────────────── */}
+      <nav className="flex items-center gap-8 border-b border-[rgba(11,11,12,0.08)] mb-12 overflow-x-auto">
+        {tabs.map(t => {
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className="relative py-4 text-[13px] tracking-tight whitespace-nowrap transition-colors"
+              style={{ color: active ? '#0B0B0C' : '#6B6B70' }}
+            >
+              {t.label}
+              {active && <span className="absolute left-0 right-0 -bottom-px h-px bg-[#0B0B0C]" />}
+            </button>
+          );
+        })}
+      </nav>
 
-      {/* ========== PROFILE TAB ========== */}
+      {/* ══════════ PROFILE ══════════ */}
       {tab === 'profile' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left column: Informations generales + Adresse */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Description / A propos */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 animate-fade">
+          <div className="lg:col-span-2 space-y-12">
             {parsed.text && (
-              <SectionCard title="A propos">
-                <p className="text-[13px] text-[#787881] leading-relaxed">{parsed.text}</p>
-              </SectionCard>
+              <Section title="Note">
+                <p className="text-[15px] text-[#2C2C2E] leading-[1.7] font-light max-w-2xl">
+                  {parsed.text}
+                </p>
+              </Section>
             )}
 
-            {/* Informations detaillees */}
-            <SectionCard title="Informations detaillees">
-              <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                <DetailField label="Nom complet" value={client.name} />
-                <DetailField label="Numero de compte" value={client.accountNumber || '—'} mono />
-                <DetailField label="Type de compte" value={client.type === 'Customer - Direct' ? 'UHNWI (Client direct)' : client.type === 'Other' ? 'Institutionnel' : client.type || '—'} />
-                <DetailField label="Industrie" value={client.industry || '—'} />
-                <DetailField label="Chiffre d'affaires / AUM" value={client.aum ? fmtEUR(client.aum) : '—'} />
-                <DetailField label="Telephone" value={client.phone || '—'} />
-                <DetailField label="Site web" value={client.website} link />
-                <DetailField label="Nombre d'employes" value={client.employees || '—'} />
-                <DetailField label="ID Salesforce" value={client.id} mono />
+            <Section title="Informations">
+              <div className="grid grid-cols-2 gap-x-12 gap-y-7">
+                <Datum label="Nom complet" value={client.name} />
+                <Datum label="Numéro de compte" value={client.accountNumber || '—'} />
+                <Datum label="Type de compte" value={typeLabel(client.type)} />
+                <Datum label="Industrie" value={client.industry || '—'} />
+                <Datum label="Chiffre d'affaires / AUM" value={client.aum ? fmtEUR(client.aum) : '—'} />
+                <Datum label="Téléphone" value={client.phone || '—'} />
+                <Datum label="Site internet" value={client.website || '—'} />
+                <Datum label="Effectifs" value={client.employees || '—'} />
               </div>
-            </SectionCard>
+            </Section>
 
-            {/* Adresse */}
-            <SectionCard title="Adresse de facturation">
-              <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                <DetailField label="Rue" value={client.street || '—'} />
-                <DetailField label="Ville" value={client.city || '—'} />
-                <DetailField label="Code postal" value={client.postalCode || '—'} />
-                <DetailField label="Pays" value={client.country || '—'} />
+            <Section title="Adresse de facturation">
+              <div className="grid grid-cols-2 gap-x-12 gap-y-7">
+                <Datum label="Rue" value={client.street || '—'} />
+                <Datum label="Ville" value={client.city || '—'} />
+                <Datum label="Code postal" value={client.postalCode || '—'} />
+                <Datum label="Pays" value={client.country || '—'} />
               </div>
-            </SectionCard>
+            </Section>
 
-            {/* Contacts */}
-            <SectionCard title={`Contacts (${contacts.length})`}>
+            <Section title={`Contacts · ${contacts.length}`}>
               {loadingContacts ? (
-                <div className="py-6 text-center"><Spinner size="w-5 h-5" /></div>
+                <div className="py-6"><Spinner /></div>
               ) : contacts.length === 0 ? (
-                <p className="text-[13px] text-[#A8A29E] py-4 text-center">Aucun contact associe</p>
+                <p className="text-[13px] text-[#A8A8AD] font-light">Aucun contact associé.</p>
               ) : (
-                <div className="space-y-3">
+                <ul className="divide-y divide-[rgba(11,11,12,0.08)]">
                   {contacts.map(c => (
-                    <div key={c.Id} className="flex items-center justify-between py-3 px-4 bg-[rgba(0,0,23,0.02)] rounded-xl hover:bg-[rgba(0,0,23,0.04)] transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 bg-[#EEF2FF] rounded-xl flex items-center justify-center text-[#6366F1] text-[13px] font-bold">
-                          {(c.FirstName?.[0] || '')}{(c.LastName?.[0] || '')}
-                        </div>
-                        <div>
-                          <p className="text-[13px] font-semibold text-[#0F0F10]">{[c.FirstName, c.LastName].filter(Boolean).join(' ')}</p>
-                          {c.Title && <p className="text-[11px] text-[#A8A29E]">{c.Title}</p>}
-                        </div>
+                    <li key={c.Id} className="py-5 flex items-baseline justify-between gap-6">
+                      <div>
+                        <p className="font-display text-[18px] text-[#0B0B0C] leading-tight">
+                          {[c.FirstName, c.LastName].filter(Boolean).join(' ')}
+                        </p>
+                        {c.Title && <p className="eyebrow mt-1">{c.Title}</p>}
                       </div>
                       <div className="text-right">
-                        {c.Email && <p className="text-[12px] text-[#787881]">{c.Email}</p>}
-                        {c.Phone && <p className="text-[11px] text-[#A8A29E]">{c.Phone}</p>}
+                        {c.Email && <p className="text-[12px] text-[#6B6B70]">{c.Email}</p>}
+                        {c.Phone && <p className="text-[12px] text-[#A8A8AD] mt-0.5">{c.Phone}</p>}
                       </div>
-                    </div>
+                    </li>
                   ))}
-                </div>
+                </ul>
               )}
-            </SectionCard>
+            </Section>
           </div>
 
-          {/* Right column: KYC / Compliance / Allocation */}
-          <div className="space-y-6">
-            {/* KYC Status */}
-            <SectionCard title="Conformite KYC">
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-3 h-3 rounded-full ${kycValid ? 'bg-[#059669]' : kycVariant === 'warning' || kycLive?.overallStatus === 'in_progress' ? 'bg-[#F59E0B]' : kycLive?.overallStatus === 'attention_required' ? 'bg-[#DC2626]' : 'bg-[#A8A29E]'}`} />
-                  <div>
-                    <p className="text-[14px] font-semibold text-[#0F0F10]">
-                      {kycValid ? 'KYC Valide' :
-                       kycLive?.overallStatus === 'in_progress' ? 'KYC En cours' :
-                       kycLive?.overallStatus === 'ready_for_validation' ? 'Pret pour validation' :
-                       kycLive?.overallStatus === 'attention_required' ? 'Attention requise' :
-                       kycVariant === 'warning' ? 'KYC En cours' :
-                       kycVariant === 'error' ? 'KYC Rejete' : 'Non verifie'}
-                    </p>
-                    {kycLive?.stats && (
-                      <p className="text-[12px] text-[#787881]">
-                        {kycLive.stats.documentsVerified} doc(s) verifie(s) — AML {kycLive.stats.amlClean ? 'clean' : 'en attente'}
-                      </p>
-                    )}
-                    {!kycLive?.stats && parsed.kyc && <p className="text-[12px] text-[#787881]">{parsed.kyc}</p>}
-                  </div>
-                </div>
-
-                {!kycValid && (
-                  <button
-                    onClick={() => setTab('kyc')}
-                    className="w-full py-2 px-4 text-[13px] font-medium text-[#6366F1] bg-[#EEF2FF] rounded-xl hover:bg-[#E0E7FF] transition-colors text-center"
-                  >
-                    Lancer la verification KYC
-                  </button>
-                )}
-
-                {parsed.documents.length > 0 && (
-                  <div>
-                    <p className="text-[11px] font-medium text-[#A8A29E] uppercase tracking-wider mb-2">Documents Salesforce</p>
-                    <div className="space-y-1.5">
-                      {parsed.documents.map((doc, i) => (
-                        <div key={i} className="flex items-center gap-2 py-1.5 px-3 bg-[rgba(0,0,23,0.02)] rounded-lg">
-                          <svg className="w-3.5 h-3.5 text-[#059669] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          <span className="text-[12px] text-[#0F0F10]">{doc}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </SectionCard>
-
-            {/* Risk Profile */}
-            <SectionCard title="Profil de risque">
-              <div className="flex items-center gap-3 mb-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  parsed.risk?.toLowerCase().includes('agressif') ? 'bg-[#FEF2F2]' :
-                  parsed.risk?.toLowerCase().includes('conservateur') ? 'bg-[#ECFDF5]' : 'bg-[#FFFBEB]'
-                }`}>
-                  <svg className={`w-5 h-5 ${riskColor}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                  </svg>
-                </div>
+          <aside className="space-y-12">
+            <Section title="Conformité">
+              <div className="flex items-baseline gap-3">
+                <span
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ background: kycValid ? '#2E5D4F' : kycLive?.overallStatus === 'attention_required' ? '#7A2424' : '#8A4A1B' }}
+                />
                 <div>
-                  <p className={`text-[14px] font-semibold ${riskColor}`}>{parsed.risk || 'Non defini'}</p>
-                  {parsed.allocation && <p className="text-[12px] text-[#787881]">Cible: {parsed.allocation}</p>}
+                  <p className="font-display text-[22px] text-[#0B0B0C] leading-tight">{kycStatusText}</p>
+                  {kycLive?.stats && (
+                    <p className="text-[12px] text-[#6B6B70] mt-1">
+                      {kycLive.stats.documentsVerified} document(s) vérifié(s) · AML {kycLive.stats.amlClean ? 'clean' : 'en attente'}
+                    </p>
+                  )}
                 </div>
               </div>
-              {parsed.allocation && (
-                <div className="bg-[rgba(0,0,23,0.02)] rounded-xl p-3">
-                  <p className="text-[12px] text-[#787881]">
-                    <span className="font-medium text-[#0F0F10]">Allocation crypto:</span> {parsed.allocation}
-                  </p>
+              {!kycValid && kycModuleEnabled && (
+                <button
+                  onClick={() => setTab('kyc')}
+                  className="mt-5 eyebrow text-[#8A6F3D] hover:text-[#0B0B0C] transition-colors"
+                >
+                  Lancer la vérification →
+                </button>
+              )}
+              {parsed.documents.length > 0 && (
+                <div className="mt-6 pt-6 border-t border-[rgba(11,11,12,0.08)]">
+                  <p className="eyebrow mb-3">Documents Salesforce</p>
+                  <ul className="space-y-2">
+                    {parsed.documents.map((doc, i) => (
+                      <li key={i} className="flex items-start gap-2 text-[13px] text-[#2C2C2E] font-light">
+                        <span className="text-[#8A6F3D] mt-0.5">·</span>
+                        {doc}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
-            </SectionCard>
+            </Section>
 
-            {/* Quick actions */}
-            <SectionCard title="Actions rapides">
-              <div className="space-y-2">
+            <Section title="Profil de risque">
+              <p className="font-display text-[22px] text-[#0B0B0C] leading-tight">
+                {parsed.risk || 'Non défini'}
+              </p>
+              {parsed.allocation && (
+                <p className="text-[13px] text-[#6B6B70] mt-3 font-light leading-relaxed">
+                  Allocation crypto cible : <span className="text-[#0B0B0C]">{parsed.allocation}</span>
+                </p>
+              )}
+            </Section>
+
+            <Section title="Actions">
+              <div className="space-y-3">
                 <button
                   onClick={() => { setTab('wallets'); setShowCreate(true); }}
-                  className="w-full flex items-center gap-3 py-2.5 px-4 text-[13px] font-medium text-[#0F0F10] bg-[rgba(0,0,23,0.02)] rounded-xl hover:bg-[rgba(0,0,23,0.05)] transition-colors text-left"
+                  className="w-full text-left py-3 eyebrow text-[#0B0B0C] border-b border-[rgba(11,11,12,0.08)] hover:border-[#0B0B0C] transition-colors"
                 >
-                  <svg className="w-4 h-4 text-[#6366F1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                  Creer un wallet
+                  Créer un portefeuille →
                 </button>
                 {client.website && (
-                  <a href={client.website.startsWith('http') ? client.website : `https://${client.website}`} target="_blank" rel="noopener noreferrer"
-                    className="w-full flex items-center gap-3 py-2.5 px-4 text-[13px] font-medium text-[#0F0F10] bg-[rgba(0,0,23,0.02)] rounded-xl hover:bg-[rgba(0,0,23,0.05)] transition-colors">
-                    <svg className="w-4 h-4 text-[#A8A29E]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                    Ouvrir le site web
+                  <a
+                    href={client.website.startsWith('http') ? client.website : `https://${client.website}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="block text-left py-3 eyebrow text-[#0B0B0C] border-b border-[rgba(11,11,12,0.08)] hover:border-[#0B0B0C] transition-colors"
+                  >
+                    Ouvrir le site internet ↗
                   </a>
                 )}
               </div>
-            </SectionCard>
+            </Section>
 
-            {/* Risk Config */}
             <RiskConfigPanel client={client} />
 
-            {/* Metadata */}
-            <SectionCard title="Metadata Salesforce">
-              <div className="space-y-2.5">
-                <DetailField label="ID Salesforce" value={client.id} mono small />
-                <DetailField label="Proprietaire" value={client.ownerId || '—'} mono small />
-                <DetailField label="Date de creation" value={fmtDate(client.createdDate)} small />
-              </div>
-            </SectionCard>
-          </div>
+            <Section title="Métadonnées">
+              <dl className="space-y-4">
+                <div>
+                  <dt className="eyebrow mb-1">Identifiant Salesforce</dt>
+                  <dd className="text-[12px] text-[#6B6B70] font-mono break-all">{client.id}</dd>
+                </div>
+                <div>
+                  <dt className="eyebrow mb-1">Propriétaire</dt>
+                  <dd className="text-[12px] text-[#6B6B70] font-mono break-all">{client.ownerId || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="eyebrow mb-1">Créé le</dt>
+                  <dd className="text-[13px] text-[#2C2C2E] font-light">{fmtDate(client.createdDate)}</dd>
+                </div>
+              </dl>
+            </Section>
+          </aside>
         </div>
       )}
 
-      {/* ========== ELIGIBILITY TAB ========== */}
+      {/* ══════════ ELIGIBILITY ══════════ */}
       {tab === 'eligibility' && (
-        <CustodyEligibilityPanel client={client} onUpdate={reloadClient} />
+        <div className="animate-fade">
+          <CustodyEligibilityPanel client={client} onUpdate={reloadClient} />
+        </div>
       )}
 
-      {/* ========== KYC TAB ========== */}
+      {/* ══════════ KYC ══════════ */}
       {tab === 'kyc' && (
-        <KYCFlow client={client} onComplete={loadKycStatus} />
+        <div className="animate-fade">
+          <KYCFlow client={client} onComplete={loadKycStatus} />
+        </div>
       )}
 
-      {/* ========== DELEGATIONS TAB ========== */}
+      {/* ══════════ DELEGATIONS ══════════ */}
       {tab === 'delegations' && (
-        <DelegationPanel client={client} />
+        <div className="animate-fade">
+          <DelegationPanel client={client} />
+        </div>
       )}
 
-      {/* ========== UBO TAB ========== */}
+      {/* ══════════ UBO ══════════ */}
       {tab === 'ubo' && (
-        <UBOPanel salesforceAccountId={client.id} clientName={client.name} />
+        <div className="animate-fade">
+          <UBOPanel salesforceAccountId={client.id} clientName={client.name} />
+        </div>
       )}
 
-      {/* ========== WALLETS TAB ========== */}
+      {/* ══════════ WALLETS ══════════ */}
       {tab === 'wallets' && (
-        <div>
-          {/* Eligibility Warning */}
+        <div className="animate-fade">
           {client.Custody_Eligible__c !== true && !kycValid && (
-            <div className="bg-[#FFFBEB] border border-[rgba(217,119,6,0.15)] rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
-              <svg className="w-5 h-5 text-[#D97706] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.072 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
-              <div>
-                <p className="text-[13px] font-medium text-[#92400E]">Compliance : Client non eligible</p>
-                <p className="text-[12px] text-[#B45309]">
-                  La creation de wallets et les transferts necessitent que le client soit eligible a la custody.{' '}
-                  <button onClick={() => setTab('eligibility')} className="underline font-medium hover:text-[#92400E]">Voir l'onglet Eligibilite</button>
-                </p>
-              </div>
+            <div className="mb-10 py-5 px-6 border-l-2 border-[#8A4A1B] bg-[rgba(138,74,27,0.04)]">
+              <p className="eyebrow text-[#8A4A1B] mb-1">Conformité</p>
+              <p className="text-[14px] text-[#2C2C2E] font-light leading-relaxed">
+                La création de portefeuilles et les transferts requièrent que le client soit éligible à la conservation.{' '}
+                <button onClick={() => setTab('eligibility')} className="text-[#8A6F3D] underline underline-offset-4 hover:text-[#0B0B0C] transition-colors">
+                  Voir l'éligibilité
+                </button>
+              </p>
             </div>
           )}
 
-          {/* Error banner */}
           {error && (
-            <div className="bg-[#FEF2F2] border border-[rgba(220,38,38,0.15)] rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
-              <svg className="w-5 h-5 text-[#DC2626] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <div className="flex-1">
-                <p className="text-[13px] font-medium text-[#991B1B]">Erreur Dfns</p>
-                <p className="text-[12px] text-[#B91C1C] font-mono">{error}</p>
-              </div>
-              <button onClick={() => setError(null)} className="text-[#DC2626] hover:text-[#991B1B]">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
+            <div className="mb-6 py-4 px-5 border-l-2 border-[#7A2424] bg-[rgba(122,36,36,0.04)]">
+              <p className="eyebrow text-[#7A2424] mb-1">Erreur DFNS</p>
+              <p className="text-[13px] text-[#7A2424] font-mono">{error}</p>
             </div>
           )}
 
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[16px] font-semibold text-[#0F0F10]">Wallets Dfns</h3>
-            <button onClick={() => setShowCreate(true)}
+          <div className="flex items-end justify-between mb-10">
+            <div>
+              <p className="eyebrow mb-2">Custody opérationnelle</p>
+              <h2 className="font-display text-[34px] leading-tight text-[#0B0B0C]">Portefeuilles</h2>
+            </div>
+            <Button
+              variant="primary"
+              onClick={() => setShowCreate(true)}
               disabled={client.Custody_Eligible__c !== true && !kycValid}
-              className="px-4 py-2 bg-[#0F0F10] text-white text-[13px] font-medium rounded-xl hover:bg-[#1a1a1a] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-              + Creer un wallet
-            </button>
+            >
+              Créer un portefeuille
+            </Button>
           </div>
 
           {loading ? (
-            <div className="flex justify-center py-16"><Spinner /></div>
+            <div className="flex justify-center py-20"><Spinner /></div>
           ) : wallets.length === 0 ? (
             <EmptyState
-              title="Aucun wallet"
-              description="Creez un premier wallet pour ce client via Dfns"
-              icon={<svg className="w-6 h-6 text-[#A8A29E]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>}
+              title="Aucun portefeuille"
+              description="Créez le premier portefeuille de ce client. La clé sera générée via DFNS, sous MPC."
             />
           ) : (
-            <div className="grid md:grid-cols-2 gap-4">
+            <ul className="divide-y divide-[rgba(11,11,12,0.08)]">
               {wallets.map(w => {
                 const n = net(w.network);
+                const active = selectedWallet?.id === w.id;
                 return (
-                  <button key={w.id} onClick={() => selectWallet(w)}
-                    className={`bg-white border rounded-2xl p-5 text-left hover:border-[rgba(0,0,29,0.15)] transition-all ${selectedWallet?.id === w.id ? 'border-[#6366F1] shadow-[0_0_0_3px_rgba(99,102,241,0.08)]' : 'border-[rgba(0,0,29,0.08)]'}`}>
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-[14px]" style={{ backgroundColor: n.color }}>
-                        {n.icon}
+                  <li key={w.id}>
+                    <button
+                      onClick={() => selectWallet(w)}
+                      className="w-full text-left py-6 group transition-colors hover:bg-[rgba(11,11,12,0.015)] px-4 -mx-4"
+                    >
+                      <div className="flex items-baseline justify-between gap-6">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline gap-3">
+                            <p className={`font-display text-[22px] text-[#0B0B0C] leading-tight truncate ${active ? 'underline underline-offset-[6px] decoration-[#8A6F3D]' : ''}`}>
+                              {w.name || n.name}
+                            </p>
+                            {frozenWallets[w.id] && <Badge variant="error">Gelé</Badge>}
+                            <Badge variant={w.status === 'Active' ? 'success' : 'warning'}>{w.status}</Badge>
+                          </div>
+                          <p className="eyebrow mt-2">{n.name}</p>
+                          <p className="mt-3 text-[12px] text-[#6B6B70] font-mono tabular">
+                            {truncAddr(w.address, 10)}
+                          </p>
+                        </div>
+                        <svg className="w-3 h-3 text-[#CFCFD1] group-hover:text-[#0B0B0C] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[14px] font-semibold text-[#0F0F10] truncate">{w.name || n.name}</p>
-                        <p className="text-[11px] text-[#A8A29E]">{n.name}</p>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        {frozenWallets[w.id] && (
-                          <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded-md uppercase tracking-wide">GELE</span>
-                        )}
-                        <Badge variant={w.status === 'Active' ? 'success' : 'warning'}>{w.status}</Badge>
-                      </div>
-                    </div>
-                    <div className="font-mono text-[12px] text-[#787881] bg-[rgba(0,0,23,0.025)] rounded-lg px-3 py-2 truncate">
-                      {truncAddr(w.address, 10)}
-                    </div>
-                  </button>
+                    </button>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           )}
 
-          {/* Wallet detail panel */}
           {selectedWallet && (
-            <div className="mt-6 bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-[16px] font-semibold text-[#0F0F10]">{selectedWallet.name || 'Wallet'}</h4>
-                <button onClick={() => setShowTransfer(true)}
+            <div className="mt-12 pt-12 border-t border-[rgba(11,11,12,0.08)]">
+              <div className="flex items-end justify-between mb-8">
+                <div>
+                  <p className="eyebrow mb-2">Détail</p>
+                  <h3 className="font-display text-[30px] leading-tight text-[#0B0B0C]">
+                    {selectedWallet.name || 'Portefeuille'}
+                  </h3>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowTransfer(true)}
                   disabled={client.Custody_Eligible__c !== true && !kycValid}
-                  className="px-4 py-2 bg-[#6366F1] text-white text-[13px] font-medium rounded-xl hover:bg-[#5558E6] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                  title={client.Custody_Eligible__c !== true && !kycValid ? 'Eligibilite requise pour les transferts' : ''}>
+                >
                   Envoyer
-                </button>
-              </div>
-              <div className="grid grid-cols-3 gap-4 mb-4">
-                <div className="bg-[rgba(0,0,23,0.025)] rounded-xl p-4">
-                  <p className="text-[12px] text-[#A8A29E] mb-1">Adresse</p>
-                  <p className="font-mono text-[12px] text-[#0F0F10] break-all">{selectedWallet.address}</p>
-                </div>
-                <div className="bg-[rgba(0,0,23,0.025)] rounded-xl p-4">
-                  <p className="text-[12px] text-[#A8A29E] mb-1">Reseau</p>
-                  <p className="text-[13px] font-medium text-[#0F0F10]">{net(selectedWallet.network).name}</p>
-                </div>
-                <div className="bg-[rgba(0,0,23,0.025)] rounded-xl p-4">
-                  <p className="text-[12px] text-[#A8A29E] mb-1">Valeur nette</p>
-                  <p className="text-[18px] font-bold text-[#0F0F10] tabular-nums">{assets?.netWorth?.USD ? `$${assets.netWorth.USD.toLocaleString()}` : '—'}</p>
-                </div>
+                </Button>
               </div>
 
-              {/* Assets */}
-              {assets?.assets?.length > 0 && (
+              <div className="grid grid-cols-3 gap-10 mb-10">
                 <div>
-                  <h5 className="text-[14px] font-semibold text-[#0F0F10] mb-3">Actifs</h5>
-                  <div className="space-y-2">
+                  <p className="eyebrow mb-2">Adresse</p>
+                  <p className="text-[12px] text-[#0B0B0C] font-mono break-all leading-relaxed">
+                    {selectedWallet.address}
+                  </p>
+                </div>
+                <Datum label="Réseau" value={net(selectedWallet.network).name} />
+                <Datum
+                  label="Valeur nette"
+                  value={assets?.netWorth?.USD ? `$${assets.netWorth.USD.toLocaleString()}` : '—'}
+                />
+              </div>
+
+              {assets?.assets?.length > 0 && (
+                <>
+                  <Rule className="mb-6">Actifs</Rule>
+                  <ul className="divide-y divide-[rgba(11,11,12,0.08)]">
                     {assets.assets.map((a, i) => (
-                      <div key={i} className="flex items-center justify-between py-2.5 px-4 bg-[rgba(0,0,23,0.015)] rounded-xl">
-                        <div className="flex items-center gap-3">
-                          <span className="text-[14px] font-bold text-[#0F0F10]">{a.symbol}</span>
-                          <Badge>{a.kind}</Badge>
+                      <li key={i} className="py-4 flex items-baseline justify-between">
+                        <div className="flex items-baseline gap-4">
+                          <span className="font-display text-[18px] text-[#0B0B0C]">{a.symbol}</span>
+                          <span className="eyebrow">{a.kind}</span>
                         </div>
                         <div className="text-right">
-                          <p className="text-[14px] font-semibold text-[#0F0F10] tabular-nums">{a.balance}</p>
-                          {a.quotes?.USD && <p className="text-[11px] text-[#A8A29E] tabular-nums">${a.quotes.USD.toLocaleString()}</p>}
+                          <p className="text-[15px] text-[#0B0B0C] tabular">{a.balance}</p>
+                          {a.quotes?.USD && (
+                            <p className="text-[11px] text-[#6B6B70] tabular mt-0.5">
+                              ${a.quotes.USD.toLocaleString()}
+                            </p>
+                          )}
                         </div>
-                      </div>
+                      </li>
                     ))}
-                  </div>
-                </div>
+                  </ul>
+                </>
               )}
+
+              <div className="mt-10">
+                <WalletFreezePanel
+                  walletId={selectedWallet.id}
+                  salesforceAccountId={client.id}
+                  clientName={client.name || client.Name}
+                />
+              </div>
             </div>
           )}
 
-          {/* Wallet Freeze Panel */}
-          {selectedWallet && (
-            <div className="mt-4">
-              <WalletFreezePanel
-                walletId={selectedWallet.id}
-                salesforceAccountId={client.id}
-                clientName={client.name || client.Name}
-              />
-            </div>
-          )}
+          <div className="mt-16">
+            <WhitelistPanel client={client} />
+          </div>
         </div>
       )}
 
-      {/* Whitelist section in wallets tab */}
-      {tab === 'wallets' && (
-        <div className="mt-6">
-          <WhitelistPanel client={client} />
-        </div>
-      )}
-
-      {/* ========== TRANSFERS TAB ========== */}
+      {/* ══════════ TRANSFERS ══════════ */}
       {tab === 'transfers' && selectedWallet && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-[16px] font-semibold text-[#0F0F10]">Transferts — {selectedWallet.name}</h3>
-            <button onClick={() => setShowTransfer(true)}
-              className="px-4 py-2 bg-[#0F0F10] text-white text-[13px] font-medium rounded-xl hover:bg-[#1a1a1a] transition-colors">
-              + Nouveau transfert
-            </button>
+        <div className="animate-fade">
+          <div className="flex items-end justify-between mb-10">
+            <div>
+              <p className="eyebrow mb-2">{selectedWallet.name}</p>
+              <h2 className="font-display text-[34px] leading-tight text-[#0B0B0C]">Transferts</h2>
+            </div>
+            <Button variant="primary" onClick={() => setShowTransfer(true)}>Nouveau transfert</Button>
           </div>
           {history.length === 0 ? (
-            <EmptyState title="Aucun transfert" description="Les transferts apparaitront ici" />
+            <EmptyState title="Aucun transfert" description="L'historique du portefeuille apparaîtra ici." />
           ) : (
-            <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[rgba(0,0,29,0.06)] bg-[rgba(0,0,23,0.02)]">
-                    <th className="px-5 py-3 text-[12px] text-[#A8A29E] font-medium text-left">Direction</th>
-                    <th className="px-5 py-3 text-[12px] text-[#A8A29E] font-medium text-left">Adresse</th>
-                    <th className="px-5 py-3 text-[12px] text-[#A8A29E] font-medium text-right">Montant</th>
-                    <th className="px-5 py-3 text-[12px] text-[#A8A29E] font-medium text-left">Statut</th>
-                    <th className="px-5 py-3 text-[12px] text-[#A8A29E] font-medium text-left">Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.map((tx, i) => (
-                    <tr key={tx.id || i} className="border-b border-[rgba(0,0,29,0.04)] hover:bg-[rgba(0,0,23,0.02)]">
-                      <td className="px-5 py-3">
-                        <Badge variant={tx.direction === 'In' ? 'success' : 'info'}>{tx.direction || '—'}</Badge>
-                      </td>
-                      <td className="px-5 py-3 font-mono text-[12px] text-[#787881]">{truncAddr(tx.to || tx.from, 8)}</td>
-                      <td className="px-5 py-3 text-right text-[13px] font-medium text-[#0F0F10] tabular-nums">{tx.value || '—'}</td>
-                      <td className="px-5 py-3"><Badge variant={tx.status === 'Confirmed' ? 'success' : 'warning'}>{tx.status || 'Pending'}</Badge></td>
-                      <td className="px-5 py-3 text-[12px] text-[#787881]">{tx.timestamp ? new Date(tx.timestamp).toLocaleDateString('fr-FR') : '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ul className="divide-y divide-[rgba(11,11,12,0.08)]">
+              {history.map((tx, i) => (
+                <li key={tx.id || i} className="py-5 grid grid-cols-12 gap-4 items-baseline">
+                  <span className="col-span-2"><Badge variant={tx.direction === 'In' ? 'success' : 'info'}>{tx.direction || '—'}</Badge></span>
+                  <span className="col-span-4 text-[12px] text-[#6B6B70] font-mono truncate">{truncAddr(tx.to || tx.from, 8)}</span>
+                  <span className="col-span-2 text-right font-display text-[17px] text-[#0B0B0C] tabular">{tx.value || '—'}</span>
+                  <span className="col-span-2"><Badge variant={tx.status === 'Confirmed' ? 'success' : 'warning'}>{tx.status || 'Pending'}</Badge></span>
+                  <span className="col-span-2 text-[12px] text-[#6B6B70] text-right">
+                    {tx.timestamp ? new Date(tx.timestamp).toLocaleDateString('fr-FR') : '—'}
+                  </span>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       )}
 
       {tab === 'transfers' && !selectedWallet && (
-        <EmptyState title="Selectionnez un wallet" description="Choisissez un wallet dans l'onglet Wallets pour voir ses transferts" />
+        <div className="animate-fade">
+          <EmptyState
+            title="Sélectionnez un portefeuille"
+            description="Choisissez un portefeuille dans l'onglet Portefeuilles pour consulter ses transferts."
+          />
+        </div>
       )}
 
-      {/* ========== HISTORY TAB ========== */}
+      {/* ══════════ HISTORY ══════════ */}
       {tab === 'history' && (
-        <div>
-          <h3 className="text-[16px] font-semibold text-[#0F0F10] mb-4">Historique global</h3>
+        <div className="animate-fade">
+          <div className="mb-10">
+            <p className="eyebrow mb-2">Chronologie</p>
+            <h2 className="font-display text-[34px] leading-tight text-[#0B0B0C]">Historique</h2>
+          </div>
           {wallets.length === 0 ? (
-            <EmptyState title="Aucun wallet" description="Creez un wallet pour voir l'historique" />
+            <EmptyState title="Aucun portefeuille" description="Créez un portefeuille pour voir son historique." />
           ) : (
-            <div className="space-y-3">
+            <ul className="divide-y divide-[rgba(11,11,12,0.08)]">
               {wallets.map(w => {
                 const n = net(w.network);
                 return (
-                  <div key={w.id} className="bg-white border border-[rgba(0,0,29,0.08)] rounded-xl p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-[12px] font-bold" style={{ backgroundColor: n.color }}>{n.icon}</div>
-                      <div>
-                        <p className="text-[13px] font-medium text-[#0F0F10]">{w.name}</p>
-                        <p className="font-mono text-[11px] text-[#A8A29E]">{truncAddr(w.address, 6)}</p>
-                      </div>
+                  <li key={w.id} className="py-6 flex items-baseline justify-between">
+                    <div>
+                      <p className="font-display text-[20px] text-[#0B0B0C] leading-tight">{w.name}</p>
+                      <p className="text-[11px] text-[#6B6B70] font-mono mt-1">{truncAddr(w.address, 10)}</p>
                     </div>
                     <div className="text-right">
                       <Badge variant={w.status === 'Active' ? 'success' : 'default'}>{w.status}</Badge>
-                      <p className="text-[11px] text-[#A8A29E] mt-1">{w.dateCreated ? new Date(w.dateCreated).toLocaleDateString('fr-FR') : ''}</p>
+                      <p className="eyebrow mt-2">
+                        {w.dateCreated ? new Date(w.dateCreated).toLocaleDateString('fr-FR') : ''}
+                      </p>
                     </div>
-                  </div>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           )}
         </div>
       )}
 
-      {/* Create Wallet Modal */}
-      <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="Creer un wallet">
-        <div className="space-y-4">
+      {/* ── Create Wallet Modal ─────────────────────────── */}
+      <Modal
+        isOpen={showCreate}
+        onClose={() => setShowCreate(false)}
+        title="Nouveau portefeuille"
+        subtitle={`Le portefeuille sera lié au client ${client.name}. La clé privée est générée en MPC par DFNS.`}
+      >
+        <div className="space-y-8">
           <div>
-            <label className={labelCls}>Nom du wallet</label>
-            <input className={inputCls} placeholder="Ex: Wallet ETH principal" value={newWallet.name} onChange={e => setNewWallet(p => ({ ...p, name: e.target.value }))} />
+            <label className={labelCls}>Nom</label>
+            <input
+              className={inputCls}
+              placeholder="Portefeuille Ethereum principal"
+              value={newWallet.name}
+              onChange={e => setNewWallet(p => ({ ...p, name: e.target.value }))}
+            />
           </div>
           <div>
-            <label className={labelCls}>Reseau</label>
-            <select className={selectCls} value={newWallet.network} onChange={e => setNewWallet(p => ({ ...p, network: e.target.value }))}>
-              {SUPPORTED_NETWORKS.map(n => <option key={n.id} value={n.id}>{n.name} ({n.symbol})</option>)}
+            <label className={labelCls}>Réseau</label>
+            <select
+              className={selectCls}
+              value={newWallet.network}
+              onChange={e => setNewWallet(p => ({ ...p, network: e.target.value }))}
+            >
+              {SUPPORTED_NETWORKS.map(n => <option key={n.id} value={n.id}>{n.name} · {n.symbol}</option>)}
             </select>
           </div>
-          <div className="bg-[rgba(0,0,23,0.025)] rounded-xl p-3 text-[12px] text-[#787881]">
-            <p>Le wallet sera lie au client <strong className="text-[#0F0F10]">{client.name}</strong> via l'ID Salesforce <code className="text-[#6366F1]">{client.id}</code>.</p>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="ghost" onClick={() => setShowCreate(false)}>Annuler</Button>
+            <Button variant="primary" onClick={handleCreate} disabled={creating || !newWallet.name}>
+              {creating ? 'Création…' : 'Créer'}
+            </Button>
           </div>
-          <button onClick={handleCreate} disabled={creating || !newWallet.name}
-            className="w-full py-2.5 bg-[#0F0F10] text-white text-[14px] font-medium rounded-xl hover:bg-[#1a1a1a] transition-colors disabled:opacity-40">
-            {creating ? 'Creation...' : 'Creer le wallet'}
-          </button>
         </div>
       </Modal>
 
-      {/* Transfer Modal */}
-      <Modal isOpen={showTransfer} onClose={() => setShowTransfer(false)} title="Envoyer des fonds">
-        <div className="space-y-4">
+      {/* ── Transfer Modal ──────────────────────────────── */}
+      <Modal
+        isOpen={showTransfer}
+        onClose={() => setShowTransfer(false)}
+        title="Envoyer des fonds"
+        subtitle="La demande sera soumise à approbation selon le principe des quatre yeux."
+      >
+        <div className="space-y-8">
           <div>
             <label className={labelCls}>Adresse de destination</label>
-            <input className={inputCls} placeholder="0x..." value={transfer.to} onChange={e => setTransfer(p => ({ ...p, to: e.target.value }))} />
+            <input
+              className={inputCls}
+              placeholder="0x…"
+              value={transfer.to}
+              onChange={e => setTransfer(p => ({ ...p, to: e.target.value }))}
+            />
           </div>
           <div>
             <label className={labelCls}>Montant</label>
-            <input className={inputCls} type="number" step="any" placeholder="0.0" value={transfer.amount} onChange={e => setTransfer(p => ({ ...p, amount: e.target.value }))} />
+            <input
+              className={inputCls}
+              type="number" step="any" placeholder="0,00"
+              value={transfer.amount}
+              onChange={e => setTransfer(p => ({ ...p, amount: e.target.value }))}
+            />
           </div>
           <div>
             <label className={labelCls}>Type</label>
-            <select className={selectCls} value={transfer.kind} onChange={e => setTransfer(p => ({ ...p, kind: e.target.value }))}>
+            <select
+              className={selectCls}
+              value={transfer.kind}
+              onChange={e => setTransfer(p => ({ ...p, kind: e.target.value }))}
+            >
               <option value="Native">Native</option>
               <option value="Erc20">ERC-20</option>
             </select>
           </div>
-          <button onClick={handleTransfer} disabled={sending || !transfer.to || !transfer.amount}
-            className="w-full py-2.5 bg-[#6366F1] text-white text-[14px] font-medium rounded-xl hover:bg-[#5558E6] transition-colors disabled:opacity-40">
-            {sending ? 'Envoi...' : 'Confirmer le transfert'}
-          </button>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="ghost" onClick={() => setShowTransfer(false)}>Annuler</Button>
+            <Button variant="primary" onClick={handleTransfer} disabled={sending || !transfer.to || !transfer.amount}>
+              {sending ? 'Envoi…' : 'Soumettre'}
+            </Button>
+          </div>
         </div>
       </Modal>
     </div>
   );
 }
 
-// ==========================================
-// Sub-components
-// ==========================================
-
-function SectionCard({ title, children }) {
+/* ─── Section — editorial block with eyebrow label ─── */
+function Section({ title, children }) {
   return (
-    <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-6">
-      <h3 className="text-[14px] font-semibold text-[#0F0F10] mb-4">{title}</h3>
+    <section>
+      <div className="flex items-center gap-4 mb-6">
+        <p className="eyebrow">{title}</p>
+        <div className="flex-1 border-t border-[rgba(11,11,12,0.08)]" />
+      </div>
       {children}
-    </div>
-  );
-}
-
-function InfoPill({ label, value, badge, badgeVariant, className }) {
-  return (
-    <div className="bg-[rgba(0,0,23,0.02)] rounded-xl px-3.5 py-2.5">
-      <p className="text-[11px] text-[#A8A29E] font-medium mb-0.5">{label}</p>
-      {badge ? (
-        <Badge variant={badgeVariant}>{value}</Badge>
-      ) : (
-        <p className={`text-[13px] font-medium ${className || 'text-[#0F0F10]'} truncate`}>{value}</p>
-      )}
-    </div>
-  );
-}
-
-function DetailField({ label, value, mono, link, small }) {
-  const textSize = small ? 'text-[12px]' : 'text-[13px]';
-  return (
-    <div>
-      <p className={`text-[11px] text-[#A8A29E] font-medium mb-0.5 ${small ? '' : 'uppercase tracking-wider'}`}>{label}</p>
-      {link && value ? (
-        <a href={value.startsWith('http') ? value : `https://${value}`} target="_blank" rel="noopener noreferrer"
-          className={`${textSize} text-[#6366F1] hover:underline font-medium`}>{value}</a>
-      ) : (
-        <p className={`${textSize} ${mono ? 'font-mono text-[#787881]' : 'text-[#0F0F10]'} font-medium`}>{value || '—'}</p>
-      )}
-    </div>
+    </section>
   );
 }

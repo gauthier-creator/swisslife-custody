@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { inputCls, labelCls, Spinner } from './shared';
+import { inputCls, labelCls, Button, Spinner } from './shared';
+
+/* ─────────────────────────────────────────────────────────
+   Login — the first impression
+   One door, set with typographic care.
+   ───────────────────────────────────────────────────────── */
 
 export default function LoginPage() {
   const { signIn, signUp } = useAuth();
-  const [mode, setMode] = useState('login'); // login | register
+  const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -16,15 +21,13 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-    setSuccess('');
-
+    setError(''); setSuccess('');
     try {
       if (mode === 'login') {
         await signIn(email, password);
       } else {
         await signUp(email, password, fullName, role);
-        setSuccess('Compte cree. Verifiez votre email pour confirmer.');
+        setSuccess('Compte créé. Vérifiez votre email pour confirmer.');
         setMode('login');
       }
     } catch (err) {
@@ -35,111 +38,150 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAF9] flex items-center justify-center p-6">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="w-12 h-12 bg-[#0F0F10] rounded-xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-white text-[16px] font-bold">SL</span>
-          </div>
-          <h1 className="text-[24px] font-semibold text-[#0F0F10] tracking-tight">SwissLife Custody</h1>
-          <p className="text-[14px] text-[#787881] mt-1">
-            {mode === 'login' ? 'Connectez-vous a votre espace' : 'Creer un nouveau compte'}
-          </p>
+    <div className="min-h-screen bg-[#FAFAF7] text-[#0B0B0C] flex">
+      {/* ── Left — editorial panel ─────────────────────── */}
+      <aside className="hidden lg:flex lg:w-1/2 relative border-r border-[rgba(11,11,12,0.08)]">
+        <div className="absolute top-10 left-10">
+          <p className="eyebrow text-[#8A6F3D]">SwissLife · Conservation</p>
         </div>
+        <div className="flex-1 flex items-center px-16">
+          <div className="max-w-lg animate-whisper">
+            <p className="eyebrow mb-6">Depuis 1857 · Paris</p>
+            <h1 className="font-display-tight text-[80px] leading-[0.92] text-[#0B0B0C]">
+              La patience
+              <br />
+              et la précision
+              <br />
+              d'un coffre-fort.
+            </h1>
+            <p className="mt-10 text-[15px] text-[#6B6B70] leading-[1.8] font-light max-w-md">
+              Un outil pour les banquiers privés : gérer la conservation
+              d'actifs numériques avec la même rigueur qu'un dossier de valeurs,
+              conformément au règlement MiCA et à l'ordonnance de l'ACPR.
+            </p>
+          </div>
+        </div>
+        <div className="absolute bottom-10 left-10 right-10 flex items-center justify-between">
+          <p className="eyebrow">AMF · ACPR · Tracfin · MiCA Art. 60</p>
+          <p className="eyebrow text-[#A8A8AD]">7 rue Belgrand · Levallois</p>
+        </div>
+      </aside>
 
-        <form onSubmit={handleSubmit} className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-6 space-y-4">
-          {mode === 'register' && (
+      {/* ── Right — the door ───────────────────────────── */}
+      <main className="flex-1 flex items-center justify-center p-8">
+        <div className="w-full max-w-sm animate-rise">
+          <div className="mb-12">
+            <p className="eyebrow mb-4">
+              {mode === 'login' ? 'Connexion' : 'Nouveau compte'}
+            </p>
+            <h2 className="font-display text-[44px] leading-[1.05] text-[#0B0B0C]">
+              {mode === 'login' ? 'Bonsoir.' : 'Bienvenue.'}
+            </h2>
+            <p className="mt-4 text-[14px] text-[#6B6B70] font-light leading-relaxed">
+              {mode === 'login'
+                ? 'Accédez à votre espace de conservation.'
+                : 'Créez votre compte pour rejoindre l\'équipe.'}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {mode === 'register' && (
+              <div>
+                <label className={labelCls}>Nom complet</label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={e => setFullName(e.target.value)}
+                  placeholder="Jean Dupont"
+                  className={inputCls}
+                  required
+                />
+              </div>
+            )}
+
             <div>
-              <label className={labelCls}>Nom complet</label>
+              <label className={labelCls}>Adresse email</label>
               <input
-                type="text"
-                value={fullName}
-                onChange={e => setFullName(e.target.value)}
-                placeholder="Jean Dupont"
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="vous@swisslife.com"
                 className={inputCls}
                 required
               />
             </div>
-          )}
 
-          <div>
-            <label className={labelCls}>Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="vous@swisslife.com"
-              className={inputCls}
-              required
-            />
-          </div>
-
-          <div>
-            <label className={labelCls}>Mot de passe</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className={inputCls}
-              required
-              minLength={6}
-            />
-          </div>
-
-          {mode === 'register' && (
             <div>
-              <label className={labelCls}>Role</label>
-              <div className="flex gap-3 mt-1">
-                {[
-                  { id: 'banquier', label: 'Banquier', desc: 'Gestion clients & wallets' },
-                  { id: 'admin', label: 'Admin', desc: 'Configuration & gestion totale' },
-                ].map(r => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    onClick={() => setRole(r.id)}
-                    className={`flex-1 p-3 rounded-xl border text-left transition-all ${
-                      role === r.id
-                        ? 'border-[#0F0F10] bg-[#0F0F10]/[0.02]'
-                        : 'border-[rgba(0,0,29,0.08)] hover:border-[rgba(0,0,29,0.15)]'
-                    }`}
-                  >
-                    <span className={`text-[13px] font-semibold ${role === r.id ? 'text-[#0F0F10]' : 'text-[#787881]'}`}>
-                      {r.label}
-                    </span>
-                    <p className="text-[11px] text-[#A8A29E] mt-0.5">{r.desc}</p>
-                  </button>
-                ))}
-              </div>
+              <label className={labelCls}>Mot de passe</label>
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className={inputCls}
+                required
+                minLength={6}
+              />
             </div>
-          )}
 
-          {error && (
-            <p className="text-[12px] text-[#DC2626] font-medium bg-red-50 rounded-lg px-3 py-2">{error}</p>
-          )}
-          {success && (
-            <p className="text-[12px] text-[#059669] font-medium bg-emerald-50 rounded-lg px-3 py-2">{success}</p>
-          )}
+            {mode === 'register' && (
+              <div>
+                <label className={labelCls}>Rôle</label>
+                <div className="mt-3 flex gap-6">
+                  {[
+                    { id: 'banquier', label: 'Banquier' },
+                    { id: 'admin', label: 'Administrateur' },
+                  ].map(r => {
+                    const active = role === r.id;
+                    return (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => setRole(r.id)}
+                        className="relative py-2 text-[13px] tracking-tight transition-colors"
+                        style={{ color: active ? '#0B0B0C' : '#6B6B70' }}
+                      >
+                        {r.label}
+                        {active && <span className="absolute left-0 right-0 -bottom-px h-px bg-[#0B0B0C]" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2.5 bg-[#0F0F10] text-white rounded-xl text-[14px] font-medium hover:bg-[#292524] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {loading ? <><Spinner size="w-4 h-4" /> Chargement...</> : mode === 'login' ? 'Se connecter' : 'Creer le compte'}
-          </button>
+            {error && (
+              <div className="py-3 px-4 border-l-2 border-[#7A2424] bg-[rgba(122,36,36,0.04)]">
+                <p className="text-[13px] text-[#7A2424]">{error}</p>
+              </div>
+            )}
+            {success && (
+              <div className="py-3 px-4 border-l-2 border-[#2E5D4F] bg-[rgba(46,93,79,0.04)]">
+                <p className="text-[13px] text-[#2E5D4F]">{success}</p>
+              </div>
+            )}
 
-          <button
-            type="button"
-            onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setSuccess(''); }}
-            className="w-full py-2 text-[13px] text-[#787881] hover:text-[#0F0F10] transition-colors font-medium"
-          >
-            {mode === 'login' ? 'Creer un compte →' : '← Retour a la connexion'}
-          </button>
-        </form>
-      </div>
+            <div className="pt-4">
+              <Button variant="primary" className="w-full" disabled={loading}>
+                {loading ? <><Spinner size="w-3 h-3" /> Chargement…</> : mode === 'login' ? 'Entrer' : 'Créer le compte'}
+              </Button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setSuccess(''); }}
+              className="w-full text-center eyebrow text-[#6B6B70] hover:text-[#0B0B0C] transition-colors"
+            >
+              {mode === 'login' ? 'Créer un compte →' : '← Retour à la connexion'}
+            </button>
+          </form>
+
+          <div className="mt-16 pt-8 border-t border-[rgba(11,11,12,0.08)] flex items-center justify-between">
+            <p className="eyebrow">SwissLife Banque Privée</p>
+            <p className="eyebrow text-[#A8A8AD]">Paris · 2026</p>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
