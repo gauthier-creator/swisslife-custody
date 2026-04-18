@@ -323,46 +323,35 @@ export function MandatCard({
     <button
       type="button"
       onClick={onClick}
-      className="group relative flex-shrink-0 w-[280px] snap-start text-left rounded-[20px] border border-[rgba(10,10,10,0.1)] bg-white p-4 transition-all duration-300 hover:-translate-y-[2px] hover:border-[rgba(10,10,10,0.2)]"
-      style={{
-        boxShadow:
-          '0 1px 0 rgba(255,255,255,0.95) inset, 0 1px 2px rgba(10,10,10,0.05), 0 8px 24px -12px rgba(124,94,60,0.25)',
-      }}
+      className="group relative flex-shrink-0 w-[280px] snap-start text-left rounded-[12px] border border-[#E9E4D9] bg-white p-3 transition-colors duration-150 hover:border-[#C8BEA4]"
     >
-      {/* Marble hero */}
-      <div
-        className="relative h-[200px] rounded-[14px] overflow-hidden border border-[rgba(124,94,60,0.18)]"
-        style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -12px 30px -10px rgba(124,94,60,0.18)' }}
-      >
+      {/* Marble hero — muted cream, no inner glow */}
+      <div className="relative h-[180px] rounded-[8px] overflow-hidden border border-[#E9E4D9]">
         <MarbleTexture variant={marble} seed={seed} />
 
-        {/* Serif label — centered, letterpress feel */}
-        <div className="absolute inset-x-0 top-5 flex flex-col items-center gap-1.5 pointer-events-none">
-          <span className="text-[8.5px] font-medium uppercase tracking-[0.22em] text-[#7C5E3C] opacity-80">
+        {/* Portfolio label — centered, serif */}
+        <div className="absolute inset-x-0 top-6 flex flex-col items-center gap-1 pointer-events-none">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8A8278]">
             Portefeuille
           </span>
-          <span className="w-5 h-px bg-[#7C5E3C] opacity-50" />
-          <span
-            className="font-display text-[22px] text-[#2A1F12]"
-            style={{ letterSpacing: '-0.02em', textShadow: '0 1px 0 rgba(255,255,255,0.6)' }}
-          >
+          <span className="font-display text-[22px] text-[#1E1E1E] mt-1"
+                style={{ letterSpacing: '-0.012em', fontWeight: 400 }}>
             {label}
           </span>
         </div>
 
-        {/* Asset-class pills — stacked, centered */}
-        <div className="absolute inset-x-0 bottom-4 flex flex-wrap items-center justify-center gap-1.5 px-4">
+        {/* Asset-class chips — muted, stacked bottom */}
+        <div className="absolute inset-x-0 bottom-4 flex flex-wrap items-center justify-center gap-1.5 px-3">
           {assetClasses.map((ac, i) => {
             const isDisabled = disabled.includes(ac);
             return (
               <span
                 key={i}
-                className={`inline-flex items-center gap-1 h-[22px] px-2.5 rounded-full text-[9.5px] font-medium uppercase tracking-[0.06em] border transition-colors ${
+                className={`inline-flex items-center gap-1 h-[20px] px-2 rounded-[4px] text-[10px] font-semibold uppercase tracking-[0.04em] ${
                   isDisabled
-                    ? 'bg-white/40 border-[rgba(124,94,60,0.15)] text-[#9B8970]'
-                    : 'bg-white/90 border-[rgba(124,94,60,0.22)] text-[#4A3A22]'
+                    ? 'bg-white/60 text-[#A8A29E]'
+                    : 'bg-white/90 text-[#5D5D5D]'
                 }`}
-                style={isDisabled ? {} : { boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 1px 2px rgba(124,94,60,0.1)' }}
               >
                 {isDisabled ? (
                   <svg className="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
@@ -370,7 +359,7 @@ export function MandatCard({
                     <path strokeLinecap="round" d="M5 12h14" />
                   </svg>
                 ) : (
-                  <span className="w-1 h-1 rounded-full bg-[#7C5E3C]" />
+                  <span className="w-1 h-1 rounded-full bg-[#8A8278]" />
                 )}
                 {ac}
               </span>
@@ -379,14 +368,11 @@ export function MandatCard({
         </div>
       </div>
 
-      {/* CTA button */}
-      <div className="mt-3 mx-1">
-        <span
-          className="inline-flex items-center justify-center gap-1.5 w-full h-10 rounded-[10px] bg-white border border-[rgba(10,10,10,0.1)] text-[12.5px] font-medium text-[#0A0A0A] tracking-[-0.006em] transition-all group-hover:bg-[#0A0A0A] group-hover:text-white group-hover:border-[#0A0A0A]"
-          style={{ boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 1px 2px rgba(10,10,10,0.05)' }}
-        >
+      {/* CTA button — mirrors ProductCard cta-primary on hover */}
+      <div className="mt-3">
+        <span className="inline-flex items-center justify-center gap-1.5 w-full h-9 rounded-[6px] bg-white border border-[#E9E4D9] text-[13.5px] font-semibold text-[#1E1E1E] transition-colors group-hover:bg-[#1E1E1E] group-hover:text-white group-hover:border-[#1E1E1E]">
           {cta}
-          <svg className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
           </svg>
         </span>
@@ -412,123 +398,41 @@ export function MarbleHero({
   className = '',
 }) {
   return (
-    <div
-      className={`relative overflow-hidden rounded-[22px] border border-[rgba(124,94,60,0.22)] ${className}`}
-      style={{
-        boxShadow:
-          '0 1px 0 rgba(255,255,255,0.9) inset, 0 1px 2px rgba(10,10,10,0.04), 0 24px 56px -24px rgba(124,94,60,0.35), 0 12px 24px -14px rgba(10,10,10,0.1)',
-      }}
-    >
-      {/* Marble background */}
-      <div className="absolute inset-0 rounded-[22px] overflow-hidden">
+    <div className={`relative overflow-hidden rounded-[12px] border border-[#E9E4D9] ${className}`}>
+      {/* Muted marble background — no specular, no watermark, no seal */}
+      <div className="absolute inset-0 overflow-hidden">
         <MarbleTexture variant={marble} seed={seed} />
       </div>
 
-      {/* Inner specular highlight (top-left) */}
-      <div
-        className="absolute inset-0 pointer-events-none rounded-[22px]"
-        style={{ background: 'radial-gradient(ellipse 70% 50% at 28% 0%, rgba(255,255,255,0.55), transparent 62%)' }}
-      />
-
-      {/* Monogram seal watermark — right side, very subtle */}
-      <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none hidden md:block" style={{ width: 340, height: 340, marginRight: -40 }}>
-        <svg viewBox="0 0 340 340" className="w-full h-full">
-          <defs>
-            <linearGradient id="seal-ring" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#C8924B" stopOpacity="0.45" />
-              <stop offset="50%" stopColor="#9A7A51" stopOpacity="0.28" />
-              <stop offset="100%" stopColor="#C8924B" stopOpacity="0.45" />
-            </linearGradient>
-          </defs>
-          {/* Concentric rings */}
-          <circle cx="170" cy="170" r="148" fill="none" stroke="url(#seal-ring)" strokeWidth="0.8" />
-          <circle cx="170" cy="170" r="138" fill="none" stroke="#9A7A51" strokeOpacity="0.16" strokeWidth="0.6" />
-          <circle cx="170" cy="170" r="116" fill="none" stroke="#9A7A51" strokeOpacity="0.22" strokeWidth="0.6" strokeDasharray="1 6" />
-          {/* Ornamental ticks at cardinal points */}
-          {[0, 90, 180, 270].map((deg) => (
-            <line
-              key={deg}
-              x1="170"
-              y1="22"
-              x2="170"
-              y2="32"
-              stroke="#9A7A51"
-              strokeOpacity="0.4"
-              strokeWidth="0.8"
-              transform={`rotate(${deg} 170 170)`}
-            />
-          ))}
-          {/* Central monogram Sℓ */}
-          <text
-            x="170"
-            y="204"
-            textAnchor="middle"
-            fontSize="132"
-            fontFamily="var(--font-display, 'Fraunces'), serif"
-            fontStyle="italic"
-            fill="#2A1F12"
-            fillOpacity="0.08"
-            letterSpacing="-6"
-          >
-            Sℓ
-          </text>
-          {/* Fine bronze rule beneath monogram */}
-          <line x1="118" y1="224" x2="222" y2="224" stroke="#9A7A51" strokeOpacity="0.32" strokeWidth="0.7" />
-          <text
-            x="170"
-            y="244"
-            textAnchor="middle"
-            fontSize="9"
-            fontFamily="var(--font-display, 'Fraunces'), serif"
-            fontStyle="italic"
-            fill="#7C5E3C"
-            fillOpacity="0.7"
-            letterSpacing="2"
-          >
-            EST · MMXXVI
-          </text>
-        </svg>
-      </div>
-
-      {/* Content */}
-      <div className="relative px-10 py-11 max-w-[58ch]">
+      {/* Content — editorial but sober */}
+      <div className="relative px-8 py-9 max-w-[58ch]">
         {eyebrow && (
-          <p className="text-[10.5px] font-medium text-[#7C5E3C] uppercase tracking-[0.16em] mb-5 flex items-center gap-2">
-            <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
+          <p className="text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.12em] mb-4">
             {eyebrow}
           </p>
         )}
         {title && (
-          <h2
-            className="font-display text-[36px] md:text-[38px] text-[#2A1F12] leading-[1.04]"
-            style={{ letterSpacing: '-0.028em', textShadow: '0 1px 0 rgba(255,255,255,0.4)' }}
-          >
+          <h2 className="font-display text-[32px] text-[#1E1E1E] leading-[1.08]"
+              style={{ letterSpacing: '-0.012em', fontWeight: 400 }}>
             {title}
           </h2>
         )}
         {description && (
-          <p className="mt-4 text-[14px] text-[#5C4A34] leading-[1.62] tracking-[-0.003em] max-w-[48ch]">
+          <p className="mt-3 text-[14px] text-[#5D5D5D] leading-[1.55] max-w-[48ch]">
             {description}
           </p>
         )}
 
         {(primaryCta || secondaryCta) && (
-          <div className="mt-7 flex items-center gap-2.5 flex-wrap">
+          <div className="mt-6 flex items-center gap-2 flex-wrap">
             {primaryCta && (
-              <button
-                onClick={primaryCta.onClick}
-                className="group/cta inline-flex items-center gap-2 h-10 px-[18px] rounded-full bg-[#0A0A0A] text-white text-[12.5px] font-medium tracking-[-0.003em] transition-all duration-200 hover:bg-[#1F1F1F] hover:-translate-y-px active:translate-y-0 active:scale-[0.98]"
-                style={{ boxShadow: '0 1px 0 rgba(255,255,255,0.12) inset, 0 1px 2px rgba(10,10,10,0.22), 0 8px 20px -8px rgba(10,10,10,0.45)' }}
-              >
+              <button onClick={primaryCta.onClick} className="cta-primary">
                 {primaryCta.icon}
                 {primaryCta.label}
               </button>
             )}
             {secondaryCta && (
-              <button
-                onClick={secondaryCta.onClick}
-                className="inline-flex items-center gap-2 h-10 px-[18px] rounded-full bg-white/75 backdrop-blur border border-[rgba(124,94,60,0.24)] text-[#2A1F12] text-[12.5px] font-medium tracking-[-0.003em] transition-all duration-200 hover:bg-white hover:border-[rgba(124,94,60,0.4)] hover:-translate-y-px active:translate-y-0"
-              >
+              <button onClick={secondaryCta.onClick} className="cta-secondary">
                 {secondaryCta.label}
               </button>
             )}
@@ -536,13 +440,10 @@ export function MarbleHero({
         )}
 
         {meta && meta.length > 0 && (
-          <div className="mt-5 flex items-center gap-3 flex-wrap">
+          <div className="mt-4 flex items-center gap-3 flex-wrap">
             {meta.map((m, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center gap-1.5 text-[10.5px] font-medium text-[#7C5E3C] tracking-[0.06em] uppercase"
-              >
-                {i > 0 && <span className="w-[3px] h-[3px] rounded-full bg-[#C8924B]" />}
+              <span key={i} className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold text-[#8A8278] tracking-[0.06em] uppercase">
+                {i > 0 && <span className="w-[3px] h-[3px] rounded-full bg-[#C8BEA4]" />}
                 {m}
               </span>
             ))}

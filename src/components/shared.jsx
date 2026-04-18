@@ -22,7 +22,7 @@ export function ToastContainer({ toasts }) {
       {toasts.map(t => (
         <div
           key={t.id}
-          className="bg-[#0A0A0A] text-white px-5 py-3.5 text-[13px] font-medium rounded-xl shadow-[0_12px_32px_-8px_rgba(10,10,10,0.35)] animate-slide-up tracking-[-0.01em]"
+          className="bg-[#1E1E1E] text-white px-4 py-3 text-[13px] font-semibold rounded-[6px] shadow-[0_8px_24px_-8px_rgba(30,30,30,0.25)] animate-slide-up"
         >
           {t.msg}
         </div>
@@ -217,29 +217,30 @@ export function CopyButton({ value, label = 'Copier', className = '' }) {
 }
 
 // ─── Badge ────────────────────────────────────────────
-// Outline style — no loud backgrounds. Dot conveys semantic color.
+// Ramify pattern: muted filled pill, no border, no shadow, no tabular.
+// Tones collapse to cream/green/red/blue/grey with just text colour.
 export function Badge({ children, variant = 'default', dot = false, size = 'md' }) {
   const tone = {
-    default: { text: '#4A4A4A', dot: '#9B9B9B', border: 'rgba(10,10,10,0.1)', bg: '#FFFFFF' },
-    success: { text: '#166534', dot: '#16A34A', border: 'rgba(22,101,52,0.18)', bg: '#F0FDF4' },
-    warning: { text: '#92400E', dot: '#CA8A04', border: 'rgba(146,64,14,0.2)',  bg: '#FEFCE8' },
-    error:   { text: '#991B1B', dot: '#DC2626', border: 'rgba(153,27,27,0.2)',  bg: '#FEF2F2' },
-    info:    { text: '#1E40AF', dot: '#2563EB', border: 'rgba(30,64,175,0.18)', bg: '#EFF6FF' },
-    gold:    { text: '#7C5E3C', dot: '#C8924B', border: 'rgba(124,94,60,0.22)', bg: '#FBF6EC' },
-    pink:    { text: '#4A4A4A', dot: '#9B9B9B', border: 'rgba(10,10,10,0.1)',   bg: '#FFFFFF' },
-    purple:  { text: '#4A4A4A', dot: '#9B9B9B', border: 'rgba(10,10,10,0.1)',   bg: '#FFFFFF' },
+    default: { text: '#5D5D5D', dot: '#8A8278', bg: '#F3F2EE' },
+    success: { text: '#0F9868', dot: '#0F9868', bg: '#ECFAF0' },
+    warning: { text: '#92400E', dot: '#CA8A04', bg: '#FEF5E7' },
+    error:   { text: '#991B1B', dot: '#DC2626', bg: '#FEF2F2' },
+    info:    { text: '#1E40AF', dot: '#2563EB', bg: '#EBF5FF' },
+    gold:    { text: '#7C5E3C', dot: '#C8924B', bg: '#F5E5CE' },
+    pink:    { text: '#5D5D5D', dot: '#8A8278', bg: '#F3F2EE' },
+    purple:  { text: '#5D5D5D', dot: '#8A8278', bg: '#F3F2EE' },
   };
   const sizes = {
-    sm: 'h-[22px] px-2 text-[10.5px]',
-    md: 'h-[26px] px-2.5 text-[11.5px]',
+    sm: 'h-[20px] px-1.5 text-[10.5px] rounded-[3px]',
+    md: 'h-[22px] px-2 text-[11.5px] rounded-[4px]',
   };
   const t = tone[variant] || tone.default;
   return (
     <span
-      className={`inline-flex items-center gap-1.5 font-medium rounded-full border tracking-[-0.003em] tabular-nums ${sizes[size]}`}
-      style={{ color: t.text, borderColor: t.border, backgroundColor: t.bg }}
+      className={`inline-flex items-center gap-1.5 font-semibold uppercase tracking-[0.04em] ${sizes[size]}`}
+      style={{ color: t.text, backgroundColor: t.bg }}
     >
-      {dot && <span className="w-1.5 h-1.5 rounded-full" style={{ background: t.dot, boxShadow: `0 0 0 2px ${t.bg}, 0 0 0 3px ${t.border}` }} />}
+      {dot && <span className="w-1 h-1 rounded-full" style={{ background: t.dot }} />}
       {children}
     </span>
   );
@@ -283,16 +284,16 @@ export function IconButton({
   ...props
 }) {
   const dims = {
-    sm: 'w-8 h-8 rounded-[9px]',
-    md: 'w-[38px] h-[38px] rounded-[11px]',
-    lg: 'w-11 h-11 rounded-[12px]',
-  }[size] || 'w-[38px] h-[38px] rounded-[11px]';
+    sm: 'w-8 h-8 rounded-[5px]',
+    md: 'w-9 h-9 rounded-[6px]',
+    lg: 'w-10 h-10 rounded-[6px]',
+  }[size] || 'w-9 h-9 rounded-[6px]';
 
   const tones = {
-    white: 'bg-white border-[rgba(10,10,10,0.08)] text-[#4A4A4A] hover:text-[#0A0A0A] hover:border-[rgba(10,10,10,0.18)]',
-    cream: 'bg-[#F5EEE0] border-[rgba(124,94,60,0.2)] text-[#6A4F30] hover:bg-[#EFE4CE] hover:text-[#4A3620]',
-    dark:  'bg-[#0A0A0A] border-[rgba(255,255,255,0.08)] text-white hover:bg-[#1A1A1A]',
-  }[tone] || 'bg-white border-[rgba(10,10,10,0.08)] text-[#4A4A4A] hover:text-[#0A0A0A] hover:border-[rgba(10,10,10,0.18)]';
+    white: 'bg-white border-[#E9E4D9] text-[#5D5D5D] hover:text-[#1E1E1E] hover:border-[#C8BEA4] hover:bg-[#FDFBF6]',
+    cream: 'bg-[#F5E5CE] border-transparent text-[#7C5E3C] hover:bg-[#EFDCBC]',
+    dark:  'bg-[#1E1E1E] border-transparent text-white hover:bg-[#000000]',
+  }[tone] || 'bg-white border-[#E9E4D9] text-[#5D5D5D] hover:text-[#1E1E1E] hover:border-[#C8BEA4]';
 
   return (
     <button
@@ -301,10 +302,8 @@ export function IconButton({
       className={`
         inline-flex items-center justify-center flex-shrink-0 border
         ${dims} ${tones}
-        shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_1px_2px_rgba(10,10,10,0.05),0_2px_6px_-2px_rgba(10,10,10,0.08)]
-        hover:shadow-[0_1px_0_rgba(255,255,255,0.95)_inset,0_2px_4px_rgba(10,10,10,0.06),0_6px_14px_-4px_rgba(10,10,10,0.14)]
-        active:scale-[0.97] transition-all duration-200
-        ${active ? 'ring-4 ring-[rgba(124,94,60,0.12)] border-[rgba(124,94,60,0.4)]' : ''}
+        transition-colors duration-150
+        ${active ? 'border-[#7C5E3C] text-[#1E1E1E]' : ''}
         ${className}
       `}
       {...props}
@@ -449,7 +448,7 @@ export function DuoIcon({ name = 'sparkle', tone = 'bronze', size = 22, classNam
 // layered card-button shadow, optional DuoIcon badge, big display number,
 // trend pill. Ramify "Allocation" style.
 export function StatCard({
-  icon,      // DuoIcon element
+  icon,      // DuoIcon element (rendered inline, monochrome)
   label,
   value,
   caption,
@@ -461,37 +460,35 @@ export function StatCard({
 }) {
   return (
     <div
-      className={`relative bg-white rounded-[16px] border border-[rgba(10,10,10,0.08)]
-                  p-5 shadow-button-card hover:shadow-button-card-hover
-                  transition-all duration-300 group ${className}`}
+      className={`relative bg-white rounded-[8px] border border-[#E9E4D9] p-5 ${className}`}
     >
       <div className="flex items-start justify-between gap-3">
-        {icon}
+        {/* Category eyebrow (matches ProductCard "CONSERVATION" pattern) */}
+        <p className="text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.1em]">
+          {label}
+        </p>
+        {icon && <span className="flex-shrink-0 -mt-0.5 opacity-75">{icon}</span>}
+      </div>
+      <p className="mt-2 font-display text-[28px] text-[#1E1E1E] leading-[1.05] tabular-nums"
+         style={{ letterSpacing: '-0.012em', fontWeight: 400 }}>
+        {value}
+      </p>
+      <div className="mt-1.5 flex items-center justify-between gap-2">
+        {caption && (
+          <p className="text-[12.5px] text-[#5D5D5D]">{caption}</p>
+        )}
         {delta && (
           <span
-            className={`inline-flex items-center gap-1 h-6 px-2 rounded-full text-[11px] font-semibold tabular-nums tracking-[-0.003em]
-              ${deltaPositive
-                ? 'bg-[#EDF6EE] text-[#15803D] border border-[rgba(22,163,74,0.2)]'
-                : 'bg-[#FDECEC] text-[#991B1B] border border-[rgba(220,38,38,0.2)]'}`}
+            className={`inline-flex items-center gap-1 text-[11.5px] font-semibold tabular-nums
+              ${deltaPositive ? 'text-[#0F9868]' : 'text-[#DC2626]'}`}
           >
             <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 12 12">
-              {deltaPositive
-                ? <path d="M6 2l4 5H2z" />
-                : <path d="M6 10L2 5h8z" />}
+              {deltaPositive ? <path d="M6 2l4 5H2z" /> : <path d="M6 10L2 5h8z" />}
             </svg>
             {delta}
           </span>
         )}
       </div>
-      <p className="mt-4 text-[11px] font-medium text-[#6B6B6B] uppercase tracking-[0.08em]">
-        {label}
-      </p>
-      <p className="mt-1.5 font-display text-[28px] text-[#0A0A0A] leading-[1.05] tabular-nums" style={{ letterSpacing: '-0.028em' }}>
-        {value}
-      </p>
-      {caption && (
-        <p className="mt-1.5 text-[12px] text-[#6B6B6B] tracking-[-0.003em]">{caption}</p>
-      )}
       {trend && <div className="mt-3 h-8 -mx-1">{trend}</div>}
       {typeof progress === 'number' && (
         <div className="progress-bronze mt-4 w-full" style={{ '--value': `${Math.max(0, Math.min(100, progress))}%` }} />
@@ -851,10 +848,11 @@ export function KPITile({ label, value, delta, visual, onClick, className = '' }
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-[14px] p-6 border border-[rgba(10,10,10,0.08)] shadow-[0_1px_2px_rgba(10,10,10,0.03)] ${clickable ? 'lift cursor-pointer' : ''} ${className}`}
+      className={`bg-white rounded-[8px] p-5 border border-[#E9E4D9] ${clickable ? 'cursor-pointer hover:border-[#C8BEA4]' : ''} transition-colors ${className}`}
     >
-      <p className="text-[12px] font-medium text-[#6B6B6B] tracking-[-0.003em]">{label}</p>
-      <p className="mt-2 text-[28px] font-medium text-[#0A0A0A] tabular-nums tracking-[-0.03em] leading-[1.1]">
+      <p className="text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.1em]">{label}</p>
+      <p className="mt-2 font-display text-[28px] text-[#1E1E1E] tabular-nums leading-[1.05]"
+         style={{ letterSpacing: '-0.012em', fontWeight: 400 }}>
         {value}
       </p>
       {delta && (
@@ -911,10 +909,11 @@ export function ListRow({ icon, tone = 'default', title, subtitle, trailing, tra
 }
 
 // ─── Section Title ────────────────────────────────────
+// Ramify pattern: eyebrow uppercase + hairline border bottom
 export function SectionTitle({ children, action }) {
   return (
-    <div className="px-6 pt-5 pb-3 flex items-center justify-between border-b border-[rgba(10,10,10,0.06)]">
-      <h3 className="text-[13px] font-medium text-[#0A0A0A] tracking-[-0.01em]">{children}</h3>
+    <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-[#E9E4D9]">
+      <h3 className="text-[11px] font-semibold text-[#8A8278] uppercase tracking-[0.08em]">{children}</h3>
       {action}
     </div>
   );
@@ -933,11 +932,11 @@ export function Modal({ isOpen, onClose, title, subtitle, children, maxWidth = '
   return (
     <>
       <div
-        className="fixed inset-0 bg-[rgba(10,10,10,0.4)] backdrop-blur-[6px] z-40 animate-fade"
+        className="fixed inset-0 bg-[rgba(30,30,30,0.35)] z-40 animate-fade"
         onClick={onClose}
       />
       <div
-        className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white z-50 w-[calc(100%-2rem)] ${maxWidth} max-h-[85vh] rounded-[18px] shadow-[0_24px_64px_-24px_rgba(10,10,10,0.35)] flex flex-col animate-scale border border-[rgba(10,10,10,0.08)] overflow-hidden`}
+        className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white z-50 w-[calc(100%-2rem)] ${maxWidth} max-h-[85vh] rounded-[10px] shadow-[0_12px_40px_-12px_rgba(30,30,30,0.2)] flex flex-col animate-scale border border-[#E9E4D9] overflow-hidden`}
       >
         {(title || subtitle) && (
           <header className="px-7 pt-7 pb-5 flex items-start justify-between gap-4 border-b border-[rgba(10,10,10,0.06)]">
@@ -1058,21 +1057,24 @@ export function Drawer({
 // Accepts either an illustration name (rendered via <Illustration />) or a custom icon
 export function EmptyState({ title, description, action, icon, illustration }) {
   return (
-    <div className="text-center py-20 px-6">
+    <div className="text-center py-16 px-6">
       {illustration ? (
-        <div className="mx-auto w-[88px] h-[88px] flex items-center justify-center">
-          <Illustration name={illustration} size={88} />
+        <div className="mx-auto w-[72px] h-[72px] flex items-center justify-center opacity-70">
+          <Illustration name={illustration} size={72} />
         </div>
       ) : icon ? (
-        <div className="w-14 h-14 mx-auto rounded-full bg-[#F5F3EE] border border-[rgba(10,10,10,0.06)] flex items-center justify-center text-[#4A4A4A]">
+        <div className="mx-auto text-[#8A8278] opacity-75 flex items-center justify-center">
           {icon}
         </div>
       ) : null}
-      <p className="text-[16px] font-medium text-[#0A0A0A] tracking-[-0.015em] mt-6">{title}</p>
+      <p className="font-display text-[20px] text-[#1E1E1E] mt-5"
+         style={{ letterSpacing: '-0.01em', fontWeight: 400 }}>
+        {title}
+      </p>
       {description && (
-        <p className="text-[13.5px] text-[#6B6B6B] mt-2 max-w-sm mx-auto leading-relaxed tracking-[-0.003em]">{description}</p>
+        <p className="text-[13.5px] text-[#5D5D5D] mt-2 max-w-md mx-auto leading-relaxed">{description}</p>
       )}
-      {action && <div className="mt-6">{action}</div>}
+      {action && <div className="mt-5">{action}</div>}
     </div>
   );
 }
@@ -1081,32 +1083,36 @@ export function EmptyState({ title, description, action, icon, illustration }) {
 export function Spinner({ size = 'w-4 h-4' }) {
   return (
     <span
-      className={`${size} inline-block border-[1.5px] border-[rgba(10,10,10,0.12)] border-t-[#0A0A0A] rounded-full animate-spin`}
+      className={`${size} inline-block border-[1.5px] border-[#E9E4D9] border-t-[#1E1E1E] rounded-full animate-spin`}
     />
   );
 }
 
 // ─── Stat Cell ────────────────────────────────────────
-// Thin horizontal strip cell — for secondary KPI rows inside a card
+// Thin horizontal strip cell — ProductCard DNA applied:
+// eyebrow label + serif-display value + sub description
 export function StatCell({ label, value, sub, className = '' }) {
   return (
-    <div className={`px-6 py-5 ${className}`}>
-      <p className="text-[12px] font-medium text-[#6B6B6B] tracking-[-0.003em]">{label}</p>
-      <p className="mt-2 text-[22px] font-medium text-[#0A0A0A] tabular-nums tracking-[-0.025em] truncate leading-[1.15]">{value || '—'}</p>
-      {sub && <p className="text-[12px] text-[#9B9B9B] mt-1 truncate tracking-[-0.003em]">{sub}</p>}
+    <div className={`px-5 py-4 ${className}`}>
+      <p className="text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.1em]">{label}</p>
+      <p className="mt-2 font-display text-[22px] text-[#1E1E1E] tabular-nums truncate leading-[1.1]"
+         style={{ letterSpacing: '-0.012em', fontWeight: 400 }}>
+        {value || '—'}
+      </p>
+      {sub && <p className="text-[12.5px] text-[#5D5D5D] mt-1 truncate">{sub}</p>}
     </div>
   );
 }
 
 // ─── Action Button ────────────────────────────────────
-// Circular icon button with label — Apple action tray style
+// Ramify pattern: square rounded (6px), peach hover, muted label
 export function ActionButton({ icon, label, onClick }) {
   return (
     <button onClick={onClick} className="flex flex-col items-center gap-2 group">
-      <div className="w-11 h-11 rounded-full flex items-center justify-center bg-[#F5F3EE] border border-[rgba(10,10,10,0.06)] text-[#0A0A0A] group-hover:bg-[#EFECE4] transition-colors">
+      <div className="w-10 h-10 rounded-[6px] flex items-center justify-center bg-white border border-[#E9E4D9] text-[#1E1E1E] group-hover:border-[#C8BEA4] group-hover:bg-[#FDFBF6] transition-colors">
         {icon}
       </div>
-      <span className="text-[11px] font-medium text-[#4A4A4A] group-hover:text-[#0A0A0A] transition-colors tracking-[-0.003em]">
+      <span className="text-[11.5px] font-medium text-[#5D5D5D] group-hover:text-[#1E1E1E] transition-colors">
         {label}
       </span>
     </button>
@@ -1115,7 +1121,7 @@ export function ActionButton({ icon, label, onClick }) {
 
 // ─── Divider ──────────────────────────────────────────
 export function Divider({ className = '' }) {
-  return <div className={`h-px bg-[rgba(10,10,10,0.08)] ${className}`} />;
+  return <div className={`h-px bg-[#E9E4D9] ${className}`} />;
 }
 
 // ─── PageHeader ───────────────────────────────────────
@@ -1261,20 +1267,20 @@ export function UnderlineTabs({ tabs, active, onChange, className = '' }) {
   );
 }
 
-// ─── Table (editorial, hairline) ──────────────────────
+// ─── Table (Ramify: hairline, muted uppercase header) ──────────────────────
 export function Table({ headers, children, className = '' }) {
   return (
     <div className={`overflow-x-auto ${className}`}>
       <table className="w-full text-sm text-left border-collapse">
         <thead>
-          <tr className="border-b border-[rgba(10,10,10,0.08)] bg-[#FBFAF7]/60">
+          <tr className="border-b border-[#E9E4D9]">
             {headers.map((h, i) => {
               const label = typeof h === 'string' ? h : h.label;
               const right = typeof h === 'object' && h.right;
               return (
                 <th
                   key={i}
-                  className={`px-6 py-3.5 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase ${right ? 'text-right' : ''}`}
+                  className={`px-5 py-3 text-[10.5px] font-semibold text-[#8A8278] tracking-[0.1em] uppercase ${right ? 'text-right' : ''}`}
                 >
                   {label}
                 </th>
@@ -1287,9 +1293,9 @@ export function Table({ headers, children, className = '' }) {
     </div>
   );
 }
-export const tdCls = 'px-6 py-4 text-[13.5px] text-[#0A0A0A] tracking-[-0.006em]';
-export const tdMuted = 'px-6 py-4 text-[12.5px] text-[#6B6B6B] tracking-[-0.003em]';
-export const trCls = 'group/row relative border-b border-[rgba(10,10,10,0.06)] transition-colors hover:bg-[#FBFAF7] hover:shadow-[inset_3px_0_0_0_rgba(200,146,75,0.55)]';
+export const tdCls = 'px-5 py-3.5 text-[14px] text-[#1E1E1E]';
+export const tdMuted = 'px-5 py-3.5 text-[13px] text-[#5D5D5D]';
+export const trCls = 'group/row relative border-b border-[#E9E4D9] transition-colors hover:bg-[#FDFBF6]';
 
 // ─── Illustrations — monochrome, editorial ───────────
 // Small refined SVGs for empty states & headers
@@ -1385,20 +1391,22 @@ export function Illustration({ name, size = 88 }) {
 }
 
 // ─── SectionCard ──────────────────────────────────────
-// Card with refined header — title + caption + optional action + slot content
+// Ramify pattern: eyebrow title above hairline, content below.
+// title is rendered as 13px semibold #1E1E1E (not serif — used for
+// interior groupings, not the page h1).
 export function SectionCard({ title, caption, action, children, className = '', bodyClassName = '', noBodyPadding = false }) {
   return (
     <Card className={className}>
       {(title || caption || action) && (
-        <div className="px-7 py-5 border-b border-[rgba(10,10,10,0.06)] flex items-center justify-between gap-4 flex-wrap">
+        <div className="px-5 py-4 border-b border-[#E9E4D9] flex items-center justify-between gap-4 flex-wrap">
           <div className="min-w-0">
-            {title && <h3 className="text-[15px] font-medium text-[#0A0A0A] tracking-[-0.015em]">{title}</h3>}
-            {caption && <p className="text-[12.5px] text-[#6B6B6B] mt-0.5 tracking-[-0.003em]">{caption}</p>}
+            {title && <h3 className="text-[13.5px] font-semibold text-[#1E1E1E]">{title}</h3>}
+            {caption && <p className="text-[12.5px] text-[#5D5D5D] mt-0.5">{caption}</p>}
           </div>
           {action && <div className="flex-shrink-0">{action}</div>}
         </div>
       )}
-      <div className={`${noBodyPadding ? '' : 'px-7 py-6'} ${bodyClassName}`}>
+      <div className={`${noBodyPadding ? '' : 'px-5 py-5'} ${bodyClassName}`}>
         {children}
       </div>
     </Card>
@@ -1406,10 +1414,10 @@ export function SectionCard({ title, caption, action, children, className = '', 
 }
 
 // ─── FooterDisclosure ─────────────────────────────────
-// Editorial footer with regulatory disclosures — reused across pages
+// Sober regulatory strip — reused across pages
 export function FooterDisclosure({ left = "SwissLife Banque Privée · Paris", right = "AMF · ACPR · Tracfin · MiCA Art. 60" }) {
   return (
-    <footer className="pt-8 mt-14 border-t border-[rgba(10,10,10,0.06)] flex items-center justify-between text-[11px] text-[#9B9B9B] tracking-[0.02em] uppercase font-medium flex-wrap gap-4">
+    <footer className="pt-6 mt-12 border-t border-[#E9E4D9] flex items-center justify-between text-[11px] text-[#8A8278] flex-wrap gap-4">
       <span>{left}</span>
       <span>{right}</span>
     </footer>

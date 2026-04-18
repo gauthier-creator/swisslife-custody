@@ -197,29 +197,9 @@ html, body {
    SIGNATURE DETAILS — the small refined touches
    ═════════════════════════════════════════════════════ */
 
-/* Layered elevation — subtle + distant. The "expensive" card shadow. */
-.shadow-crisp {
-  box-shadow:
-    0 1px 2px rgba(10, 10, 10, 0.04),
-    0 1px 1px rgba(10, 10, 10, 0.02);
-}
-.shadow-lift {
-  box-shadow:
-    0 1px 2px rgba(10, 10, 10, 0.04),
-    0 8px 24px -12px rgba(10, 10, 10, 0.1),
-    0 2px 6px -2px rgba(10, 10, 10, 0.04);
-}
-.shadow-press {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 1px 2px rgba(10, 10, 10, 0.05),
-    0 20px 40px -20px rgba(10, 10, 10, 0.18);
-}
-.shadow-plate {
-  box-shadow:
-    0 0 0 1px rgba(10, 10, 10, 0.06),
-    0 12px 32px -16px rgba(10, 10, 10, 0.12);
-}
+/* Legacy shadow utilities — Ramify uses hairline borders, not shadows.
+   Kept as noop so any lingering call-sites don't break. */
+.shadow-crisp, .shadow-lift, .shadow-press, .shadow-plate { box-shadow: none; }
 
 /* No bronze glow — Ramify doesn't use coloured shadows. Kept as noop. */
 .shadow-bronze { box-shadow: none; }
@@ -493,48 +473,12 @@ html, body {
   animation: verifiedPop 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
-/* Dot mesh background — modern fintech texture */
-.bg-dot-mesh {
-  background-color: #FDFCFA;
-  background-image:
-    radial-gradient(rgba(124, 94, 60, 0.14) 1px, transparent 1.2px),
-    radial-gradient(ellipse 60% 40% at 20% 10%, rgba(212,165,116,0.12), transparent 60%),
-    radial-gradient(ellipse 60% 40% at 85% 90%, rgba(154,122,81,0.08), transparent 60%);
-  background-size: 22px 22px, 100% 100%, 100% 100%;
-}
-
-/* Glassmorphism card — frosted white with bronze rim */
-.glass-card {
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(10, 10, 10, 0.06);
-  backdrop-filter: blur(14px) saturate(1.4);
-  -webkit-backdrop-filter: blur(14px) saturate(1.4);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 1px 2px rgba(10, 10, 10, 0.04),
-    0 12px 32px -16px rgba(124, 94, 60, 0.18);
-}
-
-/* Gradient border utility — bronze ring around cards */
-.gradient-ring {
-  position: relative;
-  background: #FFFFFF;
-  border-radius: 16px;
-}
-.gradient-ring::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  padding: 1px;
-  border-radius: inherit;
-  background: linear-gradient(135deg, rgba(212,165,116,0.6) 0%, rgba(124,94,60,0.08) 40%, rgba(154,122,81,0.5) 100%);
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-          mask-composite: exclude;
-  pointer-events: none;
-}
+/* Fintech aesthetic utilities collapsed to plain surfaces — Ramify doesn't
+   do dot meshes, glassmorphism, or gradient rings. Kept as noop. */
+.bg-dot-mesh { background-color: #FFFFFF; }
+.glass-card  { background: #FFFFFF; border: 1px solid #E9E4D9; }
+.gradient-ring { background: #FFFFFF; border-radius: 8px; }
+.gradient-ring::before { display: none; }
 
 /* ═════════════════════════════════════════════════════
    RAMIFY LANGUAGE — cream accents, marble surfaces
@@ -776,30 +720,8 @@ html, body {
   border-radius: 14px;
 }
 
-/* Ramify-style card-button shadow — subtle depth like image reference */
-.shadow-button-card {
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.95) inset,
-    0 1px 2px rgba(10, 10, 10, 0.05),
-    0 2px 6px -2px rgba(10, 10, 10, 0.08),
-    0 8px 16px -8px rgba(10, 10, 10, 0.1);
-}
-.shadow-button-card-hover {
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 1) inset,
-    0 2px 4px rgba(10, 10, 10, 0.06),
-    0 6px 14px -4px rgba(10, 10, 10, 0.14),
-    0 12px 24px -10px rgba(10, 10, 10, 0.18);
-}
-
-/* Premium marble card shadow */
-.shadow-marble {
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.9) inset,
-    0 1px 2px rgba(10, 10, 10, 0.04),
-    0 24px 48px -24px rgba(124, 94, 60, 0.3),
-    0 12px 24px -12px rgba(10, 10, 10, 0.08);
-}
+/* Legacy shadows — Ramify keeps everything flat hairline. Noop. */
+.shadow-button-card, .shadow-button-card-hover, .shadow-marble { box-shadow: none; }
 
 /* Hide scrollbar — for horizontal carousels */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
