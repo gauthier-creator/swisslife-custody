@@ -273,7 +273,7 @@ export function LiveIndicator({ tone = 'success', label, className = '' }) {
         />
       </span>
       {label && (
-        <span className="text-[10.5px] font-medium uppercase tracking-[0.1em] text-[#4A4A4A]">
+        <span className="text-[10.5px] font-medium uppercase tracking-[0.1em] text-[#1E1E1E]">
           {label}
         </span>
       )}

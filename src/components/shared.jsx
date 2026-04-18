@@ -136,7 +136,7 @@ export function SkeletonCircle({ size = 36, className = '' }) {
 export function SkeletonRow({ cols = 4, className = '' }) {
   // Editorial table skeleton row — matches our tdCls padding
   return (
-    <tr className={`border-b border-[rgba(10,10,10,0.06)] ${className}`}>
+    <tr className={`border-b border-[#E9E4D9] ${className}`}>
       {Array.from({ length: cols }).map((_, i) => (
         <td key={i} className="px-6 py-4">
           <Skeleton
@@ -196,7 +196,7 @@ export function CopyButton({ value, label = 'Copier', className = '' }) {
   return (
     <button
       onClick={onClick}
-      className={`inline-flex items-center gap-1.5 h-6 px-2 rounded-full text-[11px] font-medium text-[#6B6B6B] hover:text-[#0A0A0A] hover:bg-[#F5F3EE] transition-colors tracking-[-0.003em] ${className}`}
+      className={`inline-flex items-center gap-1.5 h-6 px-2 rounded-full text-[11px] font-medium text-[#5D5D5D] hover:text-[#0A0A0A] hover:bg-[#F5F3EE] transition-colors tracking-[-0.003em] ${className}`}
       aria-label="Copier"
     >
       <span className="relative flex items-center justify-center w-[11px] h-[11px]">
@@ -497,45 +497,22 @@ export function StatCard({
   );
 }
 
-// ─── Fleuron ──────────────────────────────────────────
-// Editorial decorative glyph — small four-point star/cross for
-// section breaks, page dividers, luxury accents (à la Phosphor fleuron).
-export function Fleuron({ size = 14, className = '', tone = 'bronze' }) {
-  const color = {
-    bronze: '#9A7A51',
-    ink:    '#0A0A0A',
-    muted:  '#BFBFBF',
-  }[tone] || '#9A7A51';
+// ─── Fleuron / FleuronRule ────────────────────────────
+// Retired — editorial four-point star and decorative break don't match the
+// Ramify "tech sober" identity. Kept as pass-through stubs so call-sites
+// don't crash. Fleuron renders a tiny dot. FleuronRule renders a plain hairline.
+export function Fleuron({ size = 4, className = '', tone = 'bronze' }) {
+  const color = tone === 'bronze' ? '#C8BEA4' : '#8A8278';
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      className={className}
+    <span
       aria-hidden="true"
-    >
-      {/* four-point star with soft curves */}
-      <path
-        d="M12 2 C 12 7.5, 12 7.5, 17.5 8.5 C 22 9.2, 22 9.2, 22 12 C 22 14.8, 22 14.8, 17.5 15.5 C 12 16.5, 12 16.5, 12 22 C 12 16.5, 12 16.5, 6.5 15.5 C 2 14.8, 2 14.8, 2 12 C 2 9.2, 2 9.2, 6.5 8.5 C 12 7.5, 12 7.5, 12 2 Z"
-        fill={color}
-        fillOpacity="0.9"
-      />
-    </svg>
+      className={`inline-block rounded-full ${className}`}
+      style={{ width: Math.max(3, Math.min(size, 5)), height: Math.max(3, Math.min(size, 5)), background: color }}
+    />
   );
 }
-
-// ─── FleuronRule ──────────────────────────────────────
-// Horizontal hairline with a centered fleuron — editorial section break.
-export function FleuronRule({ className = '', tone = 'bronze' }) {
-  const color = tone === 'bronze' ? '#9A7A51' : '#0A0A0A';
-  return (
-    <div className={`flex items-center gap-3 ${className}`} aria-hidden="true">
-      <span className="flex-1 h-px" style={{ background: `linear-gradient(90deg, transparent, ${color}33, transparent)` }} />
-      <Fleuron size={11} tone={tone} />
-      <span className="flex-1 h-px" style={{ background: `linear-gradient(90deg, transparent, ${color}33, transparent)` }} />
-    </div>
-  );
+export function FleuronRule({ className = '' }) {
+  return <div className={`h-px bg-[#E9E4D9] ${className}`} aria-hidden="true" />;
 }
 
 // ─── Avatar ───────────────────────────────────────────
@@ -620,19 +597,19 @@ export function SignatureMark({ name = 'G. Alexandrian', role = 'Banquier privé
   return (
     <div className={`flex items-center gap-4 ${className}`}>
       <div
-        className="flex-shrink-0 w-9 h-9 rounded-[9px] bg-white border border-[rgba(10,10,10,0.08)] flex items-center justify-center"
+        className="flex-shrink-0 w-9 h-9 rounded-[9px] bg-white border border-[#E9E4D9] flex items-center justify-center"
         style={{ boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 1px 2px rgba(10,10,10,0.05), 0 4px 12px -8px rgba(124,94,60,0.35)' }}
       >
         <span className="font-display text-[14px] text-[#0A0A0A] leading-none" style={{ letterSpacing: '-0.04em' }}>Sℓ</span>
       </div>
       <div className="leading-tight">
-        <p className="text-[9.5px] font-medium uppercase tracking-[0.14em] text-[#9B9B9B] flex items-center gap-1.5">
+        <p className="text-[9.5px] font-medium uppercase tracking-[0.14em] text-[#8A8278] flex items-center gap-1.5">
           <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
           Signé · scellé
         </p>
         <p className="font-display text-[15px] text-[#0A0A0A] mt-1" style={{ letterSpacing: '-0.015em' }}>
           <span className="italic text-[#7C5E3C]">{name}</span>
-          <span className="text-[#9B9B9B] text-[12px] not-italic font-sans font-normal ml-2">— {role} · {location}</span>
+          <span className="text-[#8A8278] text-[12px] not-italic font-sans font-normal ml-2">— {role} · {location}</span>
         </p>
       </div>
       {/* Flourish — a thin bronze ruled line ending in a small seal dot */}
@@ -657,7 +634,7 @@ export function AvatarStack({ items = [], size = 32, max = 3 }) {
       ))}
       {rest > 0 && (
         <div
-          className="-ml-2 rounded-full bg-[#F5F3EE] text-[#0A0A0A] flex items-center justify-center font-medium ring-[3px] ring-white border border-[rgba(10,10,10,0.08)]"
+          className="-ml-2 rounded-full bg-[#F5F3EE] text-[#0A0A0A] flex items-center justify-center font-medium ring-[3px] ring-white border border-[#E9E4D9]"
           style={{ width: size, height: size, fontSize: Math.round(size * 0.32) }}
         >
           +{rest}
@@ -720,7 +697,7 @@ export function Metric({ label, value, caption, delta, progress, align = 'left',
   const alignCls = align === 'right' ? 'text-right items-end' : 'text-left items-start';
   return (
     <div className={`flex flex-col ${alignCls} ${className}`}>
-      <span className="inline-flex items-center gap-1.5 text-[10.5px] font-medium text-[#7C5E3C] uppercase tracking-[0.12em]">
+      <span className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.12em]">
         <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
         {label}
       </span>
@@ -735,7 +712,7 @@ export function Metric({ label, value, caption, delta, progress, align = 'left',
           {delta && (typeof delta === 'string' || typeof delta === 'number'
             ? <Delta value={delta} positive prefix={typeof delta === 'string' && delta.startsWith('-') ? '' : '+'} />
             : delta)}
-          {caption && <span className="text-[12px] text-[#6B6B6B] tracking-[-0.003em]">{caption}</span>}
+          {caption && <span className="text-[12px] text-[#5D5D5D] tracking-[-0.003em]">{caption}</span>}
         </div>
       )}
       {typeof progress === 'number' && (
@@ -767,16 +744,16 @@ export function MarbleCard({
   }[variant] || 'marble-cream';
   return (
     <div
-      className={`relative overflow-hidden rounded-[22px] border border-[rgba(124,94,60,0.16)] ${surface}
+      className={`relative overflow-hidden rounded-[12px] border border-[#E9E4D9] ${surface}
         shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_1px_2px_rgba(10,10,10,0.04),0_24px_48px_-24px_rgba(124,94,60,0.3),0_12px_24px_-12px_rgba(10,10,10,0.08)]
         ${className}`}
       {...props}
     >
       {/* inner white vignette for softness */}
-      <div className="absolute inset-0 pointer-events-none rounded-[22px]"
+      <div className="absolute inset-0 pointer-events-none rounded-[12px]"
            style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,255,255,0.55), transparent 65%)' }} />
       {/* grain overlay for tactile feel */}
-      <div className="bg-grain absolute inset-0 rounded-[22px] pointer-events-none" />
+      <div className="bg-grain absolute inset-0 rounded-[12px] pointer-events-none" />
       {/* decorative corner fleurons */}
       {fleuron && (
         <>
@@ -790,7 +767,7 @@ export function MarbleCard({
       )}
       <div className="relative px-9 py-9">
         {eyebrow && (
-          <p className="text-[10.5px] font-medium text-[#7C5E3C] uppercase tracking-[0.14em] mb-4 flex items-center gap-2">
+          <p className="text-[10.5px] font-medium text-[#8A8278] uppercase tracking-[0.12em] mb-4 flex items-center gap-2">
             <Fleuron size={10} tone="bronze" />
             {eyebrow}
           </p>
@@ -887,7 +864,7 @@ export function ListRow({ icon, tone = 'default', title, subtitle, trailing, tra
   return (
     <div
       onClick={onClick}
-      className={`flex items-center gap-4 px-6 py-4 ${divider ? 'border-b border-[rgba(10,10,10,0.06)] last:border-0' : ''} ${clickable ? 'cursor-pointer hover:bg-[#FBFAF7] transition-colors' : ''}`}
+      className={`flex items-center gap-4 px-6 py-4 ${divider ? 'border-b border-[#E9E4D9] last:border-0' : ''} ${clickable ? 'cursor-pointer hover:bg-white transition-colors' : ''}`}
     >
       {icon && (
         typeof icon === 'string' || typeof icon === 'number'
@@ -896,12 +873,12 @@ export function ListRow({ icon, tone = 'default', title, subtitle, trailing, tra
       )}
       <div className="flex-1 min-w-0">
         <p className="text-[14px] font-medium text-[#0A0A0A] truncate tracking-[-0.01em]">{title}</p>
-        {subtitle && <p className="text-[12.5px] text-[#6B6B6B] truncate mt-0.5 tracking-[-0.003em]">{subtitle}</p>}
+        {subtitle && <p className="text-[12.5px] text-[#5D5D5D] truncate mt-0.5 tracking-[-0.003em]">{subtitle}</p>}
       </div>
       {(trailing || trailingSub) && (
         <div className="text-right flex-shrink-0">
           {trailing && <p className="text-[14px] font-medium text-[#0A0A0A] tabular-nums tracking-[-0.015em]">{trailing}</p>}
-          {trailingSub && <p className="text-[12px] text-[#6B6B6B] mt-0.5 tracking-[-0.003em]">{trailingSub}</p>}
+          {trailingSub && <p className="text-[12px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">{trailingSub}</p>}
         </div>
       )}
     </div>
@@ -939,14 +916,14 @@ export function Modal({ isOpen, onClose, title, subtitle, children, maxWidth = '
         className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white z-50 w-[calc(100%-2rem)] ${maxWidth} max-h-[85vh] rounded-[10px] shadow-[0_12px_40px_-12px_rgba(30,30,30,0.2)] flex flex-col animate-scale border border-[#E9E4D9] overflow-hidden`}
       >
         {(title || subtitle) && (
-          <header className="px-7 pt-7 pb-5 flex items-start justify-between gap-4 border-b border-[rgba(10,10,10,0.06)]">
+          <header className="px-7 pt-7 pb-5 flex items-start justify-between gap-4 border-b border-[#E9E4D9]">
             <div>
               {title && <h2 className="text-[20px] font-medium text-[#0A0A0A] tracking-[-0.025em]">{title}</h2>}
-              {subtitle && <p className="mt-1.5 text-[13px] text-[#6B6B6B] leading-relaxed max-w-md tracking-[-0.003em]">{subtitle}</p>}
+              {subtitle && <p className="mt-1.5 text-[13px] text-[#5D5D5D] leading-relaxed max-w-md tracking-[-0.003em]">{subtitle}</p>}
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center text-[#6B6B6B] hover:text-[#0A0A0A] hover:bg-[#F5F3EE] rounded-full transition-colors -mr-1.5 flex-shrink-0"
+              className="w-8 h-8 flex items-center justify-center text-[#5D5D5D] hover:text-[#0A0A0A] hover:bg-[#F5F3EE] rounded-full transition-colors -mr-1.5 flex-shrink-0"
               aria-label="Fermer"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -1011,11 +988,11 @@ export function Drawer({
         role="dialog"
         aria-modal="true"
         aria-label={typeof title === 'string' ? title : 'Panel'}
-        className={`fixed top-0 right-0 h-screen max-w-[calc(100vw-32px)] ${widthCls} bg-white z-50 flex flex-col animate-slide-right border-l border-[rgba(10,10,10,0.08)] ${className}`}
+        className={`fixed top-0 right-0 h-screen max-w-[calc(100vw-32px)] ${widthCls} bg-white z-50 flex flex-col animate-slide-right border-l border-[#E9E4D9] ${className}`}
         style={{ boxShadow: '-32px 0 64px -24px rgba(10,10,10,0.28), -8px 0 16px -8px rgba(10,10,10,0.08)' }}
       >
         {(title || subtitle || trailing || eyebrow) && (
-          <header className="px-8 pt-7 pb-5 flex items-start justify-between gap-6 border-b border-[rgba(10,10,10,0.06)] flex-shrink-0">
+          <header className="px-8 pt-7 pb-5 flex items-start justify-between gap-6 border-b border-[#E9E4D9] flex-shrink-0">
             <div className="min-w-0 flex-1">
               {eyebrow && (
                 <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-[#7C5E3C] mb-2 flex items-center gap-1.5">
@@ -1028,13 +1005,13 @@ export function Drawer({
                   ? <h2 className="font-display text-[26px] text-[#0A0A0A] leading-[1.1]" style={{ letterSpacing: '-0.022em' }}>{title}</h2>
                   : title
               )}
-              {subtitle && <p className="mt-2 text-[13px] text-[#6B6B6B] leading-relaxed tracking-[-0.003em]">{subtitle}</p>}
+              {subtitle && <p className="mt-2 text-[13px] text-[#5D5D5D] leading-relaxed tracking-[-0.003em]">{subtitle}</p>}
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               {trailing}
               <button
                 onClick={onClose}
-                className="w-9 h-9 flex items-center justify-center rounded-full text-[#6B6B6B] hover:text-[#0A0A0A] hover:bg-[#F5F3EE] transition-colors border border-transparent hover:border-[rgba(10,10,10,0.08)]"
+                className="w-9 h-9 flex items-center justify-center rounded-full text-[#5D5D5D] hover:text-[#0A0A0A] hover:bg-[#F5F3EE] transition-colors border border-transparent hover:border-[#E9E4D9]"
                 aria-label="Fermer"
                 title="Fermer · Échap"
               >
@@ -1172,15 +1149,15 @@ export function PageHeader({ icon, duoIcon, title, eyebrow, trailing, banner, cl
 // Tones: cream (warm peach #F5EEE0), advisor (cool blue #EBF5FF), paper, warn
 export function PageBanner({ avatar, text, subtext, cta, onCtaClick, tone = 'cream' }) {
   const palette = {
-    cream:   'bg-[#F5EEE0] border-[rgba(124,94,60,0.12)]',
+    cream:   'bg-[#F5EEE0] border-[#E9E4D9]',
     advisor: 'bg-[#EBF5FF] border-[rgba(59,130,246,0.1)]',
     paper:   'bg-[#FDFCFA] border-[#E9E4D9]',
     warn:    'bg-[#FEF5E7] border-[rgba(202,138,4,0.22)]',
-  }[tone] || 'bg-[#F5EEE0] border-[rgba(124,94,60,0.12)]';
+  }[tone] || 'bg-[#F5EEE0] border-[#E9E4D9]';
   return (
     <div className={`flex items-center gap-3 px-4 py-3 rounded-[8px] border ${palette}`}>
       {avatar && (
-        <span className="flex-shrink-0 w-9 h-9 rounded-full bg-white overflow-hidden flex items-center justify-center text-[13px] font-medium text-[#4A4A4A] border border-[rgba(10,10,10,0.06)]">
+        <span className="flex-shrink-0 w-9 h-9 rounded-full bg-white overflow-hidden flex items-center justify-center text-[13px] font-medium text-[#1E1E1E] border border-[#E9E4D9]">
           {avatar}
         </span>
       )}
@@ -1448,7 +1425,7 @@ export function Logo({ size = 'md', variant = 'full' }) {
           <span className="font-display text-[#0A0A0A]" style={{ fontSize: `${s.title}px`, letterSpacing: '-0.02em' }}>
             SwissLife
           </span>
-          <span className="text-[#6B6B6B] font-medium mt-1" style={{ fontSize: `${s.sub}px`, letterSpacing: '0.02em' }}>
+          <span className="text-[#5D5D5D] font-medium mt-1" style={{ fontSize: `${s.sub}px`, letterSpacing: '0.02em' }}>
             Custody · Banque Privée
           </span>
         </div>

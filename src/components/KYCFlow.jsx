@@ -218,7 +218,7 @@ export default function KYCFlow({ client, onComplete }) {
     return (
       <div className="flex items-center justify-center py-16">
         <Spinner size="w-5 h-5" />
-        <span className="ml-3 text-[13px] text-[#6B6B6B] tracking-[-0.006em]">Chargement du statut KYC…</span>
+        <span className="ml-3 text-[13px] text-[#5D5D5D] tracking-[-0.006em]">Chargement du statut KYC…</span>
       </div>
     );
   }
@@ -236,7 +236,7 @@ export default function KYCFlow({ client, onComplete }) {
           <h2 className="display-sm text-[#0A0A0A] mt-2">
             Vérification <span className="font-display italic text-[#7C5E3C]">d'identité</span>
           </h2>
-          <p className="text-[13.5px] text-[#6B6B6B] mt-2 tracking-[-0.006em] max-w-xl leading-relaxed">
+          <p className="text-[13.5px] text-[#5D5D5D] mt-2 tracking-[-0.006em] max-w-xl leading-relaxed">
             Parcours conforme AMLD5 · Tracfin. Documents, screening sanctions/PEP/média, puis validation finale
             par un administrateur habilité.
           </p>
@@ -260,7 +260,7 @@ export default function KYCFlow({ client, onComplete }) {
           </div>
           <div className="min-w-0">
             <p className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em]">KYC validé</p>
-            <p className="text-[12.5px] text-[#6B6B6B] mt-0.5 tracking-[-0.003em]">
+            <p className="text-[12.5px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">
               Toutes les vérifications ont été complétées avec succès. Le client est habilité à la conservation.
             </p>
           </div>
@@ -271,7 +271,7 @@ export default function KYCFlow({ client, onComplete }) {
       <Card className="p-6">
         <div className="flex items-center justify-between mb-1">
           <h3 className="text-[13px] font-medium text-[#0A0A0A] tracking-[-0.01em]">Parcours de vérification</h3>
-          <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#9B9B9B] tabular-nums">
+          <span className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#8A8278] tabular-nums">
             Étape {currentStep + 1} / {allSteps.length}
           </span>
         </div>
@@ -286,14 +286,14 @@ export default function KYCFlow({ client, onComplete }) {
 
         {/* ── Error banner ── */}
         {error && (
-          <div className="mt-5 mb-4 px-4 py-3 rounded-[10px] bg-[#FBFAF7] border border-[rgba(220,38,38,0.2)] flex items-center gap-3">
+          <div className="mt-5 mb-4 px-4 py-3 rounded-[10px] bg-white border border-[rgba(220,38,38,0.2)] flex items-center gap-3">
             <svg className="w-4 h-4 text-[#DC2626] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <p className="text-[12.5px] text-[#991B1B] flex-1 tracking-[-0.003em]">{error}</p>
             <button
               onClick={() => setError(null)}
-              className="text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors"
+              className="text-[#5D5D5D] hover:text-[#0A0A0A] transition-colors"
               aria-label="Dismiss"
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -341,7 +341,7 @@ export default function KYCFlow({ client, onComplete }) {
         </div>
 
         {/* ── Navigation ── */}
-        <div className="flex items-center justify-between mt-6 pt-5 border-t border-[rgba(10,10,10,0.06)]">
+        <div className="flex items-center justify-between mt-6 pt-5 border-t border-[#E9E4D9]">
           <Button
             variant="ghost"
             onClick={() => setCurrentStep(p => Math.max(0, p - 1))}
@@ -392,7 +392,7 @@ function StepRail({ steps, currentStep, onSelect, isComplete, isPending }) {
               className={`flex items-center gap-2.5 w-full px-2.5 py-2 rounded-[10px] text-left transition-all group ${
                 active
                   ? 'bg-[#0A0A0A] text-white shadow-crisp'
-                  : 'text-[#6B6B6B] hover:bg-[#FBFAF7]'
+                  : 'text-[#5D5D5D] hover:bg-white'
               }`}
             >
               <span
@@ -403,7 +403,7 @@ function StepRail({ steps, currentStep, onSelect, isComplete, isPending }) {
                       ? 'bg-white border border-[rgba(22,163,74,0.35)] text-[#16A34A]'
                       : pending
                         ? 'bg-white border border-[rgba(124,94,60,0.35)] text-[#7C5E3C]'
-                        : 'bg-[#F5F3EE] border border-[rgba(10,10,10,0.08)] text-[#9B9B9B]'
+                        : 'bg-[#F5F3EE] border border-[#E9E4D9] text-[#8A8278]'
                 }`}
               >
                 {complete ? (
@@ -453,43 +453,43 @@ function DocumentUploadStep({
     <div>
       <div className="mb-5">
         <h4 className="text-[17px] font-medium text-[#0A0A0A] tracking-[-0.015em]">{step.label}</h4>
-        <p className="text-[13px] text-[#6B6B6B] mt-1 tracking-[-0.006em]">{step.desc}</p>
+        <p className="text-[13px] text-[#5D5D5D] mt-1 tracking-[-0.006em]">{step.desc}</p>
       </div>
 
       {isComplete && (
-        <div className="mb-4 px-4 py-3 rounded-[10px] bg-[#FBFAF7] border border-[rgba(22,163,74,0.22)] flex items-center gap-3">
-          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-[rgba(10,10,10,0.08)] flex items-center justify-center shadow-crisp">
+        <div className="mb-4 px-4 py-3 rounded-[10px] bg-white border border-[rgba(22,163,74,0.22)] flex items-center gap-3">
+          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-[#E9E4D9] flex items-center justify-center shadow-crisp">
             <svg className="w-4 h-4 text-[#16A34A]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
           <div className="min-w-0">
             <p className="text-[13px] font-medium text-[#0A0A0A] tracking-[-0.006em]">Document vérifié</p>
-            <p className="text-[12px] text-[#6B6B6B] mt-0.5 tracking-[-0.003em] truncate">{existing.file_name || 'Document accepté'}</p>
+            <p className="text-[12px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em] truncate">{existing.file_name || 'Document accepté'}</p>
           </div>
         </div>
       )}
 
       {isPending && (
-        <div className="mb-4 px-4 py-3 rounded-[10px] bg-[#FBFAF7] border border-[rgba(124,94,60,0.2)] flex items-center gap-3">
+        <div className="mb-4 px-4 py-3 rounded-[10px] bg-white border border-[#E9E4D9] flex items-center gap-3">
           <Spinner size="w-4 h-4" />
           <div className="min-w-0">
             <p className="text-[13px] font-medium text-[#0A0A0A] tracking-[-0.006em]">Vérification en cours</p>
-            <p className="text-[12px] text-[#6B6B6B] mt-0.5 tracking-[-0.003em] truncate">{existing.file_name || 'Analyse du document…'}</p>
+            <p className="text-[12px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em] truncate">{existing.file_name || 'Analyse du document…'}</p>
           </div>
         </div>
       )}
 
       {isFailed && (
-        <div className="mb-4 px-4 py-3 rounded-[10px] bg-[#FBFAF7] border border-[rgba(220,38,38,0.22)] flex items-center gap-3">
-          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-[rgba(10,10,10,0.08)] flex items-center justify-center shadow-crisp">
+        <div className="mb-4 px-4 py-3 rounded-[10px] bg-white border border-[rgba(220,38,38,0.22)] flex items-center gap-3">
+          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-[#E9E4D9] flex items-center justify-center shadow-crisp">
             <svg className="w-4 h-4 text-[#DC2626]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
           <div className="min-w-0">
             <p className="text-[13px] font-medium text-[#0A0A0A] tracking-[-0.006em]">Document refusé</p>
-            <p className="text-[12px] text-[#6B6B6B] mt-0.5 tracking-[-0.003em]">Reprenez l'envoi avec un document plus lisible.</p>
+            <p className="text-[12px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">Reprenez l'envoi avec un document plus lisible.</p>
           </div>
         </div>
       )}
@@ -501,10 +501,10 @@ function DocumentUploadStep({
           onDragLeave={onDragLeave}
           onDrop={onDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`relative rounded-[14px] p-10 text-center cursor-pointer transition-all overflow-hidden ${
+          className={`relative rounded-[8px] p-10 text-center cursor-pointer transition-all overflow-hidden ${
             dragOver
-              ? 'bg-[#FBFAF7] border-[1.5px] border-[#7C5E3C] shadow-bronze'
-              : 'bg-white border border-dashed border-[rgba(10,10,10,0.18)] hover:border-[rgba(124,94,60,0.5)] hover:bg-[#FBFAF7]'
+              ? 'bg-white border-[1.5px] border-[#7C5E3C] shadow-bronze'
+              : 'bg-white border border-dashed border-[rgba(10,10,10,0.18)] hover:border-[rgba(124,94,60,0.5)] hover:bg-white'
           }`}
         >
           <input
@@ -520,10 +520,10 @@ function DocumentUploadStep({
 
           {uploading ? (
             <div className="relative flex flex-col items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-white border border-[rgba(10,10,10,0.08)] flex items-center justify-center shadow-crisp">
+              <div className="w-12 h-12 rounded-full bg-white border border-[#E9E4D9] flex items-center justify-center shadow-crisp">
                 <Spinner size="w-5 h-5" />
               </div>
-              <p className="text-[13px] text-[#6B6B6B] tracking-[-0.006em]">Envoi et analyse du document…</p>
+              <p className="text-[13px] text-[#5D5D5D] tracking-[-0.006em]">Envoi et analyse du document…</p>
             </div>
           ) : (
             <div className="relative">
@@ -535,7 +535,7 @@ function DocumentUploadStep({
               <p className="text-[14px] font-medium text-[#0A0A0A] mb-1 tracking-[-0.01em]">
                 Glissez votre fichier ici
               </p>
-              <p className="text-[12px] text-[#9B9B9B] tracking-[-0.003em]">
+              <p className="text-[12px] text-[#8A8278] tracking-[-0.003em]">
                 ou cliquez pour parcourir — PDF, JPG, PNG · max 50 Mo
               </p>
 
@@ -544,7 +544,7 @@ function DocumentUploadStep({
                   {['Passeport', "Carte d'identité", 'Permis de conduire'].map(t => (
                     <span
                       key={t}
-                      className="px-2.5 py-1 rounded-full bg-white border border-[rgba(10,10,10,0.08)] text-[10.5px] font-medium text-[#6B6B6B] tracking-[-0.003em]"
+                      className="px-2.5 py-1 rounded-full bg-white border border-[#E9E4D9] text-[10.5px] font-medium text-[#5D5D5D] tracking-[-0.003em]"
                     >
                       {t}
                     </span>
@@ -558,8 +558,8 @@ function DocumentUploadStep({
 
       {/* Company requirements reminder */}
       {step.id === 'company_docs' && (
-        <div className="mt-4 rounded-[10px] bg-[#FBFAF7] border border-[rgba(10,10,10,0.06)] p-4">
-          <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#9B9B9B] mb-2">
+        <div className="mt-4 rounded-[10px] bg-white border border-[#E9E4D9] p-4">
+          <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#8A8278] mb-2">
             Documents requis · Personne morale
           </p>
           <ul className="space-y-1.5">
@@ -568,7 +568,7 @@ function DocumentUploadStep({
               'Statuts de la société à jour',
               'Liste des ayants droit économiques',
             ].map((t, i) => (
-              <li key={i} className="flex items-center gap-2 text-[12px] text-[#4A4A4A] tracking-[-0.003em]">
+              <li key={i} className="flex items-center gap-2 text-[12px] text-[#1E1E1E] tracking-[-0.003em]">
                 <span className="w-1 h-1 rounded-full bg-[#7C5E3C] flex-shrink-0" />
                 {t}
               </li>
@@ -592,7 +592,7 @@ function AmlScreeningStep({ checks, screening, onStartScreening, clientName }) {
     <div>
       <div className="mb-5">
         <h4 className="text-[17px] font-medium text-[#0A0A0A] tracking-[-0.015em]">Screening AML / LCB-FT</h4>
-        <p className="text-[13px] text-[#6B6B6B] mt-1 tracking-[-0.006em]">
+        <p className="text-[13px] text-[#5D5D5D] mt-1 tracking-[-0.006em]">
           Vérification automatique contre les listes de sanctions (OFAC, UE, ONU, UK HMT), PEP et média défavorables.
         </p>
       </div>
@@ -606,7 +606,7 @@ function AmlScreeningStep({ checks, screening, onStartScreening, clientName }) {
           </div>
           <div className="min-w-0">
             <p className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em]">Screening clean</p>
-            <p className="text-[12.5px] text-[#6B6B6B] mt-0.5 tracking-[-0.003em]">
+            <p className="text-[12.5px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">
               Aucune correspondance trouvée dans les listes de sanctions, PEP ou média défavorables.
             </p>
           </div>
@@ -622,7 +622,7 @@ function AmlScreeningStep({ checks, screening, onStartScreening, clientName }) {
           </div>
           <div className="min-w-0">
             <p className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em]">Alerte AML — revue manuelle</p>
-            <p className="text-[12.5px] text-[#6B6B6B] mt-0.5 tracking-[-0.003em]">
+            <p className="text-[12.5px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">
               Des correspondances potentielles ont été détectées. Une alerte compliance a été créée automatiquement.
             </p>
           </div>
@@ -633,13 +633,13 @@ function AmlScreeningStep({ checks, screening, onStartScreening, clientName }) {
         <div className="text-center py-6">
           {screening ? (
             <div className="flex flex-col items-center gap-5">
-              <div className="relative w-16 h-16 rounded-full bg-white border border-[rgba(10,10,10,0.08)] shadow-crisp flex items-center justify-center">
+              <div className="relative w-16 h-16 rounded-full bg-white border border-[#E9E4D9] shadow-crisp flex items-center justify-center">
                 <Spinner size="w-6 h-6" />
-                <div className="absolute inset-0 rounded-full border-2 border-[rgba(124,94,60,0.14)]" />
+                <div className="absolute inset-0 rounded-full border-2 border-[#E9E4D9]" />
               </div>
               <div>
                 <p className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em]">Analyse en cours…</p>
-                <p className="text-[12.5px] text-[#6B6B6B] mt-1 tracking-[-0.003em]">
+                <p className="text-[12.5px] text-[#5D5D5D] mt-1 tracking-[-0.003em]">
                   Vérification de {clientName} contre les bases internationales
                 </p>
               </div>
@@ -647,10 +647,10 @@ function AmlScreeningStep({ checks, screening, onStartScreening, clientName }) {
                 {['Sanctions', 'PEP', 'Média défavorable'].map((item) => (
                   <span
                     key={item}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-[rgba(10,10,10,0.08)] shadow-crisp"
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-[#E9E4D9] shadow-crisp"
                   >
                     <Spinner size="w-2.5 h-2.5" />
-                    <span className="text-[10.5px] text-[#6B6B6B] tracking-[-0.003em]">{item}</span>
+                    <span className="text-[10.5px] text-[#5D5D5D] tracking-[-0.003em]">{item}</span>
                   </span>
                 ))}
               </div>
@@ -663,7 +663,7 @@ function AmlScreeningStep({ checks, screening, onStartScreening, clientName }) {
                 </svg>
               </div>
               <p className="text-[14px] font-medium text-[#0A0A0A] mb-2 tracking-[-0.01em]">Lancer le screening AML</p>
-              <p className="text-[12.5px] text-[#6B6B6B] mb-6 max-w-sm mx-auto tracking-[-0.003em] leading-relaxed">
+              <p className="text-[12.5px] text-[#5D5D5D] mb-6 max-w-sm mx-auto tracking-[-0.003em] leading-relaxed">
                 Vérification contre les listes OFAC, UE, ONU, UK HMT et les bases PEP / média défavorables.
               </p>
               <Button variant="primary" onClick={onStartScreening}>
@@ -690,7 +690,7 @@ function ResultStep({ kycStatus, checks, isAdmin, onValidate, overallComplete })
     <div>
       <div className="mb-5">
         <h4 className="text-[17px] font-medium text-[#0A0A0A] tracking-[-0.015em]">Résultat de la vérification</h4>
-        <p className="text-[13px] text-[#6B6B6B] mt-1 tracking-[-0.006em]">Synthèse des contrôles KYC effectués.</p>
+        <p className="text-[13px] text-[#5D5D5D] mt-1 tracking-[-0.006em]">Synthèse des contrôles KYC effectués.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 mb-6">
@@ -711,7 +711,7 @@ function ResultStep({ kycStatus, checks, isAdmin, onValidate, overallComplete })
       {overallComplete ? (
         <Card className="p-5 text-center relative overflow-hidden watermark-sl">
           <p className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em]">KYC entièrement validé</p>
-          <p className="text-[12.5px] text-[#6B6B6B] mt-1.5 tracking-[-0.003em]">
+          <p className="text-[12.5px] text-[#5D5D5D] mt-1.5 tracking-[-0.003em]">
             {kycStatus?.validatedAt
               ? `Validé le ${new Date(kycStatus.validatedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })}`
               : 'Validation confirmée'}
@@ -722,7 +722,7 @@ function ResultStep({ kycStatus, checks, isAdmin, onValidate, overallComplete })
         <div className="text-center">
           {isAdmin ? (
             <>
-              <p className="text-[13px] text-[#6B6B6B] mb-4 tracking-[-0.006em]">
+              <p className="text-[13px] text-[#5D5D5D] mb-4 tracking-[-0.006em]">
                 Toutes les vérifications sont complétées. En tant qu'administrateur, vous pouvez valider le KYC.
               </p>
               <Button variant="primary" onClick={onValidate}>
@@ -730,15 +730,15 @@ function ResultStep({ kycStatus, checks, isAdmin, onValidate, overallComplete })
               </Button>
             </>
           ) : (
-            <p className="text-[13px] text-[#6B6B6B] tracking-[-0.006em]">
+            <p className="text-[13px] text-[#5D5D5D] tracking-[-0.006em]">
               Toutes les vérifications sont complétées. Un administrateur doit valider le KYC pour habiliter le client.
             </p>
           )}
         </div>
       ) : (
-        <Card className="p-4 text-center bg-[#FBFAF7]">
+        <Card className="p-4 text-center bg-white">
           <p className="text-[13px] font-medium text-[#0A0A0A] tracking-[-0.006em]">Vérifications incomplètes</p>
-          <p className="text-[12px] text-[#6B6B6B] mt-1 tracking-[-0.003em]">
+          <p className="text-[12px] text-[#5D5D5D] mt-1 tracking-[-0.003em]">
             Complétez toutes les étapes (documents + screening AML) avant la validation finale.
           </p>
         </Card>
@@ -750,16 +750,16 @@ function ResultStep({ kycStatus, checks, isAdmin, onValidate, overallComplete })
 function SummaryCard({ label, value, ok, hint }) {
   return (
     <div className={`rounded-[12px] p-4 bg-white border ${
-      ok ? 'border-[rgba(22,163,74,0.22)] shadow-crisp' : 'border-[rgba(10,10,10,0.08)]'
+      ok ? 'border-[rgba(22,163,74,0.22)] shadow-crisp' : 'border-[#E9E4D9]'
     }`}>
       <div className="flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-full" style={{ background: ok ? '#16A34A' : '#9B9B9B' }} />
-        <p className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-[#9B9B9B]">{label}</p>
+        <p className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-[#8A8278]">{label}</p>
       </div>
-      <p className={`mt-2.5 text-[22px] font-medium tracking-[-0.02em] tabular-nums ${ok ? 'text-[#0A0A0A]' : 'text-[#4A4A4A]'}`}>
+      <p className={`mt-2.5 text-[22px] font-medium tracking-[-0.02em] tabular-nums ${ok ? 'text-[#0A0A0A]' : 'text-[#1E1E1E]'}`}>
         {value}
       </p>
-      {hint && <p className="text-[11px] text-[#9B9B9B] mt-0.5 tracking-[-0.003em]">{hint}</p>}
+      {hint && <p className="text-[11px] text-[#8A8278] mt-0.5 tracking-[-0.003em]">{hint}</p>}
     </div>
   );
 }
@@ -776,9 +776,9 @@ function CheckRow({ check }) {
       : KYC_DOCUMENT_TYPES[check.document_type]?.label || check.document_type || 'Document';
 
   return (
-    <div className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-[#FBFAF7] transition-colors">
+    <div className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-white transition-colors">
       <div className="flex items-center gap-3 min-w-0">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-[rgba(10,10,10,0.08)] flex items-center justify-center shadow-crisp">
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-[#E9E4D9] flex items-center justify-center shadow-crisp">
           {check.status === 'complete' ? (
             <svg className="w-4 h-4" style={{ color: statusCfg.color }} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -794,12 +794,12 @@ function CheckRow({ check }) {
         <div className="min-w-0">
           <p className="text-[13px] font-medium text-[#0A0A0A] tracking-[-0.006em] truncate">{label}</p>
           {check.file_name && (
-            <p className="text-[11.5px] text-[#9B9B9B] mt-0.5 tracking-[-0.003em] truncate">{check.file_name}</p>
+            <p className="text-[11.5px] text-[#8A8278] mt-0.5 tracking-[-0.003em] truncate">{check.file_name}</p>
           )}
         </div>
       </div>
       <div className="flex items-center gap-3 flex-shrink-0">
-        <span className="text-[11px] text-[#9B9B9B] tabular-nums tracking-[-0.003em] hidden sm:inline">
+        <span className="text-[11px] text-[#8A8278] tabular-nums tracking-[-0.003em] hidden sm:inline">
           {check.created_at
             ? new Date(check.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
             : ''}

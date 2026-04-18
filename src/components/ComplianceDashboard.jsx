@@ -90,7 +90,7 @@ function StatCard({ label, value, tone = 'default', hint }) {
   const animated = useCountUp(numericValue ?? 0);
   const displayValue = numericValue != null ? animated : (value ?? '—');
   return (
-    <div className="group bg-white border border-[rgba(10,10,10,0.08)] rounded-[14px] p-5 shadow-crisp relative overflow-hidden transition-[border-color,box-shadow] duration-200 hover:border-[rgba(10,10,10,0.14)] hover:shadow-[0_4px_16px_-8px_rgba(10,10,10,0.12)]">
+    <div className="group bg-white border border-[#E9E4D9] rounded-[8px] p-5 shadow-crisp relative overflow-hidden transition-[border-color,box-shadow] duration-200 hover:border-[rgba(10,10,10,0.14)] hover:shadow-[0_4px_16px_-8px_rgba(10,10,10,0.12)]">
       <div className="absolute inset-x-5 top-0 h-[2px] opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: `linear-gradient(90deg, transparent, ${t.dot}, transparent)` }} />
       <div className="flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-full" style={{ background: t.dot }} />
@@ -99,7 +99,7 @@ function StatCard({ label, value, tone = 'default', hint }) {
       <p className="mt-3 text-[30px] font-medium text-[#0A0A0A] tabular-nums leading-[1.05] tracking-[-0.03em]">
         {displayValue}
       </p>
-      {hint && <p className="text-[11.5px] text-[#9B9B9B] mt-1 tracking-[-0.003em]">{hint}</p>}
+      {hint && <p className="text-[11.5px] text-[#8A8278] mt-1 tracking-[-0.003em]">{hint}</p>}
     </div>
   );
 }
@@ -371,11 +371,11 @@ export default function ComplianceDashboard() {
       <div className="overflow-x-auto">
         <table className="w-full text-sm text-left border-collapse">
           <thead>
-            <tr className="border-b border-[rgba(10,10,10,0.08)]">
+            <tr className="border-b border-[#E9E4D9]">
               {headers.map((h, i) => (
                 <th
                   key={i}
-                  className={`px-6 py-3.5 text-[10.5px] text-[#9B9B9B] font-medium tracking-[0.06em] uppercase ${h.right ? 'text-right' : ''}`}
+                  className={`px-6 py-3.5 text-[10.5px] text-[#8A8278] font-medium tracking-[0.06em] uppercase ${h.right ? 'text-right' : ''}`}
                 >
                   {h.label || h}
                 </th>
@@ -389,12 +389,12 @@ export default function ComplianceDashboard() {
   );
 
   const tdCls = 'px-6 py-4 text-[13.5px] text-[#0A0A0A] tracking-[-0.006em]';
-  const tdMuted = 'px-6 py-4 text-[12.5px] text-[#6B6B6B] tracking-[-0.003em]';
-  const rowCls = 'border-b border-[rgba(10,10,10,0.06)] last:border-0 hover:bg-[#FBFAF7] transition-colors';
+  const tdMuted = 'px-6 py-4 text-[12.5px] text-[#5D5D5D] tracking-[-0.003em]';
+  const rowCls = 'border-b border-[#E9E4D9] last:border-0 hover:bg-white transition-colors';
 
   const actionBtn = (label, onClick, variant = 'default') => {
     const styles = {
-      default: 'text-[#6B6B6B] hover:text-[#0A0A0A] hover:bg-[#F5F3EE]',
+      default: 'text-[#5D5D5D] hover:text-[#0A0A0A] hover:bg-[#F5F3EE]',
       success: 'text-[#0A0A0A] hover:bg-[#F5F3EE] border border-transparent hover:border-[rgba(10,10,10,0.1)]',
       error: 'text-[#991B1B] hover:bg-white hover:border-[rgba(220,38,38,0.25)] border border-transparent',
       info: 'text-[#0A0A0A] hover:bg-[#F5F3EE] border border-transparent hover:border-[rgba(10,10,10,0.1)]',
@@ -465,14 +465,14 @@ export default function ComplianceDashboard() {
       {/* Loading */}
       {loading && (
         <Card className="animate-slide-up stagger-4">
-          <div className="px-6 py-4 border-b border-[rgba(10,10,10,0.06)] flex items-center justify-between">
+          <div className="px-6 py-4 border-b border-[#E9E4D9] flex items-center justify-between">
             <Skeleton className="h-[14px]" style={{ width: 160 }} />
             <Skeleton className="h-[11px]" style={{ width: 90 }} />
           </div>
           <table className="w-full">
             <tbody>
               {Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i} className="border-b border-[rgba(10,10,10,0.06)] row-stagger" style={{ '--i': i }}>
+                <tr key={i} className="border-b border-[#E9E4D9] row-stagger" style={{ '--i': i }}>
                   {Array.from({ length: 6 }).map((__, j) => (
                     <td key={j} className="px-6 py-4">
                       <Skeleton className="h-[13px]" style={{ width: `${55 + ((i * 11 + j * 7) % 35)}%` }} />
@@ -640,7 +640,7 @@ export default function ComplianceDashboard() {
                           {expandedAudit === e.id ? 'Masquer' : 'Voir'}
                         </button>
                       ) : (
-                        <span className="text-[12px] text-[#9B9B9B]">—</span>
+                        <span className="text-[12px] text-[#8A8278]">—</span>
                       )}
                     </td>
                     <td className="px-5 py-3.5">{severityBadge(e.severity)}</td>
@@ -653,7 +653,7 @@ export default function ComplianceDashboard() {
                 const entry = auditEntries.find(e => e.id === expandedAudit);
                 if (!entry?.details) return null;
                 return (
-                  <div className="mt-2 bg-[rgba(10,10,10,0.02)] border border-[rgba(10,10,10,0.06)] rounded-xl p-4">
+                  <div className="mt-2 bg-[rgba(10,10,10,0.02)] border border-[#E9E4D9] rounded-xl p-4">
                     <pre className="text-[12px] text-[#0A0A0A] whitespace-pre-wrap font-mono leading-relaxed">
                       {typeof entry.details === 'string' ? entry.details : JSON.stringify(entry.details, null, 2)}
                     </pre>
@@ -664,21 +664,21 @@ export default function ComplianceDashboard() {
               {/* Pagination */}
               {auditTotal > AUDIT_LIMIT && (
                 <div className="flex items-center justify-between mt-4">
-                  <p className="text-[12px] text-[#6B6B6B]">
+                  <p className="text-[12px] text-[#5D5D5D]">
                     {auditOffset + 1}–{Math.min(auditOffset + AUDIT_LIMIT, auditTotal)} sur {auditTotal}
                   </p>
                   <div className="flex gap-2">
                     <button
                       disabled={auditOffset === 0}
                       onClick={() => setAuditOffset(Math.max(0, auditOffset - AUDIT_LIMIT))}
-                      className="px-3 py-1.5 text-[12px] font-medium rounded-lg border border-[rgba(10,10,10,0.1)] text-[#6B6B6B] hover:text-[#0A0A0A] disabled:opacity-40 transition-all"
+                      className="px-3 py-1.5 text-[12px] font-medium rounded-lg border border-[rgba(10,10,10,0.1)] text-[#5D5D5D] hover:text-[#0A0A0A] disabled:opacity-40 transition-all"
                     >
                       Precedent
                     </button>
                     <button
                       disabled={auditOffset + AUDIT_LIMIT >= auditTotal}
                       onClick={() => setAuditOffset(auditOffset + AUDIT_LIMIT)}
-                      className="px-3 py-1.5 text-[12px] font-medium rounded-lg border border-[rgba(10,10,10,0.1)] text-[#6B6B6B] hover:text-[#0A0A0A] disabled:opacity-40 transition-all"
+                      className="px-3 py-1.5 text-[12px] font-medium rounded-lg border border-[rgba(10,10,10,0.1)] text-[#5D5D5D] hover:text-[#0A0A0A] disabled:opacity-40 transition-all"
                     >
                       Suivant
                     </button>
@@ -907,7 +907,7 @@ export default function ComplianceDashboard() {
               placeholder="Decrivez l'activite suspecte..."
             />
           </div>
-          <div className="flex justify-end gap-2 pt-5 border-t border-[rgba(10,10,10,0.06)]">
+          <div className="flex justify-end gap-2 pt-5 border-t border-[#E9E4D9]">
             <Button variant="ghost" onClick={() => setSarCreateModal(false)}>Annuler</Button>
             <Button
               variant="primary"
@@ -936,7 +936,7 @@ export default function ComplianceDashboard() {
                   className={`flex-1 flex items-center gap-2 p-3 rounded-xl border cursor-pointer transition-all text-[13px] ${
                     sarFilingAuthority === opt.value
                       ? 'border-[#0A0A0A] bg-[#F5F3EE] font-medium'
-                      : 'border-[rgba(10,10,10,0.08)]'
+                      : 'border-[#E9E4D9]'
                   }`}
                 >
                   <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
@@ -960,7 +960,7 @@ export default function ComplianceDashboard() {
               placeholder={sarFilingAuthority === 'mros' ? 'Reference MROS...' : 'Reference Tracfin...'}
             />
           </div>
-          <div className="flex justify-end gap-2 pt-5 border-t border-[rgba(10,10,10,0.06)]">
+          <div className="flex justify-end gap-2 pt-5 border-t border-[#E9E4D9]">
             <Button variant="ghost" onClick={() => setSarFileModal(null)}>Annuler</Button>
             <Button variant="primary" onClick={handleFileSAR}>
               Confirmer le dépôt {sarFilingAuthority === 'mros' ? 'MROS' : 'Tracfin'}
@@ -994,7 +994,7 @@ export default function ComplianceDashboard() {
               placeholder="Raison de la cloture..."
             />
           </div>
-          <div className="flex justify-end gap-2 pt-5 border-t border-[rgba(10,10,10,0.06)]">
+          <div className="flex justify-end gap-2 pt-5 border-t border-[#E9E4D9]">
             <Button variant="ghost" onClick={() => setSarCloseModal(null)}>Annuler</Button>
             <Button variant="primary" onClick={handleCloseSAR}>Confirmer la clôture</Button>
           </div>
@@ -1014,7 +1014,7 @@ export default function ComplianceDashboard() {
               placeholder="Indiquez la raison du rejet..."
             />
           </div>
-          <div className="flex justify-end gap-2 pt-5 border-t border-[rgba(10,10,10,0.06)]">
+          <div className="flex justify-end gap-2 pt-5 border-t border-[#E9E4D9]">
             <Button variant="ghost" onClick={() => setRejectModal(null)}>Annuler</Button>
             <Button variant="primary" onClick={handleReject} disabled={!rejectReason.trim()}>
               Confirmer le rejet
@@ -1036,7 +1036,7 @@ export default function ComplianceDashboard() {
               placeholder="Decrivez les actions entreprises..."
             />
           </div>
-          <div className="flex justify-end gap-2 pt-5 border-t border-[rgba(10,10,10,0.06)]">
+          <div className="flex justify-end gap-2 pt-5 border-t border-[#E9E4D9]">
             <Button variant="ghost" onClick={() => setResolveModal(null)}>Annuler</Button>
             <Button variant="primary" onClick={handleResolve}>Confirmer</Button>
           </div>

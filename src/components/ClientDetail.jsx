@@ -207,7 +207,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
       {!embedded && (
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 text-[13px] font-medium text-[#6B6B6B] hover:text-[#0A0A0A] transition-colors group -mt-4"
+          className="flex items-center gap-1.5 text-[13px] font-medium text-[#5D5D5D] hover:text-[#0A0A0A] transition-colors group -mt-4"
         >
           <svg className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -229,9 +229,9 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
             </div>
             <div className="flex items-center gap-2 mt-3 flex-wrap">
               <Badge variant={typeVariant(client.type)} size="sm" dot>{typeLabel(client.type)}</Badge>
-              <span className="text-[13px] text-[#6B6B6B] tracking-[-0.003em]">
+              <span className="text-[13px] text-[#5D5D5D] tracking-[-0.003em]">
                 {[client.city, client.country].filter(Boolean).join(' · ') || '—'}
-                {client.industry && <span className="text-[#9B9B9B]"> · {client.industry}</span>}
+                {client.industry && <span className="text-[#8A8278]"> · {client.industry}</span>}
               </span>
             </div>
           </div>
@@ -249,10 +249,10 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
             </p>
             <div className="flex items-center justify-end gap-2 mt-2.5">
               <Delta value="2.4%" positive prefix="+" />
-              <span className="text-[12px] text-[#6B6B6B] tracking-[-0.003em]">12 mois</span>
+              <span className="text-[12px] text-[#5D5D5D] tracking-[-0.003em]">12 mois</span>
             </div>
             {client.accountNumber && (
-              <p className="text-[11px] text-[#9B9B9B] font-mono mt-3 tracking-wider">№ {client.accountNumber}</p>
+              <p className="text-[11px] text-[#8A8278] font-mono mt-3 tracking-wider">№ {client.accountNumber}</p>
             )}
           </div>
         </div>
@@ -285,7 +285,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
       </div>
 
       {/* ── Tabs — editorial underline nav ─────────────── */}
-      <div className="border-b border-[rgba(10,10,10,0.08)] animate-slide-up stagger-3">
+      <div className="border-b border-[#E9E4D9] animate-slide-up stagger-3">
         <nav className="flex items-center gap-1 -mb-px overflow-x-auto">
           {tabs.map(t => {
             const active = tab === t.id;
@@ -294,7 +294,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                 key={t.id}
                 onClick={() => setTab(t.id)}
                 className={`relative h-11 px-4 text-[13.5px] font-medium whitespace-nowrap transition-colors tracking-[-0.01em] ${
-                  active ? 'text-[#0A0A0A]' : 'text-[#6B6B6B] hover:text-[#0A0A0A]'
+                  active ? 'text-[#0A0A0A]' : 'text-[#5D5D5D] hover:text-[#0A0A0A]'
                 }`}
               >
                 {t.label}
@@ -312,7 +312,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
           <div className="lg:col-span-8 space-y-6">
             {parsed.text && (
               <SectionCard title="À propos">
-                <p className="text-[14px] text-[#4A4A4A] leading-[1.65] tracking-[-0.003em] max-w-2xl">{parsed.text}</p>
+                <p className="text-[14px] text-[#1E1E1E] leading-[1.65] tracking-[-0.003em] max-w-2xl">{parsed.text}</p>
               </SectionCard>
             )}
 
@@ -339,14 +339,14 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
             </SectionCard>
 
             <Card>
-              <div className="px-6 py-4 flex items-center justify-between border-b border-[rgba(10,10,10,0.06)]">
+              <div className="px-6 py-4 flex items-center justify-between border-b border-[#E9E4D9]">
                 <h3 className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em]">Contacts</h3>
-                <span className="text-[12px] text-[#6B6B6B] tracking-[-0.003em]">{contacts.length} personne{contacts.length > 1 ? 's' : ''}</span>
+                <span className="text-[12px] text-[#5D5D5D] tracking-[-0.003em]">{contacts.length} personne{contacts.length > 1 ? 's' : ''}</span>
               </div>
               {loadingContacts ? (
                 <div className="py-10 text-center"><Spinner /></div>
               ) : contacts.length === 0 ? (
-                <p className="px-6 py-8 text-[13px] text-[#6B6B6B]">Aucun contact associé.</p>
+                <p className="px-6 py-8 text-[13px] text-[#5D5D5D]">Aucun contact associé.</p>
               ) : (
                 <ul>
                   {contacts.map((c, i) => {
@@ -354,7 +354,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                     return (
                       <li
                         key={c.Id}
-                        className={`px-6 py-4 flex items-center justify-between gap-4 ${i < contacts.length - 1 ? 'border-b border-[rgba(10,10,10,0.06)]' : ''}`}
+                        className={`px-6 py-4 flex items-center justify-between gap-4 ${i < contacts.length - 1 ? 'border-b border-[#E9E4D9]' : ''}`}
                       >
                         <div className="flex items-center gap-4 min-w-0">
                           <Avatar name={name} size={38} />
@@ -362,12 +362,12 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                             <p className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em] truncate">
                               {name || '—'}
                             </p>
-                            {c.Title && <p className="text-[12px] text-[#6B6B6B] mt-0.5 tracking-[-0.003em]">{c.Title}</p>}
+                            {c.Title && <p className="text-[12px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">{c.Title}</p>}
                           </div>
                         </div>
                         <div className="text-right flex-shrink-0">
-                          {c.Email && <p className="text-[12.5px] text-[#4A4A4A] tracking-[-0.003em]">{c.Email}</p>}
-                          {c.Phone && <p className="text-[11.5px] text-[#9B9B9B] mt-0.5">{c.Phone}</p>}
+                          {c.Email && <p className="text-[12.5px] text-[#1E1E1E] tracking-[-0.003em]">{c.Email}</p>}
+                          {c.Phone && <p className="text-[11.5px] text-[#8A8278] mt-0.5">{c.Phone}</p>}
                         </div>
                       </li>
                     );
@@ -380,7 +380,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
           <aside className="lg:col-span-4 space-y-6">
             {/* Wealth breakdown */}
             <Card>
-              <div className="px-6 pt-5 pb-4 border-b border-[rgba(10,10,10,0.06)]">
+              <div className="px-6 pt-5 pb-4 border-b border-[#E9E4D9]">
                 <p className="text-eyebrow">Patrimoine consolidé</p>
                 <p className="display-sm text-[#0A0A0A] tabular-nums mt-2">
                   {client.aum ? fmtCompactEUR(client.aum) : '—'}
@@ -430,7 +430,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                 <div>
                   <p className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em]">{kycStatusText}</p>
                   {kycLive?.stats && (
-                    <p className="text-[12px] text-[#6B6B6B] mt-0.5 tracking-[-0.003em]">
+                    <p className="text-[12px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">
                       {kycLive.stats.documentsVerified} document{kycLive.stats.documentsVerified > 1 ? 's' : ''} vérifié{kycLive.stats.documentsVerified > 1 ? 's' : ''} · AML {kycLive.stats.amlClean ? 'clean' : 'en attente'}
                     </p>
                   )}
@@ -447,13 +447,13 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                 </Button>
               )}
               {parsed.documents.length > 0 && (
-                <div className="mt-5 pt-5 border-t border-[rgba(10,10,10,0.06)]">
-                  <p className="text-[11px] font-medium text-[#9B9B9B] uppercase tracking-[0.04em] mb-3">
+                <div className="mt-5 pt-5 border-t border-[#E9E4D9]">
+                  <p className="text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em] mb-3">
                     Documents Salesforce
                   </p>
                   <ul className="space-y-2">
                     {parsed.documents.map((doc, i) => (
-                      <li key={i} className="flex items-center gap-2 text-[13px] text-[#4A4A4A] tracking-[-0.003em]">
+                      <li key={i} className="flex items-center gap-2 text-[13px] text-[#1E1E1E] tracking-[-0.003em]">
                         <svg className="w-3.5 h-3.5 text-[#16A34A] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.4}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
@@ -483,7 +483,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                   <a
                     href={client.website.startsWith('http') ? client.website : `https://${client.website}`}
                     target="_blank" rel="noopener noreferrer"
-                    className="w-full h-10 inline-flex items-center justify-center gap-2 px-5 text-[13.5px] font-medium rounded-full bg-white text-[#0A0A0A] border border-[rgba(10,10,10,0.12)] hover:bg-[#FBFAF7] transition-colors tracking-[-0.01em]"
+                    className="w-full h-10 inline-flex items-center justify-center gap-2 px-5 text-[13.5px] font-medium rounded-full bg-white text-[#0A0A0A] border border-[rgba(10,10,10,0.12)] hover:bg-white transition-colors tracking-[-0.01em]"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -547,7 +547,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
               </svg>
               <div className="flex-1">
                 <p className="text-[13.5px] font-medium text-[#0A0A0A] tracking-[-0.01em]">Client non éligible à la custody</p>
-                <p className="text-[12.5px] text-[#6B6B6B] mt-0.5 tracking-[-0.003em]">
+                <p className="text-[12.5px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">
                   La création de wallets requiert l'éligibilité MiCA Art. 60.{' '}
                   <button
                     onClick={() => setTab('eligibility')}
@@ -569,7 +569,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <h2 className="display-sm text-[#0A0A0A]">Wallets DFNS</h2>
-              <p className="text-[13.5px] text-[#6B6B6B] mt-1.5 tracking-[-0.003em]">
+              <p className="text-[13.5px] text-[#5D5D5D] mt-1.5 tracking-[-0.003em]">
                 {wallets.length} wallet{wallets.length > 1 ? 's' : ''} · Conservation MPC · Clés fragmentées par threshold cryptography
               </p>
             </div>
@@ -609,10 +609,10 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                     key={w.id}
                     onClick={() => selectWallet(w)}
                     className={`flex items-center gap-5 px-6 py-5 cursor-pointer transition-colors ${
-                      active ? 'bg-[#FBFAF7]' : 'hover:bg-[#FBFAF7]'
-                    } ${i < wallets.length - 1 ? 'border-b border-[rgba(10,10,10,0.06)]' : ''}`}
+                      active ? 'bg-white' : 'hover:bg-white'
+                    } ${i < wallets.length - 1 ? 'border-b border-[#E9E4D9]' : ''}`}
                   >
-                    <div className="w-11 h-11 rounded-[10px] flex items-center justify-center bg-[#F5F3EE] border border-[rgba(10,10,10,0.06)] flex-shrink-0">
+                    <div className="w-11 h-11 rounded-[10px] flex items-center justify-center bg-[#F5F3EE] border border-[#E9E4D9] flex-shrink-0">
                       <span className="font-mono text-[12px] font-medium text-[#0A0A0A]">{n.icon}</span>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -621,13 +621,13 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                         {frozenWallets[w.id] && <Badge variant="error" size="sm" dot>Gelé</Badge>}
                         <Badge variant={w.status === 'Active' ? 'success' : 'warning'} size="sm" dot>{w.status}</Badge>
                       </div>
-                      <p className="text-[12px] font-mono text-[#6B6B6B] truncate mt-1">{truncAddr(w.address, 12)}</p>
+                      <p className="text-[12px] font-mono text-[#5D5D5D] truncate mt-1">{truncAddr(w.address, 12)}</p>
                     </div>
                     <div className="text-right flex-shrink-0 hidden sm:block w-28">
-                      <p className="text-[11px] font-medium text-[#9B9B9B] uppercase tracking-[0.04em]">Réseau</p>
+                      <p className="text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em]">Réseau</p>
                       <p className="text-[13px] font-medium text-[#0A0A0A] mt-1 tracking-[-0.01em]">{n.name}</p>
                     </div>
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-[#9B9B9B] flex-shrink-0">
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-[#8A8278] flex-shrink-0">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                       </svg>
@@ -642,12 +642,12 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
             <Card className="p-6">
               <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-[10px] flex items-center justify-center bg-[#F5F3EE] border border-[rgba(10,10,10,0.06)]">
+                  <div className="w-12 h-12 rounded-[10px] flex items-center justify-center bg-[#F5F3EE] border border-[#E9E4D9]">
                     <span className="font-mono text-[13px] font-medium text-[#0A0A0A]">{net(selectedWallet.network).icon}</span>
                   </div>
                   <div>
-                    <h3 className="text-[18px] font-medium text-[#0A0A0A] tracking-[-0.02em]">{selectedWallet.name || 'Wallet'}</h3>
-                    <p className="text-[12.5px] text-[#6B6B6B] mt-0.5 tracking-[-0.003em]">{net(selectedWallet.network).name}</p>
+                    <h3 className="text-[18px] font-medium text-[#1E1E1E]">{selectedWallet.name || 'Wallet'}</h3>
+                    <p className="text-[12.5px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">{net(selectedWallet.network).name}</p>
                   </div>
                 </div>
                 <Button
@@ -663,18 +663,18 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="p-4 bg-[#FBFAF7] rounded-[12px] border border-[rgba(10,10,10,0.04)]">
-                  <p className="text-[11px] font-medium text-[#9B9B9B] uppercase tracking-[0.04em] mb-1.5">Adresse</p>
+                <div className="p-4 bg-white rounded-[12px] border border-[#E9E4D9]">
+                  <p className="text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em] mb-1.5">Adresse</p>
                   <p className="text-[12px] font-mono text-[#0A0A0A] break-all leading-relaxed">{selectedWallet.address}</p>
                 </div>
-                <div className="p-4 bg-[#FBFAF7] rounded-[12px] border border-[rgba(10,10,10,0.04)]">
-                  <p className="text-[11px] font-medium text-[#9B9B9B] uppercase tracking-[0.04em] mb-1.5">Valeur nette</p>
+                <div className="p-4 bg-white rounded-[12px] border border-[#E9E4D9]">
+                  <p className="text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em] mb-1.5">Valeur nette</p>
                   <p className="text-[22px] font-medium text-[#0A0A0A] tabular-nums tracking-[-0.025em]">
                     {assets?.netWorth?.USD ? `$${assets.netWorth.USD.toLocaleString()}` : '—'}
                   </p>
                 </div>
-                <div className="p-4 bg-[#FBFAF7] rounded-[12px] border border-[rgba(10,10,10,0.04)]">
-                  <p className="text-[11px] font-medium text-[#9B9B9B] uppercase tracking-[0.04em] mb-1.5">Actifs</p>
+                <div className="p-4 bg-white rounded-[12px] border border-[#E9E4D9]">
+                  <p className="text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em] mb-1.5">Actifs</p>
                   <p className="text-[22px] font-medium text-[#0A0A0A] tabular-nums tracking-[-0.025em]">
                     {assets?.assets?.length || 0}
                   </p>
@@ -683,22 +683,22 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
 
               {assets?.assets?.length > 0 && (
                 <div>
-                  <p className="text-[11px] font-medium text-[#9B9B9B] uppercase tracking-[0.04em] mb-3">Portefeuille</p>
+                  <p className="text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em] mb-3">Portefeuille</p>
                   <div className="space-y-2">
                     {assets.assets.map((a, i) => (
-                      <div key={i} className="flex items-center justify-between py-3 px-4 bg-[#FBFAF7] rounded-[10px] border border-[rgba(10,10,10,0.04)]">
+                      <div key={i} className="flex items-center justify-between py-3 px-4 bg-white rounded-[10px] border border-[#E9E4D9]">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-white border border-[rgba(10,10,10,0.08)] flex items-center justify-center">
+                          <div className="w-9 h-9 rounded-full bg-white border border-[#E9E4D9] flex items-center justify-center">
                             <span className="text-[10px] font-medium font-mono">{a.symbol?.slice(0, 3)}</span>
                           </div>
                           <div>
                             <p className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em]">{a.symbol}</p>
-                            <p className="text-[11px] text-[#6B6B6B]">{a.kind}</p>
+                            <p className="text-[11px] text-[#5D5D5D]">{a.kind}</p>
                           </div>
                         </div>
                         <div className="text-right">
                           <p className="text-[14px] font-medium text-[#0A0A0A] tabular-nums tracking-[-0.015em]">{a.balance}</p>
-                          {a.quotes?.USD && <p className="text-[11px] text-[#6B6B6B] tabular-nums">${a.quotes.USD.toLocaleString()}</p>}
+                          {a.quotes?.USD && <p className="text-[11px] text-[#5D5D5D] tabular-nums">${a.quotes.USD.toLocaleString()}</p>}
                         </div>
                       </div>
                     ))}
@@ -726,7 +726,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
           <div className="flex items-center justify-between">
             <div>
               <h2 className="display-sm text-[#0A0A0A]">Transferts</h2>
-              <p className="text-[13.5px] text-[#6B6B6B] mt-1.5 tracking-[-0.003em]">
+              <p className="text-[13.5px] text-[#5D5D5D] mt-1.5 tracking-[-0.003em]">
                 {selectedWallet.name} · {history.length} opération{history.length > 1 ? 's' : ''}
               </p>
             </div>
@@ -742,21 +742,21 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
             <Card className="overflow-hidden">
               <table className="w-full text-[13px]">
                 <thead>
-                  <tr className="border-b border-[rgba(10,10,10,0.06)]">
-                    <th className="text-left px-6 h-12 text-[11px] font-medium text-[#9B9B9B] uppercase tracking-[0.04em]">Direction</th>
-                    <th className="text-left px-6 h-12 text-[11px] font-medium text-[#9B9B9B] uppercase tracking-[0.04em]">Adresse</th>
-                    <th className="text-right px-6 h-12 text-[11px] font-medium text-[#9B9B9B] uppercase tracking-[0.04em]">Montant</th>
-                    <th className="text-left px-6 h-12 text-[11px] font-medium text-[#9B9B9B] uppercase tracking-[0.04em]">Statut</th>
-                    <th className="text-left px-6 h-12 text-[11px] font-medium text-[#9B9B9B] uppercase tracking-[0.04em]">Date</th>
+                  <tr className="border-b border-[#E9E4D9]">
+                    <th className="text-left px-6 h-12 text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em]">Direction</th>
+                    <th className="text-left px-6 h-12 text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em]">Adresse</th>
+                    <th className="text-right px-6 h-12 text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em]">Montant</th>
+                    <th className="text-left px-6 h-12 text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em]">Statut</th>
+                    <th className="text-left px-6 h-12 text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em]">Date</th>
                   </tr>
                 </thead>
                 <tbody>
                   {history.map((tx, i) => (
-                    <tr key={tx.id || i} className="border-b border-[rgba(10,10,10,0.06)] last:border-0 hover:bg-[#FBFAF7] transition-colors">
+                    <tr key={tx.id || i} className="border-b border-[#E9E4D9] last:border-0 hover:bg-white transition-colors">
                       <td className="px-6 py-3.5">
                         <Badge variant={tx.direction === 'In' ? 'success' : 'default'} size="sm" dot>{tx.direction || '—'}</Badge>
                       </td>
-                      <td className="px-6 py-3.5 font-mono text-[12px] text-[#4A4A4A]">
+                      <td className="px-6 py-3.5 font-mono text-[12px] text-[#1E1E1E]">
                         {truncAddr(tx.to || tx.from, 8)}
                       </td>
                       <td className="px-6 py-3.5 text-right font-medium text-[#0A0A0A] tabular-nums tracking-[-0.015em]">
@@ -765,7 +765,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                       <td className="px-6 py-3.5">
                         <Badge variant={tx.status === 'Confirmed' ? 'success' : 'warning'} size="sm" dot>{tx.status || 'Pending'}</Badge>
                       </td>
-                      <td className="px-6 py-3.5 text-[12.5px] text-[#6B6B6B]">
+                      <td className="px-6 py-3.5 text-[12.5px] text-[#5D5D5D]">
                         {tx.timestamp ? new Date(tx.timestamp).toLocaleDateString('fr-FR') : '—'}
                       </td>
                     </tr>
@@ -793,7 +793,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
         <div className="animate-fade space-y-6">
           <div>
             <h2 className="display-sm text-[#0A0A0A]">Historique global</h2>
-            <p className="text-[13.5px] text-[#6B6B6B] mt-1.5 tracking-[-0.003em]">Tous les wallets sous mandat</p>
+            <p className="text-[13.5px] text-[#5D5D5D] mt-1.5 tracking-[-0.003em]">Tous les wallets sous mandat</p>
           </div>
           {wallets.length === 0 ? (
             <Card className="py-4">
@@ -806,20 +806,20 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                 return (
                   <div
                     key={w.id}
-                    className={`px-6 py-4 flex items-center justify-between gap-4 ${i < wallets.length - 1 ? 'border-b border-[rgba(10,10,10,0.06)]' : ''}`}
+                    className={`px-6 py-4 flex items-center justify-between gap-4 ${i < wallets.length - 1 ? 'border-b border-[#E9E4D9]' : ''}`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-[10px] flex items-center justify-center bg-[#F5F3EE] border border-[rgba(10,10,10,0.06)]">
+                      <div className="w-10 h-10 rounded-[10px] flex items-center justify-center bg-[#F5F3EE] border border-[#E9E4D9]">
                         <span className="font-mono text-[11px] font-medium">{n.icon}</span>
                       </div>
                       <div>
                         <p className="text-[13.5px] font-medium text-[#0A0A0A] tracking-[-0.01em]">{w.name}</p>
-                        <p className="font-mono text-[11.5px] text-[#6B6B6B]">{truncAddr(w.address, 10)}</p>
+                        <p className="font-mono text-[11.5px] text-[#5D5D5D]">{truncAddr(w.address, 10)}</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <Badge variant={w.status === 'Active' ? 'success' : 'default'} size="sm" dot>{w.status}</Badge>
-                      <p className="text-[11px] text-[#9B9B9B] mt-1">
+                      <p className="text-[11px] text-[#8A8278] mt-1">
                         {w.dateCreated ? new Date(w.dateCreated).toLocaleDateString('fr-FR') : ''}
                       </p>
                     </div>
@@ -929,7 +929,7 @@ function SectionCard({ title, children }) {
 function Field({ label, value, mono, link }) {
   return (
     <div>
-      <p className="text-[11px] font-medium text-[#9B9B9B] uppercase tracking-[0.04em] mb-1.5">{label}</p>
+      <p className="text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em] mb-1.5">{label}</p>
       {link && value ? (
         <a
           href={value.startsWith('http') ? value : `https://${value}`}
@@ -939,7 +939,7 @@ function Field({ label, value, mono, link }) {
           {value}
         </a>
       ) : (
-        <p className={`text-[14px] ${mono ? 'font-mono text-[#4A4A4A]' : 'text-[#0A0A0A] font-medium tracking-[-0.01em]'}`}>
+        <p className={`text-[14px] ${mono ? 'font-mono text-[#1E1E1E]' : 'text-[#0A0A0A] font-medium tracking-[-0.01em]'}`}>
           {value || '—'}
         </p>
       )}
@@ -950,23 +950,23 @@ function Field({ label, value, mono, link }) {
 function MetaRow({ label, value, mono }) {
   return (
     <div>
-      <dt className="text-[11px] font-medium text-[#9B9B9B] uppercase tracking-[0.04em] mb-1">{label}</dt>
-      <dd className={`text-[12.5px] ${mono ? 'font-mono text-[#4A4A4A] break-all' : 'text-[#0A0A0A] font-medium tracking-[-0.01em]'}`}>{value}</dd>
+      <dt className="text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em] mb-1">{label}</dt>
+      <dd className={`text-[12.5px] ${mono ? 'font-mono text-[#1E1E1E] break-all' : 'text-[#0A0A0A] font-medium tracking-[-0.01em]'}`}>{value}</dd>
     </div>
   );
 }
 
 function WealthRow({ label, sub, value, pct, last }) {
   return (
-    <li className={`px-6 py-4 ${!last ? 'border-b border-[rgba(10,10,10,0.06)]' : ''}`}>
+    <li className={`px-6 py-4 ${!last ? 'border-b border-[#E9E4D9]' : ''}`}>
       <div className="flex items-center justify-between mb-2">
         <div>
           <p className="text-[13.5px] font-medium text-[#0A0A0A] tracking-[-0.01em]">{label}</p>
-          <p className="text-[11.5px] text-[#6B6B6B] mt-0.5 tracking-[-0.003em]">{sub}</p>
+          <p className="text-[11.5px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">{sub}</p>
         </div>
         <div className="text-right">
           <p className="text-[13.5px] font-medium text-[#0A0A0A] tabular-nums tracking-[-0.015em]">{value}</p>
-          <p className="text-[11px] text-[#9B9B9B] tabular-nums mt-0.5">{pct}%</p>
+          <p className="text-[11px] text-[#8A8278] tabular-nums mt-0.5">{pct}%</p>
         </div>
       </div>
       {/* Progress bar — hairline */}

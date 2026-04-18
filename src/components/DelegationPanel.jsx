@@ -99,14 +99,14 @@ export default function DelegationPanel({ client }) {
       {/* ── Header ─────────────────────────────────────── */}
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div className="min-w-0">
-          <p className="text-[10.5px] font-medium text-[#7C5E3C] uppercase tracking-[0.14em] mb-2 flex items-center gap-2">
+          <p className="text-[10.5px] font-medium text-[#8A8278] uppercase tracking-[0.12em] mb-2 flex items-center gap-2">
             <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
             Gouvernance · AMF
           </p>
           <h3 className="font-display text-[24px] text-[#0A0A0A] leading-[1.08]" style={{ letterSpacing: '-0.024em' }}>
             Délégations d'accès
           </h3>
-          <p className="text-[13px] text-[#6B6B6B] mt-1 tracking-[-0.003em] max-w-[56ch]">
+          <p className="text-[13px] text-[#5D5D5D] mt-1 tracking-[-0.003em] max-w-[56ch]">
             Gestion des accès famille et tiers autorisés. Chaque délégation est horodatée et révocable à tout moment.
           </p>
         </div>
@@ -166,7 +166,7 @@ export default function DelegationPanel({ client }) {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-[rgba(10,10,10,0.08)] bg-[#FBFAF7]/60">
+                    <tr className="border-b border-[#E9E4D9] bg-white">
                       <th className="px-6 py-3.5 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase">Délégataire</th>
                       <th className="px-6 py-3.5 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase">Email</th>
                       <th className="px-6 py-3.5 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase">Permission</th>
@@ -181,22 +181,22 @@ export default function DelegationPanel({ client }) {
                     {activeDelegations.map((d, i) => (
                       <tr
                         key={d.id}
-                        className="border-b border-[rgba(10,10,10,0.06)] transition-colors hover:bg-[#FBFAF7] hover:shadow-[inset_3px_0_0_0_rgba(200,146,75,0.55)] row-stagger"
+                        className="border-b border-[#E9E4D9] transition-colors hover:bg-white hover:bg-[#FDFBF6] row-stagger"
                         style={{ '--i': i }}
                       >
                         <td className="px-6 py-4 text-[13px] font-medium text-[#0A0A0A] tracking-[-0.006em]">{d.delegate_name || '—'}</td>
-                        <td className="px-6 py-4 text-[12px] text-[#6B6B6B] font-mono tracking-[-0.003em]">{d.delegate_email}</td>
+                        <td className="px-6 py-4 text-[12px] text-[#5D5D5D] font-mono tracking-[-0.003em]">{d.delegate_email}</td>
                         <td className="px-6 py-4">{permBadge(d.permission_level)}</td>
                         <td className="px-6 py-4 text-right text-[13px] font-medium text-[#0A0A0A] tabular-nums">
                           {d.permission_level === 'transfer' && d.transfer_limit
                             ? `${Number(d.transfer_limit).toLocaleString('fr-FR')} ${d.currency || 'EUR'}`
                             : d.permission_level === 'transfer' ? 'Illimité' : '—'}
                         </td>
-                        <td className="px-6 py-4 text-[12px] text-[#6B6B6B] tabular-nums">
+                        <td className="px-6 py-4 text-[12px] text-[#5D5D5D] tabular-nums">
                           {d.expires_at ? fmtDate(d.expires_at) : 'Permanent'}
                         </td>
                         <td className="px-6 py-4">{statusBadge(d.status)}</td>
-                        <td className="px-6 py-4 text-[12px] text-[#6B6B6B]">{d.granted_by_email || '—'}</td>
+                        <td className="px-6 py-4 text-[12px] text-[#5D5D5D]">{d.granted_by_email || '—'}</td>
                         <td className="px-6 py-4">
                           <button
                             onClick={() => handleRevoke(d.id)}
@@ -216,7 +216,7 @@ export default function DelegationPanel({ client }) {
           {/* Revoked / expired */}
           {inactiveDelegations.length > 0 && (
             <details className="group">
-              <summary className="inline-flex items-center gap-2 text-[12px] text-[#6B6B6B] cursor-pointer hover:text-[#0A0A0A] transition-colors tracking-[-0.003em]">
+              <summary className="inline-flex items-center gap-2 text-[12px] text-[#5D5D5D] cursor-pointer hover:text-[#0A0A0A] transition-colors tracking-[-0.003em]">
                 <svg className="w-3 h-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
@@ -225,7 +225,7 @@ export default function DelegationPanel({ client }) {
               <Card className="mt-3 overflow-hidden opacity-75">
                 <table className="w-full text-sm text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-[rgba(10,10,10,0.08)] bg-[#FBFAF7]/60">
+                    <tr className="border-b border-[#E9E4D9] bg-white">
                       <th className="px-6 py-3 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase">Délégataire</th>
                       <th className="px-6 py-3 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase">Permission</th>
                       <th className="px-6 py-3 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase">Statut</th>
@@ -234,11 +234,11 @@ export default function DelegationPanel({ client }) {
                   </thead>
                   <tbody>
                     {inactiveDelegations.map(d => (
-                      <tr key={d.id} className="border-b border-[rgba(10,10,10,0.06)]">
-                        <td className="px-6 py-3 text-[13px] text-[#6B6B6B] tracking-[-0.003em]">{d.delegate_name || d.delegate_email}</td>
+                      <tr key={d.id} className="border-b border-[#E9E4D9]">
+                        <td className="px-6 py-3 text-[13px] text-[#5D5D5D] tracking-[-0.003em]">{d.delegate_name || d.delegate_email}</td>
                         <td className="px-6 py-3">{permBadge(d.permission_level)}</td>
                         <td className="px-6 py-3">{statusBadge(d.status)}</td>
-                        <td className="px-6 py-3 text-[12px] text-[#6B6B6B] tabular-nums">{fmtDate(d.revoked_at)}</td>
+                        <td className="px-6 py-3 text-[12px] text-[#5D5D5D] tabular-nums">{fmtDate(d.revoked_at)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -321,7 +321,7 @@ export default function DelegationPanel({ client }) {
               className={inputCls}
               type="date"
             />
-            <p className="text-[11px] text-[#9B9B9B] mt-1.5 tracking-[-0.003em]">Laisser vide pour une délégation permanente</p>
+            <p className="text-[11px] text-[#8A8278] mt-1.5 tracking-[-0.003em]">Laisser vide pour une délégation permanente</p>
           </div>
           <div>
             <label className={labelCls}>Notes</label>
@@ -333,7 +333,7 @@ export default function DelegationPanel({ client }) {
               rows={3}
             />
           </div>
-          <div className="flex justify-end gap-2 pt-5 border-t border-[rgba(10,10,10,0.06)]">
+          <div className="flex justify-end gap-2 pt-5 border-t border-[#E9E4D9]">
             <Button variant="ghost" onClick={() => setShowModal(false)}>Annuler</Button>
             <Button variant="primary" onClick={handleCreate} disabled={!form.delegateEmail}>
               Créer la délégation

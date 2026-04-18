@@ -291,7 +291,7 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
             <h2 className="display-sm text-[#0A0A0A] mt-3">
               Éligibilité <span className="font-display italic text-[#7C5E3C]">conservation</span>
             </h2>
-            <p className="mt-3 text-[14px] text-[#4A4A4A] leading-relaxed tracking-[-0.006em]">
+            <p className="mt-3 text-[14px] text-[#1E1E1E] leading-relaxed tracking-[-0.006em]">
               Quatre conditions impératives avant l'ouverture d'un portefeuille de
               conservation. Chaque étape est horodatée et auditée.
             </p>
@@ -328,7 +328,7 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
               }}
             />
           </div>
-          <div className="mt-3 flex items-center justify-between text-[11px] text-[#9B9B9B] tracking-[0.02em] uppercase font-medium">
+          <div className="mt-3 flex items-center justify-between text-[11px] text-[#8A8278] tracking-[0.02em] uppercase font-medium">
             <span>{Math.round(progressPct)}% complété</span>
             <span>Audit temps-réel · Salesforce Cloud</span>
           </div>
@@ -337,14 +337,14 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
 
       {/* ── Checklist card ──────────────────────────────── */}
       <Card>
-        <div className="px-7 py-5 border-b border-[rgba(10,10,10,0.06)] flex items-center justify-between">
+        <div className="px-7 py-5 border-b border-[#E9E4D9] flex items-center justify-between">
           <div>
             <h3 className="text-[15px] font-medium text-[#0A0A0A] tracking-[-0.015em]">Conditions réglementaires</h3>
-            <p className="text-[12.5px] text-[#6B6B6B] mt-0.5 tracking-[-0.003em]">
+            <p className="text-[12.5px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">
               Checklist MiCA Art. 60 · chaque étape est horodatée et auditée
             </p>
           </div>
-          <span className="text-[11px] text-[#9B9B9B] tracking-[0.04em] uppercase font-medium hidden md:block">
+          <span className="text-[11px] text-[#8A8278] tracking-[0.04em] uppercase font-medium hidden md:block">
             {items.length} conditions
           </span>
         </div>
@@ -352,7 +352,7 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
           {items.map((item, i) => (
             <li
               key={item.key}
-              className={`px-7 py-5 ${i < items.length - 1 ? 'border-b border-[rgba(10,10,10,0.06)]' : ''}`}
+              className={`px-7 py-5 ${i < items.length - 1 ? 'border-b border-[#E9E4D9]' : ''}`}
             >
               <div className="flex items-start justify-between gap-6">
                 <div className="flex items-start gap-5 min-w-0 flex-1">
@@ -373,7 +373,7 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
                   </div>
                   <div className="min-w-0 flex-1 pt-0.5">
                     <h4 className="text-[14.5px] font-medium text-[#0A0A0A] tracking-[-0.01em]">{item.title}</h4>
-                    <p className="text-[13px] text-[#6B6B6B] mt-1 tracking-[-0.003em]">{item.caption}</p>
+                    <p className="text-[13px] text-[#5D5D5D] mt-1 tracking-[-0.003em]">{item.caption}</p>
                   </div>
                 </div>
                 <div className="flex-shrink-0 pt-0.5">{item.action}</div>
@@ -458,7 +458,7 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
             </div>
           )}
 
-          <div className="flex justify-end gap-2 pt-5 border-t border-[rgba(10,10,10,0.06)]">
+          <div className="flex justify-end gap-2 pt-5 border-t border-[#E9E4D9]">
             <Button variant="ghost" onClick={() => setShowAdequacy(false)}>Annuler</Button>
             <Button
               variant="primary"
@@ -489,19 +489,19 @@ function SigningLinkCard({ title, caption, link, copied, onCopy }) {
     <Card className="px-7 py-6">
       <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
         <div className="flex items-start gap-4 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-[#F5F3EE] border border-[rgba(10,10,10,0.06)] flex items-center justify-center text-[#0A0A0A] flex-shrink-0">
+          <div className="w-10 h-10 rounded-full bg-[#F5F3EE] border border-[#E9E4D9] flex items-center justify-center text-[#0A0A0A] flex-shrink-0">
             <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
             </svg>
           </div>
           <div className="min-w-0">
             <h3 className="text-[15px] font-medium text-[#0A0A0A] tracking-[-0.015em]">{title}</h3>
-            <p className="text-[12.5px] text-[#6B6B6B] mt-1 max-w-xl leading-relaxed tracking-[-0.003em]">{caption}</p>
+            <p className="text-[12.5px] text-[#5D5D5D] mt-1 max-w-xl leading-relaxed tracking-[-0.003em]">{caption}</p>
           </div>
         </div>
         <Badge variant="success" dot>Prêt</Badge>
       </div>
-      <div className="flex items-center gap-2 p-2 bg-[#FBFAF7] border border-[rgba(10,10,10,0.06)] rounded-[10px]">
+      <div className="flex items-center gap-2 p-2 bg-white border border-[#E9E4D9] rounded-[10px]">
         <div className="flex-1 min-w-0 text-[12px] text-[#0A0A0A] font-mono truncate px-3">
           {link}
         </div>
@@ -544,11 +544,11 @@ function ScreeningReport({ check, error }) {
     <div
       className={`rounded-[12px] border overflow-hidden ${
         clear
-          ? 'border-[rgba(10,10,10,0.08)] bg-white'
+          ? 'border-[#E9E4D9] bg-white'
           : 'border-[rgba(220,38,38,0.22)] bg-white'
       }`}
     >
-      <div className="px-5 py-4 border-b border-[rgba(10,10,10,0.06)] flex items-center justify-between gap-4">
+      <div className="px-5 py-4 border-b border-[#E9E4D9] flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <div
             className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
@@ -565,7 +565,7 @@ function ScreeningReport({ check, error }) {
             )}
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#9B9B9B]">{providerLabel}</p>
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#8A8278]">{providerLabel}</p>
             <p className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em] mt-0.5">
               {clear
                 ? 'Aucune correspondance · dossier blanchi'
@@ -573,14 +573,14 @@ function ScreeningReport({ check, error }) {
             </p>
           </div>
         </div>
-        <span className="text-[10.5px] font-medium uppercase tracking-[0.08em] text-[#9B9B9B] tabular-nums whitespace-nowrap hidden sm:block">
+        <span className="text-[10.5px] font-medium uppercase tracking-[0.08em] text-[#8A8278] tabular-nums whitespace-nowrap hidden sm:block">
           {check.created_at && new Date(check.created_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
         </span>
       </div>
 
       <div className="px-5 py-4 space-y-4">
         <div>
-          <p className="text-[10.5px] font-medium uppercase tracking-[0.08em] text-[#9B9B9B] mb-2.5">Décomposition du screening</p>
+          <p className="text-[10.5px] font-medium uppercase tracking-[0.08em] text-[#8A8278] mb-2.5">Décomposition du screening</p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {categories.map(c => (
               <div
@@ -588,30 +588,30 @@ function ScreeningReport({ check, error }) {
                 className={`px-3.5 py-3 rounded-[10px] border ${
                   c.n > 0
                     ? 'bg-[rgba(220,38,38,0.04)] border-[rgba(220,38,38,0.15)]'
-                    : 'bg-[#FBFAF7] border-[rgba(10,10,10,0.06)]'
+                    : 'bg-white border-[#E9E4D9]'
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#6B6B6B]">{c.label}</p>
+                  <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#5D5D5D]">{c.label}</p>
                   <span className={`text-[13px] font-medium tabular-nums ${c.n > 0 ? 'text-[#991B1B]' : 'text-[#0A0A0A]'}`}>
                     {c.n}
                   </span>
                 </div>
-                <p className="text-[11px] text-[#9B9B9B] tracking-[-0.003em] mt-1 leading-snug">{c.detail}</p>
+                <p className="text-[11px] text-[#8A8278] tracking-[-0.003em] mt-1 leading-snug">{c.detail}</p>
               </div>
             ))}
           </div>
         </div>
 
         {check.complycube_check_id && (
-          <div className="flex items-center justify-between pt-3 border-t border-[rgba(10,10,10,0.06)]">
-            <span className="text-[10.5px] font-medium uppercase tracking-[0.08em] text-[#9B9B9B]">Référence ComplyCube</span>
-            <span className="text-[11px] font-mono text-[#4A4A4A] truncate ml-4">{check.complycube_check_id}</span>
+          <div className="flex items-center justify-between pt-3 border-t border-[#E9E4D9]">
+            <span className="text-[10.5px] font-medium uppercase tracking-[0.08em] text-[#8A8278]">Référence ComplyCube</span>
+            <span className="text-[11px] font-mono text-[#1E1E1E] truncate ml-4">{check.complycube_check_id}</span>
           </div>
         )}
 
         {!clear && (
-          <p className="text-[11px] text-[#6B6B6B] leading-relaxed tracking-[-0.003em] pt-1">
+          <p className="text-[11px] text-[#5D5D5D] leading-relaxed tracking-[-0.003em] pt-1">
             Une alerte de conformité a été créée dans le dashboard Tracfin. Revue manuelle requise avant ouverture du dossier.
           </p>
         )}
@@ -625,7 +625,7 @@ function AdequacyQuestion({ n, question, value, onChange }) {
   return (
     <div>
       <div className="flex items-start gap-3 mb-3">
-        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#F5F3EE] border border-[rgba(10,10,10,0.06)] text-[11px] font-medium text-[#4A4A4A] flex items-center justify-center tabular-nums mt-0.5">
+        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#F5F3EE] border border-[#E9E4D9] text-[11px] font-medium text-[#1E1E1E] flex items-center justify-center tabular-nums mt-0.5">
           {n}
         </span>
         <p className="flex-1 text-[14px] text-[#0A0A0A] leading-relaxed tracking-[-0.006em]">{question}</p>
@@ -641,7 +641,7 @@ function AdequacyQuestion({ n, question, value, onChange }) {
               className={`h-9 px-5 text-[13px] font-medium rounded-full border transition-all tracking-[-0.01em] ${
                 active
                   ? 'bg-[#0A0A0A] text-white border-[#0A0A0A]'
-                  : 'bg-white text-[#6B6B6B] border-[rgba(10,10,10,0.1)] hover:bg-[#FBFAF7] hover:text-[#0A0A0A] hover:border-[rgba(10,10,10,0.2)]'
+                  : 'bg-white text-[#5D5D5D] border-[rgba(10,10,10,0.1)] hover:bg-white hover:text-[#0A0A0A] hover:border-[rgba(10,10,10,0.2)]'
               }`}
             >
               {opt}

@@ -78,7 +78,7 @@ export default function ClientList({ onSelectClient, onNavigate }) {
           <>
             <div className="relative">
               <svg
-                className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9B9B9B] pointer-events-none"
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8A8278] pointer-events-none"
                 fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}
               >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.2-5.2m2.2-5.3a7.5 7.5 0 11-15 0 7.5 7.5 0 0115 0z" />
@@ -88,7 +88,7 @@ export default function ClientList({ onSelectClient, onNavigate }) {
                 value={search}
                 onChange={handleSearch}
                 placeholder="Rechercher un client…"
-                className="h-10 pl-10 pr-4 w-[300px] text-[13px] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none focus:border-[rgba(124,94,60,0.4)] focus:ring-4 focus:ring-[rgba(124,94,60,0.1)] placeholder:text-[#9B9B9B] tracking-[-0.006em] transition-[border-color,box-shadow] duration-200"
+                className="h-10 pl-10 pr-4 w-[300px] text-[13px] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none focus:border-[rgba(124,94,60,0.4)] focus:ring-4 focus:ring-[rgba(124,94,60,0.1)] placeholder:text-[#8A8278] tracking-[-0.006em] transition-[border-color,box-shadow] duration-200"
               />
             </div>
             <div className="flex items-center gap-3">
@@ -163,7 +163,7 @@ export default function ClientList({ onSelectClient, onNavigate }) {
             eyebrow="Mandats de conservation"
             title="Les portefeuilles SwissLife Custody."
             trailing={
-              <span className="hidden md:inline-flex items-center gap-1.5 h-9 px-3 mr-2 rounded-full bg-[#FBFAF7] border border-[rgba(10,10,10,0.08)] text-[11px] font-medium text-[#6B6B6B] tracking-[-0.003em]">
+              <span className="hidden md:inline-flex items-center gap-1.5 h-9 px-3 mr-2 rounded-full bg-white border border-[#E9E4D9] text-[11px] font-medium text-[#5D5D5D] tracking-[-0.003em]">
                 <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
                 4 tiers
               </span>
@@ -277,7 +277,7 @@ export default function ClientList({ onSelectClient, onNavigate }) {
 
       {/* ── Error ──────────────────────────────────────── */}
       {error && (
-        <div className="px-5 py-4 bg-white border border-[rgba(220,38,38,0.2)] rounded-[14px]">
+        <div className="px-5 py-4 bg-white border border-[rgba(220,38,38,0.2)] rounded-[8px]">
           <p className="text-[13px] text-[#991B1B] font-medium tracking-[-0.003em]">{error}</p>
         </div>
       )}
@@ -285,7 +285,7 @@ export default function ClientList({ onSelectClient, onNavigate }) {
       {/* ── Clients list ───────────────────────────────── */}
       {loading ? (
         <Card className="animate-slide-up stagger-2">
-          <div className="px-6 py-4 flex items-center justify-between border-b border-[rgba(10,10,10,0.06)]">
+          <div className="px-6 py-4 flex items-center justify-between border-b border-[#E9E4D9]">
             <Skeleton className="h-[14px]" style={{ width: 180 }} />
             <Skeleton className="h-[12px]" style={{ width: 90 }} />
           </div>
@@ -293,7 +293,7 @@ export default function ClientList({ onSelectClient, onNavigate }) {
             {Array.from({ length: 6 }).map((_, i) => (
               <li
                 key={i}
-                className="flex items-center gap-5 px-6 py-5 border-b border-[rgba(10,10,10,0.06)] last:border-0 row-stagger"
+                className="flex items-center gap-5 px-6 py-5 border-b border-[#E9E4D9] last:border-0 row-stagger"
                 style={{ '--i': i }}
               >
                 <SkeletonCircle size={44} />
@@ -324,14 +324,14 @@ export default function ClientList({ onSelectClient, onNavigate }) {
       ) : (
         <div className="animate-slide-up stagger-3">
           <Card>
-            <div className="px-6 py-4 flex items-center justify-between border-b border-[rgba(10,10,10,0.06)]">
+            <div className="px-6 py-4 flex items-center justify-between border-b border-[#E9E4D9]">
               <div>
                 <h2 className="text-[15px] font-medium text-[#0A0A0A] tracking-[-0.015em]">Registre des clients</h2>
-                <p className="text-[12.5px] text-[#6B6B6B] mt-0.5 tracking-[-0.003em]">
+                <p className="text-[12.5px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">
                   Triés par nom · {clients.length} résultat{clients.length > 1 ? 's' : ''}
                 </p>
               </div>
-              <div className="hidden md:flex items-center gap-2 text-[11px] font-medium text-[#6B6B6B] uppercase tracking-[0.04em]">
+              <div className="hidden md:flex items-center gap-2 text-[11px] font-medium text-[#5D5D5D] uppercase tracking-[0.04em]">
                 <div className="w-40 text-right">Actifs</div>
                 <div className="w-8"></div>
               </div>
@@ -342,7 +342,7 @@ export default function ClientList({ onSelectClient, onNavigate }) {
                   key={client.id}
                   onClick={() => onSelectClient(client)}
                   style={{ '--i': i }}
-                  className={`row-stagger flex items-center gap-5 px-6 py-5 cursor-pointer hover:bg-[#FBFAF7] transition-colors group ${i < clients.length - 1 ? 'border-b border-[rgba(10,10,10,0.06)]' : ''}`}
+                  className={`row-stagger flex items-center gap-5 px-6 py-5 cursor-pointer hover:bg-white transition-colors group ${i < clients.length - 1 ? 'border-b border-[#E9E4D9]' : ''}`}
                 >
                   <Avatar name={client.name} size={44} verified={client.type === 'Customer - Direct'} />
                   <div className="flex-1 min-w-0">
@@ -352,20 +352,20 @@ export default function ClientList({ onSelectClient, onNavigate }) {
                       </p>
                       <Badge variant={typeVariant(client.type)} size="sm" dot>{typeLabel(client.type)}</Badge>
                     </div>
-                    <p className="text-[13px] text-[#6B6B6B] mt-1 truncate tracking-[-0.003em]">
+                    <p className="text-[13px] text-[#5D5D5D] mt-1 truncate tracking-[-0.003em]">
                       {[client.city, client.country].filter(Boolean).join(' · ') || '—'}
-                      {client.industry && <span className="text-[#9B9B9B]"> · {client.industry}</span>}
+                      {client.industry && <span className="text-[#8A8278]"> · {client.industry}</span>}
                     </p>
                   </div>
                   <div className="hidden md:block text-right flex-shrink-0 w-40">
                     <p className="text-[15px] font-medium text-[#0A0A0A] tabular-nums tracking-[-0.02em]">
                       {client.aum ? fmtEUR(client.aum) : '—'}
                     </p>
-                    <p className="text-[11px] font-medium text-[#9B9B9B] mt-0.5 tracking-[0.02em] uppercase">
+                    <p className="text-[11px] font-medium text-[#8A8278] mt-0.5 tracking-[0.02em] uppercase">
                       {client.accountNumber ? `№ ${client.accountNumber}` : 'AUM'}
                     </p>
                   </div>
-                  <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[#9B9B9B] group-hover:text-[#0A0A0A] group-hover:bg-[#F5F3EE] transition-all">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-[#8A8278] group-hover:text-[#0A0A0A] group-hover:bg-[#F5F3EE] transition-all">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
@@ -378,9 +378,9 @@ export default function ClientList({ onSelectClient, onNavigate }) {
       )}
 
       {/* ── Editorial signature footer ─────────────────── */}
-      <footer className="pt-10 mt-4 border-t border-[rgba(10,10,10,0.06)] space-y-4">
+      <footer className="pt-10 mt-4 border-t border-[#E9E4D9] space-y-4">
         <SignatureMark name="G. Alexandrian" role="Banquier privé" location="Paris" />
-        <div className="flex items-center justify-between text-[10.5px] text-[#9B9B9B] tracking-[0.06em] uppercase font-medium">
+        <div className="flex items-center justify-between text-[10.5px] text-[#8A8278] tracking-[0.06em] uppercase font-medium">
           <span>SwissLife Banque Privée · 7 rue Boudreau, 75009 Paris</span>
           <span>AMF · ACPR · Tracfin · MiCA Art. 60</span>
         </div>

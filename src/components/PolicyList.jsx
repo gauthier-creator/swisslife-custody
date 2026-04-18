@@ -170,7 +170,7 @@ export default function PolicyList() {
               </select>
             </div>
           </div>
-          <div className="flex justify-end gap-2 pt-5 border-t border-[rgba(10,10,10,0.06)]">
+          <div className="flex justify-end gap-2 pt-5 border-t border-[#E9E4D9]">
             <Button variant="ghost" onClick={() => setShowCreate(false)}>Annuler</Button>
             <Button variant="primary" onClick={handleCreate} disabled={creating || !form.name}>
               {creating && <Spinner />}
@@ -205,7 +205,7 @@ function PolicyCard({ pol, index }) {
           <div className="min-w-0">
             <h3 className="text-[15px] font-medium text-[#0A0A0A] tracking-[-0.015em] truncate">{pol.name}</h3>
             {pol.description && (
-              <p className="text-[12.5px] text-[#6B6B6B] mt-1 line-clamp-2 tracking-[-0.003em]">{pol.description}</p>
+              <p className="text-[12.5px] text-[#5D5D5D] mt-1 line-clamp-2 tracking-[-0.003em]">{pol.description}</p>
             )}
           </div>
         </div>
@@ -219,18 +219,18 @@ function PolicyCard({ pol, index }) {
 
       {/* Meta rows */}
       <div className="pl-[54px] space-y-1.5">
-        <div className="flex items-center gap-2 text-[12px] text-[#6B6B6B] tracking-[-0.003em]">
+        <div className="flex items-center gap-2 text-[12px] text-[#5D5D5D] tracking-[-0.003em]">
           <span className="w-3 h-px bg-[rgba(10,10,10,0.2)]" />
-          <span className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-[#9B9B9B]">Activité</span>
+          <span className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-[#8A8278]">Activité</span>
           <span className="text-[#0A0A0A] font-medium">{activityLabel(pol.activityKind)}</span>
         </div>
-        <div className="flex items-center gap-2 text-[12px] text-[#6B6B6B] tracking-[-0.003em]">
+        <div className="flex items-center gap-2 text-[12px] text-[#5D5D5D] tracking-[-0.003em]">
           <span className="w-3 h-px bg-[rgba(10,10,10,0.2)]" />
-          <span className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-[#9B9B9B]">Règle</span>
+          <span className="text-[10.5px] font-medium uppercase tracking-[0.06em] text-[#8A8278]">Règle</span>
           <span className="text-[#0A0A0A] font-medium">{ruleLabel(pol.rule?.kind)}</span>
         </div>
         {pol.dateCreated && (
-          <div className="flex items-center gap-2 text-[12px] text-[#9B9B9B] tracking-[-0.003em]">
+          <div className="flex items-center gap-2 text-[12px] text-[#8A8278] tracking-[-0.003em]">
             <span className="w-3 h-px bg-[rgba(10,10,10,0.2)]" />
             <span className="text-[10.5px] font-medium uppercase tracking-[0.06em]">Créée le</span>
             <span className="tabular-nums">{new Date(pol.dateCreated).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>

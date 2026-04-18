@@ -147,8 +147,8 @@ export default function CommandPalette({ open, onClose, onNavigate, isAdmin = fa
         onKeyDown={onKeyDown}
       >
         {/* Header · search */}
-        <div className="flex items-center gap-3 px-5 h-[60px] border-b border-[rgba(10,10,10,0.08)]">
-          <svg className="w-4 h-4 text-[#9B9B9B] flex-shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <div className="flex items-center gap-3 px-5 h-[60px] border-b border-[#E9E4D9]">
+          <svg className="w-4 h-4 text-[#8A8278] flex-shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="8.8" cy="8.8" r="5.4" />
             <path d="M13 13 l4 4" />
           </svg>
@@ -158,11 +158,11 @@ export default function CommandPalette({ open, onClose, onNavigate, isAdmin = fa
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Aller à… clients, wallets, compliance"
-            className="flex-1 h-full bg-transparent outline-none text-[15px] text-[#0A0A0A] placeholder:text-[#9B9B9B] tracking-[-0.01em]"
+            className="flex-1 h-full bg-transparent outline-none text-[15px] text-[#0A0A0A] placeholder:text-[#8A8278] tracking-[-0.01em]"
             autoComplete="off"
             spellCheck="false"
           />
-          <div className="flex items-center gap-1.5 flex-shrink-0 pl-2 border-l border-[rgba(10,10,10,0.06)]">
+          <div className="flex items-center gap-1.5 flex-shrink-0 pl-2 border-l border-[#E9E4D9]">
             <Kbd>esc</Kbd>
           </div>
         </div>
@@ -175,13 +175,13 @@ export default function CommandPalette({ open, onClose, onNavigate, isAdmin = fa
           {groups.length === 0 && (
             <div className="px-4 py-10 text-center">
               <p className="text-[13px] font-medium text-[#0A0A0A] tracking-[-0.01em]">Aucun résultat</p>
-              <p className="text-[12px] text-[#6B6B6B] mt-1">Essayez <span className="font-display italic text-[#7C5E3C]">clients</span>, <span className="font-display italic text-[#7C5E3C]">wallets</span> ou <span className="font-display italic text-[#7C5E3C]">compliance</span></p>
+              <p className="text-[12px] text-[#5D5D5D] mt-1">Essayez <span className="font-display italic text-[#7C5E3C]">clients</span>, <span className="font-display italic text-[#7C5E3C]">wallets</span> ou <span className="font-display italic text-[#7C5E3C]">compliance</span></p>
             </div>
           )}
 
           {groups.map((g) => (
             <div key={g.id} className="mb-1">
-              <p className="px-3 pt-3 pb-1.5 text-[10.5px] font-medium uppercase tracking-[0.08em] text-[#9B9B9B]">{g.label}</p>
+              <p className="px-3 pt-3 pb-1.5 text-[10.5px] font-medium uppercase tracking-[0.08em] text-[#8A8278]">{g.label}</p>
               <ul>
                 {g.items.map((it) => {
                   flatCursor += 1;
@@ -197,12 +197,12 @@ export default function CommandPalette({ open, onClose, onNavigate, isAdmin = fa
                         active ? 'bg-[#F5F3EE]' : ''
                       }`}
                     >
-                      <span className={`w-8 h-8 flex items-center justify-center rounded-[8px] flex-shrink-0 transition-colors ${active ? 'bg-white border border-[rgba(10,10,10,0.08)] text-[#7C5E3C]' : 'bg-[#F5F3EE] text-[#4A4A4A] border border-transparent'}`}>
+                      <span className={`w-8 h-8 flex items-center justify-center rounded-[8px] flex-shrink-0 transition-colors ${active ? 'bg-white border border-[#E9E4D9] text-[#7C5E3C]' : 'bg-[#F5F3EE] text-[#1E1E1E] border border-transparent'}`}>
                         <Icon name={it.icon} />
                       </span>
                       <div className="flex-1 min-w-0">
                         <p className="text-[13.5px] font-medium text-[#0A0A0A] truncate tracking-[-0.01em]">{it.title}</p>
-                        {it.hint && <p className="text-[11.5px] text-[#6B6B6B] truncate mt-0.5 tracking-[-0.003em]">{it.hint}</p>}
+                        {it.hint && <p className="text-[11.5px] text-[#5D5D5D] truncate mt-0.5 tracking-[-0.003em]">{it.hint}</p>}
                       </div>
                       {active && (
                         <span className="text-[11px] font-medium text-[#7C5E3C] tracking-[-0.003em] flex items-center gap-1.5">
@@ -213,7 +213,7 @@ export default function CommandPalette({ open, onClose, onNavigate, isAdmin = fa
                         </span>
                       )}
                       {!active && it.shortcut && (
-                        <div className="flex items-center gap-1 text-[10px] text-[#9B9B9B]">
+                        <div className="flex items-center gap-1 text-[10px] text-[#8A8278]">
                           {it.shortcut.map((k, i) => <Kbd key={i}>{k}</Kbd>)}
                         </div>
                       )}
@@ -226,14 +226,14 @@ export default function CommandPalette({ open, onClose, onNavigate, isAdmin = fa
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-5 h-[44px] border-t border-[rgba(10,10,10,0.06)] bg-[#FBFAF7] text-[11px] text-[#6B6B6B] tracking-[-0.003em]">
+        <div className="flex items-center justify-between px-5 h-[44px] border-t border-[#E9E4D9] bg-white text-[11px] text-[#5D5D5D] tracking-[-0.003em]">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1.5"><Kbd>↑</Kbd><Kbd>↓</Kbd> naviguer</span>
             <span className="flex items-center gap-1.5"><Kbd>↵</Kbd> ouvrir</span>
           </div>
           <span className="flex items-center gap-1.5">
             <span className="w-1 h-1 rounded-full bg-[#7C5E3C]" />
-            <span className="uppercase tracking-[0.08em] font-medium text-[#9B9B9B]">SwissLife Custody</span>
+            <span className="uppercase tracking-[0.08em] font-medium text-[#8A8278]">SwissLife Custody</span>
           </span>
         </div>
       </div>

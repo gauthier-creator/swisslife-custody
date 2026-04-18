@@ -67,7 +67,7 @@ export default function WalletList() {
         trailing={
           <>
             <div className="relative">
-              <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9B9B9B] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+              <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8A8278] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.2-5.2m2.2-5.3a7.5 7.5 0 11-15 0 7.5 7.5 0 0115 0z" />
               </svg>
               <input
@@ -75,7 +75,7 @@ export default function WalletList() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Rechercher un wallet…"
-                className="h-10 pl-10 pr-16 w-[280px] text-[13px] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none focus:border-[rgba(124,94,60,0.4)] focus:ring-4 focus:ring-[rgba(124,94,60,0.1)] placeholder:text-[#9B9B9B] tracking-[-0.006em] transition-[border-color,box-shadow] duration-200"
+                className="h-10 pl-10 pr-16 w-[280px] text-[13px] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none focus:border-[rgba(124,94,60,0.4)] focus:ring-4 focus:ring-[rgba(124,94,60,0.1)] placeholder:text-[#8A8278] tracking-[-0.006em] transition-[border-color,box-shadow] duration-200"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:inline-flex">
                 <span className="kbd">⌘K</span>
@@ -126,7 +126,7 @@ export default function WalletList() {
         <div className="space-y-8 animate-slide-up stagger-2">
           {Array.from({ length: 2 }).map((_, g) => (
             <Card key={g}>
-              <div className="px-6 py-4 border-b border-[rgba(10,10,10,0.06)] flex items-center gap-3">
+              <div className="px-6 py-4 border-b border-[#E9E4D9] flex items-center gap-3">
                 <Skeleton className="h-7 w-7 rounded-[8px]" />
                 <Skeleton className="h-[14px]" style={{ width: 140 }} />
                 <Skeleton className="h-[11px]" style={{ width: 60 }} />
@@ -168,7 +168,7 @@ export default function WalletList() {
                       {n.icon}
                     </span>
                     <span>{n.name}</span>
-                    <span className="text-[11px] font-medium text-[#9B9B9B] tracking-[0.06em] uppercase tabular-nums">
+                    <span className="text-[11px] font-medium text-[#8A8278] tracking-[0.06em] uppercase tabular-nums">
                       {nws.length} wallet{nws.length > 1 ? 's' : ''}
                     </span>
                   </span>

@@ -73,7 +73,7 @@ export default function ConfigPage({ onConfigured }) {
                   </Badge>
                 )}
               </div>
-              <p className="text-[12.5px] text-[#6B6B6B] mt-1 tracking-[-0.003em]">Connexion OAuth server-side · Sync comptes & opportunités</p>
+              <p className="text-[12.5px] text-[#5D5D5D] mt-1 tracking-[-0.003em]">Connexion OAuth server-side · Sync comptes & opportunités</p>
             </div>
           </div>
 
@@ -82,20 +82,20 @@ export default function ConfigPage({ onConfigured }) {
           ) : sfStatus?.configured ? (
             <div className="space-y-3">
               {sfStatus.instanceUrl && (
-                <div className="flex items-center gap-2 px-3 py-2.5 bg-[#FBFAF7] border border-[rgba(10,10,10,0.06)] rounded-[10px]">
-                  <svg className="w-3.5 h-3.5 text-[#9B9B9B] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                <div className="flex items-center gap-2 px-3 py-2.5 bg-white border border-[#E9E4D9] rounded-[10px]">
+                  <svg className="w-3.5 h-3.5 text-[#8A8278] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                   </svg>
-                  <p className="text-[11.5px] text-[#4A4A4A] font-mono truncate tracking-[-0.003em]">{sfStatus.instanceUrl}</p>
+                  <p className="text-[11.5px] text-[#1E1E1E] font-mono truncate tracking-[-0.003em]">{sfStatus.instanceUrl}</p>
                 </div>
               )}
               <Button variant="ghost" onClick={handleTestSf}>Rafraîchir le statut</Button>
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="bg-[#FBFAF7] border border-[rgba(10,10,10,0.06)] rounded-[10px] p-4">
-                <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#9B9B9B] mb-2">Variables d'environnement requises</p>
-                <div className="font-mono text-[11px] text-[#4A4A4A] space-y-1 leading-relaxed">
+              <div className="bg-white border border-[#E9E4D9] rounded-[10px] p-4">
+                <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#8A8278] mb-2">Variables d'environnement requises</p>
+                <div className="font-mono text-[11px] text-[#1E1E1E] space-y-1 leading-relaxed">
                   <p><span className="text-[#7C5E3C]">SF_LOGIN_URL</span>=https://login.salesforce.com</p>
                   <p><span className="text-[#7C5E3C]">SF_CLIENT_ID</span>=…</p>
                   <p><span className="text-[#7C5E3C]">SF_CLIENT_SECRET</span>=…</p>
@@ -104,7 +104,7 @@ export default function ConfigPage({ onConfigured }) {
                   <p><span className="text-[#7C5E3C]">SF_SECURITY_TOKEN</span>=…</p>
                 </div>
               </div>
-              <p className="text-[11.5px] text-[#6B6B6B] leading-relaxed tracking-[-0.003em]">
+              <p className="text-[11.5px] text-[#5D5D5D] leading-relaxed tracking-[-0.003em]">
                 Créez une <span className="font-medium text-[#0A0A0A]">Connected App</span> dans Salesforce Setup → App Manager, activez OAuth et cochez "Full access".
               </p>
             </div>
@@ -126,7 +126,7 @@ export default function ConfigPage({ onConfigured }) {
                   </Badge>
                 )}
               </div>
-              <p className="text-[12.5px] text-[#6B6B6B] mt-1 tracking-[-0.003em]">API PAT + User Action Signing · MPC 2/3 threshold</p>
+              <p className="text-[12.5px] text-[#5D5D5D] mt-1 tracking-[-0.003em]">API PAT + User Action Signing · MPC 2/3 threshold</p>
             </div>
           </div>
 
@@ -135,9 +135,9 @@ export default function ConfigPage({ onConfigured }) {
               {testingDfns && <Spinner size="w-3.5 h-3.5" />}
               {testingDfns ? 'Test en cours…' : 'Tester la connexion'}
             </Button>
-            <div className="bg-[#FBFAF7] border border-[rgba(10,10,10,0.06)] rounded-[10px] p-4">
-              <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#9B9B9B] mb-2">Variables d'environnement</p>
-              <div className="font-mono text-[11px] text-[#4A4A4A] space-y-1 leading-relaxed">
+            <div className="bg-white border border-[#E9E4D9] rounded-[10px] p-4">
+              <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#8A8278] mb-2">Variables d'environnement</p>
+              <div className="font-mono text-[11px] text-[#1E1E1E] space-y-1 leading-relaxed">
                 <p><span className="text-[#7C5E3C]">DFNS_API_TOKEN</span>=…</p>
                 <p><span className="text-[#7C5E3C]">DFNS_APP_ID</span>=…</p>
                 <p><span className="text-[#7C5E3C]">DFNS_CRED_ID</span>=…</p>
@@ -206,7 +206,7 @@ function ComplianceSettings() {
           <div className="flex items-start justify-between gap-4 mb-4">
             <div className="min-w-0">
               <h3 className="text-[15px] font-medium text-[#0A0A0A] tracking-[-0.015em]">Module KYC intégré</h3>
-              <p className="text-[12.5px] text-[#6B6B6B] mt-1 tracking-[-0.003em] leading-relaxed">
+              <p className="text-[12.5px] text-[#5D5D5D] mt-1 tracking-[-0.003em] leading-relaxed">
                 Vérification d'identité via ComplyCube — en complément du KYC bancaire existant.
               </p>
             </div>
@@ -227,20 +227,20 @@ function ComplianceSettings() {
           </div>
           <div className={`flex items-center gap-2 px-3 py-2.5 rounded-[10px] border ${
             settings?.kyc_module_enabled
-              ? 'bg-[#FBFAF7] border-[rgba(22,163,74,0.18)]'
-              : 'bg-[#FBFAF7] border-[rgba(10,10,10,0.06)]'
+              ? 'bg-white border-[rgba(22,163,74,0.18)]'
+              : 'bg-white border-[#E9E4D9]'
           }`}>
             <span
               className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${settings?.kyc_module_enabled ? 'status-pulse' : ''}`}
               style={{ background: settings?.kyc_module_enabled ? '#16A34A' : '#9B9B9B' }}
             />
-            <p className="text-[12px] text-[#4A4A4A] tracking-[-0.003em]">
+            <p className="text-[12px] text-[#1E1E1E] tracking-[-0.003em]">
               {settings?.kyc_module_enabled
                 ? "Actif — onglet KYC/KYB visible dans les fiches clients"
                 : "Inactif — KYC géré par les outils existants de la banque"}
             </p>
           </div>
-          <p className="text-[11px] text-[#9B9B9B] mt-3 tracking-[-0.003em]">
+          <p className="text-[11px] text-[#8A8278] mt-3 tracking-[-0.003em]">
             Le screening crypto (Chainalysis KYT) est géré directement par DFNS sur chaque transfert.
           </p>
         </Card>
@@ -249,7 +249,7 @@ function ComplianceSettings() {
         <Card className="p-6 relative overflow-hidden accent-ruler-left">
           <div className="mb-4">
             <h3 className="text-[15px] font-medium text-[#0A0A0A] tracking-[-0.015em]">Autorité de déclaration</h3>
-            <p className="text-[12.5px] text-[#6B6B6B] mt-1 tracking-[-0.003em]">
+            <p className="text-[12.5px] text-[#5D5D5D] mt-1 tracking-[-0.003em]">
               Destination des déclarations d'activité suspecte (SAR/STR).
             </p>
           </div>
@@ -266,8 +266,8 @@ function ComplianceSettings() {
                   onClick={() => save({ filing_authority: opt.value })}
                   className={`flex items-start gap-3 p-3 rounded-[10px] border cursor-pointer transition-all ${
                     selected
-                      ? 'border-[#0A0A0A] bg-[#FBFAF7] shadow-crisp'
-                      : 'border-[rgba(10,10,10,0.08)] hover:border-[rgba(10,10,10,0.14)]'
+                      ? 'border-[#0A0A0A] bg-white shadow-crisp'
+                      : 'border-[#E9E4D9] hover:border-[rgba(10,10,10,0.14)]'
                   }`}
                 >
                   <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
@@ -277,7 +277,7 @@ function ComplianceSettings() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-[13px] font-medium text-[#0A0A0A] tracking-[-0.006em]">{opt.label}</p>
-                    <p className="text-[11.5px] text-[#6B6B6B] mt-0.5 tracking-[-0.003em]">{opt.desc}</p>
+                    <p className="text-[11.5px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">{opt.desc}</p>
                   </div>
                 </div>
               );
@@ -334,15 +334,15 @@ function UserManagement() {
         {loading ? (
           <div className="p-10 text-center"><Spinner size="w-5 h-5" /></div>
         ) : users.length === 0 ? (
-          <div className="p-10 text-center text-[13px] text-[#6B6B6B]">Aucun utilisateur</div>
+          <div className="p-10 text-center text-[13px] text-[#5D5D5D]">Aucun utilisateur</div>
         ) : (
           <Table headers={['Utilisateur', 'Email', 'Rôle', 'Inscrit le', { label: '', right: true }]}>
             {users.map(u => (
               <tr key={u.id} className={trCls}>
                 <td className={tdCls + ' font-medium'}>
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#F5F3EE] border border-[rgba(10,10,10,0.08)] flex items-center justify-center flex-shrink-0">
-                      <span className="text-[11px] font-medium text-[#4A4A4A] tracking-tight">
+                    <div className="w-8 h-8 rounded-full bg-[#F5F3EE] border border-[#E9E4D9] flex items-center justify-center flex-shrink-0">
+                      <span className="text-[11px] font-medium text-[#1E1E1E] tracking-tight">
                         {(u.full_name || u.email || '?').slice(0, 2).toUpperCase()}
                       </span>
                     </div>
@@ -363,7 +363,7 @@ function UserManagement() {
                 <td className="px-6 py-4 text-right">
                   <button
                     onClick={() => toggleRole(u.id, u.role)}
-                    className="text-[11px] font-medium text-[#6B6B6B] hover:text-[#0A0A0A] tracking-[-0.003em] transition-colors"
+                    className="text-[11px] font-medium text-[#5D5D5D] hover:text-[#0A0A0A] tracking-[-0.003em] transition-colors"
                   >
                     {u.role === 'admin' ? 'Passer banquier' : 'Passer admin'}
                   </button>

@@ -71,7 +71,7 @@ export function ProductCard({
         {scene}
         {/* Small square icon badge top-left (Ramify pattern) */}
         <span
-          className="absolute top-3.5 left-3.5 w-8 h-8 rounded-[6px] bg-white/90 border border-[rgba(10,10,10,0.06)] backdrop-blur-sm
+          className="absolute top-3.5 left-3.5 w-8 h-8 rounded-[6px] bg-white/90 border border-[#E9E4D9] backdrop-blur-sm
                      flex items-center justify-center text-[#1E1E1E] shadow-[0_1px_2px_rgba(10,10,10,0.04)]"
         >
           {categoryIcon}
@@ -152,7 +152,7 @@ export function ProductCarousel({ title, eyebrow, children, className = '' }) {
       <div className="flex items-end justify-between gap-6 mb-6">
         <div>
           {eyebrow && (
-            <p className="text-[10.5px] font-medium text-[#7C5E3C] uppercase tracking-[0.12em] mb-1.5">
+            <p className="text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.12em] mb-1.5">
               {eyebrow}
             </p>
           )}
@@ -188,9 +188,9 @@ function CarouselNav({ direction, disabled, onClick }) {
       disabled={disabled}
       aria-label={direction === 'left' ? 'Précédent' : 'Suivant'}
       className={`
-        w-10 h-10 rounded-full bg-white border border-[rgba(10,10,10,0.08)]
+        w-10 h-10 rounded-full bg-white border border-[#E9E4D9]
         shadow-[0_1px_0_rgba(255,255,255,0.95)_inset,0_1px_2px_rgba(10,10,10,0.05),0_4px_10px_-4px_rgba(10,10,10,0.12)]
-        flex items-center justify-center text-[#2A2A2A]
+        flex items-center justify-center text-[#1E1E1E]
         disabled:opacity-30 disabled:cursor-not-allowed
         hover:border-[rgba(10,10,10,0.2)] hover:shadow-[0_1px_0_rgba(255,255,255,1)_inset,0_2px_4px_rgba(10,10,10,0.08),0_8px_18px_-6px_rgba(10,10,10,0.18)]
         active:scale-95
@@ -490,7 +490,7 @@ export function MandatCarousel({ title, eyebrow, children, trailing, className =
       <div className="flex items-end justify-between gap-6 mb-6">
         <div>
           {eyebrow && (
-            <p className="text-[10.5px] font-medium text-[#7C5E3C] uppercase tracking-[0.12em] mb-1.5 flex items-center gap-1.5">
+            <p className="text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.12em] mb-1.5 flex items-center gap-1.5">
               <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
               {eyebrow}
             </p>
