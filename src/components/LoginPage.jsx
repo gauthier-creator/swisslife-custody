@@ -57,25 +57,25 @@ export default function LoginPage() {
       {/* ── Main split ─────────────────────────────────── */}
       <main className="flex-1 grid grid-cols-1 lg:grid-cols-2 max-w-[1240px] mx-auto w-full">
 
-        {/* Left — sober statement + compliance strip */}
-        <section className="relative hidden lg:flex flex-col justify-between px-12 py-16 border-r border-[#E9E4D9]">
-          <div className="animate-fade">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8A8278] mb-6">
+        {/* Left — institutional statement + compliance strip */}
+        <section className="relative hidden lg:flex flex-col justify-center px-12 py-16 border-r border-[#E9E4D9]">
+          <div className="animate-fade space-y-8 max-w-[440px]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8A8278]">
               SwissLife Banque Privée · Custody
             </p>
-            <h1 className="font-display text-[44px] leading-[1.08] text-[#1E1E1E] max-w-[460px]"
-                style={{ letterSpacing: '-0.015em', fontWeight: 400 }}>
+
+            <h1 className="font-display text-[34px] leading-[1.15] text-[#1E1E1E]"
+                style={{ letterSpacing: '-0.01em', fontWeight: 400, fontVariationSettings: '"opsz" 36' }}>
               Conservation institutionnelle d'actifs numériques.
             </h1>
-            <p className="mt-6 text-[15px] text-[#5D5D5D] leading-relaxed max-w-[440px]">
+
+            <p className="text-[14.5px] text-[#5D5D5D] leading-relaxed">
               Registre sécurisé par cryptographie à seuil, ségrégation stricte des actifs
               clients et audit temps-réel — conforme MiCA Art. 60.
             </p>
-          </div>
 
-          {/* Trust strip — quiet hairline row, no big numbers */}
-          <div className="animate-fade">
-            <div className="grid grid-cols-4 gap-6 py-5 border-y border-[#E9E4D9]">
+            {/* Compliance quartet — sober label/value rows */}
+            <div className="grid grid-cols-4 gap-5 pt-6 border-t border-[#E9E4D9]">
               {[
                 { k: 'AMF',    v: 'Régulé' },
                 { k: 'ACPR',   v: 'n° 17328' },
@@ -84,11 +84,12 @@ export default function LoginPage() {
               ].map(({ k, v }) => (
                 <div key={k}>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[#8A8278]">{k}</p>
-                  <p className="mt-1 text-[13px] text-[#1E1E1E] font-medium">{v}</p>
+                  <p className="mt-1 text-[13px] text-[#1E1E1E] font-semibold">{v}</p>
                 </div>
               ))}
             </div>
-            <p className="mt-5 text-[11.5px] text-[#8A8278] leading-relaxed max-w-[440px]">
+
+            <p className="text-[11.5px] text-[#8A8278] leading-relaxed">
               SwissLife Banque Privée · 11 Quai André Citroën, Paris — Services de conservation
               et d'administration d'actifs numériques pour le compte de tiers, conformément au
               règlement (UE) 2023/1114.
@@ -97,15 +98,14 @@ export default function LoginPage() {
         </section>
 
         {/* Right — form */}
-        <section className="flex items-center justify-center px-6 py-16 lg:py-12 lg:px-16">
+        <section className="flex items-center justify-center px-6 py-12 lg:px-16">
           <div className="w-full max-w-[380px] animate-fade">
 
-            <div className="mb-8">
-              <h2 className="font-display text-[28px] text-[#1E1E1E] leading-[1.15]"
-                  style={{ letterSpacing: '-0.012em', fontWeight: 400 }}>
+            <div className="mb-7">
+              <h2 className="text-[22px] font-semibold text-[#1E1E1E] leading-[1.2]">
                 {mode === 'login' ? 'Connexion' : 'Créer un compte'}
               </h2>
-              <p className="mt-2 text-[13.5px] text-[#5D5D5D]">
+              <p className="mt-1.5 text-[13.5px] text-[#5D5D5D]">
                 {mode === 'login'
                   ? 'Accédez au registre de conservation et à vos mandats clients.'
                   : "Rejoignez l'équipe de gestion et d'administration SwissLife Custody."}

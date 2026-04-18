@@ -61,8 +61,11 @@ export default function WalletList() {
     <div className="space-y-10">
       {/* ── Header ─────────────────────────────────────── */}
       <PageHeader
-        duoIcon={{ name: 'wallets', tone: 'bronze' }}
-        eyebrow="Chambre forte DFNS"
+        icon={
+          <svg className="w-[22px] h-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.7}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9v3m13.5 3h.008v.008H16.5V15z" />
+          </svg>
+        }
         title="Wallets"
         trailing={
           <>

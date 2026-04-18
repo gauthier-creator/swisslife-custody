@@ -411,8 +411,11 @@ export default function ComplianceDashboard() {
     <div className="space-y-10">
       {/* ── Header ─────────────────────────────────────── */}
       <PageHeader
-        duoIcon={{ name: 'compliance', tone: 'bronze' }}
-        eyebrow="Surveillance temps réel"
+        icon={
+          <svg className="w-[22px] h-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.7}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.306a11.95 11.95 0 015.814-5.518l2.74-1.22m0 0l-5.94-2.281m5.94 2.28l-2.28 5.941" />
+          </svg>
+        }
         title="Compliance"
         trailing={
           <>
