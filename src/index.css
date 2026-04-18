@@ -128,6 +128,16 @@ html, body {
     letter-spacing: inherit;
   }
   input:focus, select:focus, textarea:focus { outline: none; }
+
+  /* Kill Chrome's blue autofill tint — keep inputs pure white */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #1E1E1E;
+    -webkit-box-shadow: 0 0 0 1000px #FFFFFF inset;
+    box-shadow: 0 0 0 1000px #FFFFFF inset;
+    transition: background-color 5000s ease-in-out 0s;
+  }
 }
 
 /* ═════════════════════════════════════════════════════
@@ -173,21 +183,14 @@ html, body {
   box-shadow: 0 4px 16px -6px rgba(10, 10, 10, 0.08);
 }
 
-/* Editorial grain background — subtle noise for the main page */
+/* Flat page background — Ramify uses pure white or #FAFAFA, no texture */
 .bg-paper {
-  background-color: #FBFAF7;
-  background-image:
-    radial-gradient(circle at 20% 10%, rgba(124, 94, 60, 0.025) 0%, transparent 40%),
-    radial-gradient(circle at 80% 0%, rgba(10, 10, 10, 0.02) 0%, transparent 50%);
+  background-color: #FFFFFF;
 }
 
-/* Hero gradient mesh — for login page, empty states */
+/* Quiet gradient for empty states — very subtle warm cream */
 .mesh-warm {
-  background:
-    radial-gradient(ellipse 60% 50% at 20% 20%, rgba(201, 168, 118, 0.28), transparent 60%),
-    radial-gradient(ellipse 70% 60% at 80% 30%, rgba(124, 94, 60, 0.16), transparent 60%),
-    radial-gradient(ellipse 60% 50% at 50% 80%, rgba(223, 210, 182, 0.34), transparent 60%),
-    linear-gradient(180deg, #FBFAF7 0%, #F5F3EE 100%);
+  background: linear-gradient(180deg, #FFFFFF 0%, #FAF8F3 100%);
 }
 
 /* ═════════════════════════════════════════════════════
@@ -218,12 +221,8 @@ html, body {
     0 12px 32px -16px rgba(10, 10, 10, 0.12);
 }
 
-/* Signature bronze glow — under premium CTAs */
-.shadow-bronze {
-  box-shadow:
-    0 1px 2px rgba(124, 94, 60, 0.18),
-    0 12px 28px -14px rgba(124, 94, 60, 0.28);
-}
+/* No bronze glow — Ramify doesn't use coloured shadows. Kept as noop. */
+.shadow-bronze { box-shadow: none; }
 
 /* Subtle dotted grid — for configuration / system pages */
 .bg-dotgrid {
@@ -271,56 +270,9 @@ html, body {
   animation: pulseDotBronze 2.4s ease-out infinite;
 }
 
-/* Bronze accent top rule — sits on top of premium cards */
-.accent-rule-top {
-  position: relative;
-}
-.accent-rule-top::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 48px;
-  height: 2px;
-  border-radius: 0 0 2px 2px;
-  background: linear-gradient(90deg, transparent, #7C5E3C, transparent);
-}
-
-/* Bronze vertical accent ruler (Patek-style stripe) */
-.accent-ruler-left {
-  position: relative;
-}
-.accent-ruler-left::before {
-  content: "";
-  position: absolute;
-  top: 14%;
-  bottom: 14%;
-  left: 0;
-  width: 2px;
-  border-radius: 2px;
-  background: linear-gradient(180deg, transparent, #7C5E3C 50%, transparent);
-}
-
-/* Watermark monogram (decorative serif corner) */
-.watermark-sl {
-  position: relative;
-  overflow: hidden;
-}
-.watermark-sl::after {
-  content: "Sℓ";
-  position: absolute;
-  right: -8px;
-  bottom: -30px;
-  font-family: "Fraunces", ui-serif, Georgia, serif;
-  font-size: 120px;
-  line-height: 1;
-  font-weight: 500;
-  letter-spacing: -0.05em;
-  color: rgba(10, 10, 10, 0.025);
-  pointer-events: none;
-  user-select: none;
-}
+/* Decorative "accent-rule" and "watermark" utilities removed —
+   Ramify DNA is hairline borders only, no ornamental flourishes. */
+.accent-rule-top, .accent-ruler-left, .watermark-sl { position: relative; }
 
 /* Command-K pill */
 .kbd {
@@ -771,34 +723,32 @@ html, body {
 .cta-gold:hover { background: #B47F38; }
 .cta-gold:active { transform: scale(0.98); }
 
-/* Marble card surface — warm layered gradient for hero cards */
+/* Marble card surface — muted, Ramify-sober: pale cream with almost
+   imperceptible warm tint. No orange/gold saturation. Think Italian
+   Calacatta marble slab photographed in overcast light. */
 .marble-cream {
   background:
-    radial-gradient(ellipse 60% 50% at 18% 12%, rgba(255, 255, 255, 0.9), transparent 65%),
-    radial-gradient(ellipse 70% 55% at 78% 88%, rgba(212, 188, 143, 0.35), transparent 60%),
-    radial-gradient(ellipse 55% 45% at 85% 10%, rgba(230, 208, 170, 0.42), transparent 60%),
-    linear-gradient(135deg, #FBF3DF 0%, #F3E6C5 55%, #E8D5A8 100%);
+    radial-gradient(ellipse 55% 45% at 20% 12%, rgba(255, 255, 255, 0.9), transparent 60%),
+    radial-gradient(ellipse 70% 55% at 82% 88%, rgba(214, 206, 188, 0.3), transparent 60%),
+    linear-gradient(135deg, #F8F5EE 0%, #EFEBE0 100%);
 }
 .marble-sand {
   background:
-    radial-gradient(ellipse 60% 50% at 20% 10%, rgba(255, 255, 255, 0.82), transparent 65%),
-    radial-gradient(ellipse 80% 60% at 75% 90%, rgba(214, 180, 128, 0.38), transparent 60%),
-    linear-gradient(160deg, #FAF1DB 0%, #EFDCB0 60%, #E0C58A 100%);
+    radial-gradient(ellipse 60% 50% at 20% 10%, rgba(255, 255, 255, 0.88), transparent 60%),
+    radial-gradient(ellipse 70% 55% at 80% 85%, rgba(200, 188, 158, 0.25), transparent 60%),
+    linear-gradient(150deg, #F5F1E6 0%, #E6DFCE 100%);
 }
 .marble-mist {
   background:
-    radial-gradient(ellipse 60% 50% at 20% 10%, rgba(255, 255, 255, 0.92), transparent 65%),
-    radial-gradient(ellipse 80% 60% at 80% 90%, rgba(200, 210, 220, 0.45), transparent 60%),
-    linear-gradient(150deg, #F4F2EE 0%, #E7E3DA 100%);
+    radial-gradient(ellipse 60% 50% at 20% 10%, rgba(255, 255, 255, 0.92), transparent 60%),
+    radial-gradient(ellipse 80% 60% at 80% 90%, rgba(200, 200, 205, 0.32), transparent 60%),
+    linear-gradient(150deg, #F3F2EE 0%, #E4E2DC 100%);
 }
-/* Peach — warmer, more saturated, like Ramify's hero cards */
 .marble-peach {
   background:
-    radial-gradient(ellipse 55% 45% at 15% 10%, rgba(255, 255, 255, 0.95), transparent 65%),
-    radial-gradient(ellipse 70% 55% at 85% 90%, rgba(232, 170, 120, 0.5), transparent 60%),
-    radial-gradient(ellipse 50% 40% at 90% 15%, rgba(255, 216, 170, 0.55), transparent 60%),
-    radial-gradient(ellipse 60% 50% at 30% 85%, rgba(240, 195, 145, 0.38), transparent 60%),
-    linear-gradient(140deg, #FDF0DC 0%, #F8DDB2 45%, #EFC487 100%);
+    radial-gradient(ellipse 55% 45% at 18% 12%, rgba(255, 255, 255, 0.92), transparent 60%),
+    radial-gradient(ellipse 70% 55% at 82% 88%, rgba(220, 200, 174, 0.32), transparent 60%),
+    linear-gradient(140deg, #F7F2E8 0%, #EADFC8 100%);
 }
 
 /* Ramify bronze progress bar — sits at bottom of metric cards */

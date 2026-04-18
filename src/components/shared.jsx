@@ -32,18 +32,18 @@ export function ToastContainer({ toasts }) {
 }
 
 // ─── Form primitives ──────────────────────────────────
-// Focus ring uses bronze tint so inputs carry the identity
+// Ramify inputs: 6px radius, hairline #E9E4D9, subtle bronze focus
 export const inputCls =
-  "w-full h-11 px-4 text-[14px] text-[#0A0A0A] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none transition-[border-color,box-shadow] duration-200 focus:border-[rgba(124,94,60,0.4)] focus:ring-4 focus:ring-[rgba(124,94,60,0.1)] placeholder:text-[#9B9B9B] tracking-[-0.006em]";
+  "w-full h-10 px-3.5 text-[14px] text-[#1E1E1E] bg-white border border-[#E9E4D9] rounded-[6px] outline-none transition-[border-color] duration-150 focus:border-[#7C5E3C] placeholder:text-[#8A8278]";
 
 export const selectCls =
-  "w-full h-11 px-4 pr-9 text-[14px] text-[#0A0A0A] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none transition-[border-color,box-shadow] duration-200 focus:border-[rgba(124,94,60,0.4)] focus:ring-4 focus:ring-[rgba(124,94,60,0.1)] appearance-none cursor-pointer tracking-[-0.006em]";
+  "w-full h-10 px-3.5 pr-9 text-[14px] text-[#1E1E1E] bg-white border border-[#E9E4D9] rounded-[6px] outline-none transition-[border-color] duration-150 focus:border-[#7C5E3C] appearance-none cursor-pointer";
 
 export const textareaCls =
-  "w-full px-4 py-3 text-[14px] text-[#0A0A0A] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none transition-[border-color,box-shadow] duration-200 focus:border-[rgba(124,94,60,0.4)] focus:ring-4 focus:ring-[rgba(124,94,60,0.1)] placeholder:text-[#9B9B9B] resize-none tracking-[-0.006em]";
+  "w-full px-3.5 py-2.5 text-[14px] text-[#1E1E1E] bg-white border border-[#E9E4D9] rounded-[6px] outline-none transition-[border-color] duration-150 focus:border-[#7C5E3C] placeholder:text-[#8A8278] resize-none";
 
 export const labelCls =
-  "block text-[11.5px] font-medium text-[#4A4A4A] mb-2 tracking-[0.01em]";
+  "block text-[12px] font-medium text-[#5D5D5D] mb-1.5";
 
 // ─── Format helpers ───────────────────────────────────
 export const fmtEUR = (n) =>
@@ -73,35 +73,34 @@ export const initials = (name = '') =>
 export const avatarColor = () => ({ bg: '#F5F3EE', fg: '#0A0A0A' });
 
 // ─── Button ───────────────────────────────────────────
-// Apple-style pill buttons, tracking-tight, no loud variants
+// Ramify pattern: 6px radius, 14px semibold, no shadows, flat colors
 export function Button({ variant = 'primary', size = 'md', children, className = '', ...props }) {
   const variants = {
     primary:
-      'bg-[#0A0A0A] text-white border border-[#0A0A0A] hover:bg-[#1F1F1F] shadow-[0_1px_0_rgba(255,255,255,0.1)_inset,0_1px_2px_rgba(10,10,10,0.2),0_8px_20px_-8px_rgba(10,10,10,0.4)] hover:shadow-[0_1px_0_rgba(255,255,255,0.12)_inset,0_2px_3px_rgba(10,10,10,0.22),0_14px_28px_-10px_rgba(10,10,10,0.45)]',
+      'bg-[#1E1E1E] text-white border border-[#1E1E1E] hover:bg-[#000000]',
     accent:
-      'bg-[#7C5E3C] text-white border border-[#7C5E3C] hover:bg-[#6A4F30] shadow-[0_1px_0_rgba(255,255,255,0.12)_inset,0_1px_2px_rgba(124,94,60,0.2),0_8px_20px_-8px_rgba(124,94,60,0.4)]',
+      'bg-[#C8924B] text-white border border-[#C8924B] hover:bg-[#B47F38]',
     secondary:
-      'bg-white text-[#0A0A0A] border border-[rgba(10,10,10,0.12)] hover:bg-[#FBFAF7] hover:border-[rgba(124,94,60,0.28)]',
+      'bg-white text-[#1E1E1E] border border-[#E9E4D9] hover:border-[#C8BEA4] hover:bg-[#FDFBF6]',
     soft:
-      'bg-[#F5F3EE] text-[#0A0A0A] border border-transparent hover:bg-[#EFECE4]',
+      'bg-[#F5EEE0] text-[#1E1E1E] border border-transparent hover:bg-[#EFE4CE]',
     ghost:
-      'bg-transparent text-[#4A4A4A] border border-transparent hover:bg-[#F5F3EE] hover:text-[#0A0A0A]',
+      'bg-transparent text-[#5D5D5D] border border-transparent hover:bg-[rgba(245,229,206,0.4)] hover:text-[#1E1E1E]',
     danger:
-      'bg-white text-[#DC2626] border border-[rgba(220,38,38,0.25)] hover:bg-[#FEF2F2] hover:border-[rgba(220,38,38,0.4)]',
+      'bg-white text-[#DC2626] border border-[rgba(220,38,38,0.22)] hover:bg-[#FEF2F2] hover:border-[rgba(220,38,38,0.38)]',
     link:
-      'bg-transparent text-[#0A0A0A] border-0 hover:underline underline-offset-4 px-0 h-auto',
+      'bg-transparent text-[#1E1E1E] border-0 hover:underline underline-offset-4 px-0 h-auto',
   };
   const sizes = {
-    sm: 'h-8 px-3.5 text-[13px] rounded-full',
-    md: 'h-10 px-[18px] text-[13px] rounded-full',
-    lg: 'h-12 px-6 text-[14px] rounded-full',
-    pill: 'h-10 px-[18px] text-[13px] rounded-full',
+    sm: 'h-8 px-3 text-[13px] rounded-[5px]',
+    md: 'h-9 px-4 text-[13.5px] rounded-[6px]',
+    lg: 'h-11 px-5 text-[14px] rounded-[6px]',
+    pill: 'h-9 px-4 text-[13.5px] rounded-[6px]',
   };
-  const liftable = variant !== 'link' && variant !== 'ghost';
   return (
     <button
       {...props}
-      className={`inline-flex items-center justify-center gap-2 font-medium transition-[background,border-color,color,box-shadow,transform] duration-[220ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] disabled:opacity-40 disabled:cursor-not-allowed tracking-[-0.01em] whitespace-nowrap outline-none focus-visible:ring-[3px] focus-visible:ring-[rgba(124,94,60,0.22)] active:scale-[0.97] will-change-transform ${liftable ? 'hover:-translate-y-[1px] active:translate-y-0' : ''} ${variants[variant]} ${variant !== 'link' ? sizes[size] : ''} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 font-semibold transition-[background,border-color,color] duration-150 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap outline-none focus-visible:ring-[2px] focus-visible:ring-[#C8BEA4] active:scale-[0.98] ${variants[variant]} ${variant !== 'link' ? sizes[size] : ''} ${className}`}
     >
       {children}
     </button>
@@ -322,13 +321,15 @@ export function IconButton({
 // Props: name (clients|wallets|compliance|policies|config|lock|shield|chart|sparkle|coin|bolt|building|document|check)
 //        tone (bronze|ink|sage|blue|lavender), size (default 22)
 export function DuoIcon({ name = 'sparkle', tone = 'bronze', size = 22, className = '' }) {
+  // Ramify-sober: all tones render as monochrome outline (#1E1E1E stroke,
+  // transparent fill) beside the serif page title. No color, no duo-tint.
   const tones = {
-    bronze:   { bg: '#F5EEE0', fg: '#7C5E3C', tint: '#C8924B' },
-    ink:      { bg: '#F5F3EE', fg: '#0A0A0A', tint: '#4A4A4A' },
-    sage:     { bg: '#EDF3EB', fg: '#3F6B4A', tint: '#7FA68A' },
-    blue:     { bg: '#EEF2F8', fg: '#2A3F6B', tint: '#6B85B0' },
-    lavender: { bg: '#FBF6EC', fg: '#7C5E3C', tint: '#C8924B' },
-    peach:    { bg: '#FDF0DC', fg: '#9A5A1A', tint: '#E8A878' },
+    bronze:   { bg: 'transparent', fg: '#1E1E1E', tint: '#1E1E1E' },
+    ink:      { bg: 'transparent', fg: '#1E1E1E', tint: '#1E1E1E' },
+    sage:     { bg: 'transparent', fg: '#1E1E1E', tint: '#1E1E1E' },
+    blue:     { bg: 'transparent', fg: '#1E1E1E', tint: '#1E1E1E' },
+    lavender: { bg: 'transparent', fg: '#1E1E1E', tint: '#1E1E1E' },
+    peach:    { bg: 'transparent', fg: '#1E1E1E', tint: '#1E1E1E' },
   };
   const t = tones[tone] || tones.bronze;
 
@@ -433,13 +434,7 @@ export function DuoIcon({ name = 'sparkle', tone = 'bronze', size = 22, classNam
 
   return (
     <span
-      className={`inline-flex items-center justify-center flex-shrink-0 rounded-[11px] ${className}`}
-      style={{
-        width: size + 14,
-        height: size + 14,
-        background: t.bg,
-        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.6), inset 0 0 0 1px ${t.fg}15`,
-      }}
+      className={`inline-flex items-center justify-center flex-shrink-0 ${className}`}
       aria-hidden="true"
     >
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
