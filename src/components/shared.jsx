@@ -249,11 +249,14 @@ export function Badge({ children, variant = 'default', dot = false, size = 'md' 
 // ─── Card ─────────────────────────────────────────────
 // Hairline border, warm white, barely-there shadow. Apple restraint.
 export function Card({ children, className = '', variant = 'elevated', ...props }) {
+  // Ramify DNA: 8px radius, 1px hairline #E9E4D9, no shadow — pure editorial.
+  // `elevated` and `flat` are kept for API compatibility but render identically
+  // (Ramify never uses drop shadows on data cards).
   const variants = {
-    elevated: 'bg-white rounded-[14px] border border-[rgba(10,10,10,0.08)] shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_1px_2px_rgba(10,10,10,0.03),0_10px_24px_-18px_rgba(10,10,10,0.18)]',
-    flat:     'bg-white rounded-[14px] border border-[rgba(10,10,10,0.08)]',
-    soft:     'bg-[#FBFAF7] rounded-[14px] border border-[rgba(124,94,60,0.08)]',
-    dark:     'bg-[#0A0A0A] text-white rounded-[14px] shadow-[0_12px_32px_-12px_rgba(10,10,10,0.3)]',
+    elevated: 'bg-white rounded-[8px] border border-[#E9E4D9]',
+    flat:     'bg-white rounded-[8px] border border-[#E9E4D9]',
+    soft:     'bg-[#FDFBF6] rounded-[8px] border border-[#E9E4D9]',
+    dark:     'bg-[#1E1E1E] text-white rounded-[8px]',
   };
   return (
     <div
@@ -1127,43 +1130,35 @@ export function Divider({ className = '' }) {
 // Legacy props (eyebrow/accent/description) are accepted but ignored in favor
 // of the simpler Ramify aesthetic.
 export function PageHeader({ icon, duoIcon, title, eyebrow, trailing, banner, className = '' }) {
-  // If `duoIcon` object is provided, render a DuoIcon directly. Otherwise
-  // wrap raw `icon` SVG in the card-style chrome.
-  const iconNode = duoIcon
-    ? <DuoIcon name={duoIcon.name} tone={duoIcon.tone || 'bronze'} size={duoIcon.size || 22} />
-    : icon
-      ? (
-        <span
-          className="flex-shrink-0 w-11 h-11 rounded-[12px] bg-white border border-[rgba(10,10,10,0.08)] text-[#2A2A2A] flex items-center justify-center
-                     shadow-[0_1px_0_rgba(255,255,255,0.95)_inset,0_1px_2px_rgba(10,10,10,0.05),0_6px_14px_-6px_rgba(10,10,10,0.12)]"
-        >
-          {icon}
-        </span>
-      )
+  // Ramify pattern: small icon (22px, inline, no chrome) + serif title (~28px PP Fragment)
+  // No duo-icon gradient; just the glyph in a muted color beside the title.
+  const iconNode = icon
+    ? <span className="flex-shrink-0 text-[#1E1E1E] opacity-90">{icon}</span>
+    : duoIcon
+      ? <DuoIcon name={duoIcon.name} tone={duoIcon.tone || 'bronze'} size={22} />
       : null;
 
   return (
-    <header className={`space-y-6 animate-slide-up ${className}`}>
+    <header className={`space-y-5 animate-fade ${className}`}>
       <div className="flex items-end justify-between gap-6 flex-wrap">
-        <div className="flex items-center gap-4 min-w-0">
+        <div className="flex items-center gap-3 min-w-0">
           {iconNode}
           <div className="min-w-0">
             {eyebrow && (
-              <p className="text-[10.5px] font-medium text-[#7C5E3C] uppercase tracking-[0.14em] mb-2 flex items-center gap-2">
-                <Fleuron size={10} tone="bronze" />
+              <p className="text-[10.5px] font-medium text-[#8A8278] uppercase tracking-[0.14em] mb-1.5">
                 {eyebrow}
               </p>
             )}
             <h1
-              className="font-display text-[36px] text-[#0A0A0A] leading-[1.02] truncate"
-              style={{ letterSpacing: '-0.028em' }}
+              className="font-display text-[30px] text-[#1E1E1E] leading-[1.1] truncate"
+              style={{ letterSpacing: '-0.012em', fontWeight: 400 }}
             >
               {title}
             </h1>
           </div>
         </div>
         {trailing && (
-          <div className="flex-shrink-0 flex items-center gap-2.5">{trailing}</div>
+          <div className="flex-shrink-0 flex items-center gap-2">{trailing}</div>
         )}
       </div>
       {banner && <PageBanner {...banner} />}
@@ -1172,33 +1167,35 @@ export function PageHeader({ icon, duoIcon, title, eyebrow, trailing, banner, cl
 }
 
 // ─── PageBanner ───────────────────────────────────────
-// Cream notification banner — avatar + text + CTA (Ramify style)
+// Ramify announcement banner — avatar + text + CTA link right
+// Tones: cream (warm peach #F5EEE0), advisor (cool blue #EBF5FF), paper, warn
 export function PageBanner({ avatar, text, subtext, cta, onCtaClick, tone = 'cream' }) {
   const palette = {
-    cream: 'bg-[#F5EEE0] border-[rgba(124,94,60,0.18)]',
-    paper: 'bg-[#FDFCFA] border-[rgba(10,10,10,0.08)]',
-    warn:  'bg-[#FEF5E7] border-[rgba(202,138,4,0.22)]',
-  }[tone] || 'bg-[#F5EEE0] border-[rgba(124,94,60,0.18)]';
+    cream:   'bg-[#F5EEE0] border-[rgba(124,94,60,0.12)]',
+    advisor: 'bg-[#EBF5FF] border-[rgba(59,130,246,0.1)]',
+    paper:   'bg-[#FDFCFA] border-[#E9E4D9]',
+    warn:    'bg-[#FEF5E7] border-[rgba(202,138,4,0.22)]',
+  }[tone] || 'bg-[#F5EEE0] border-[rgba(124,94,60,0.12)]';
   return (
-    <div className={`flex items-center gap-4 px-5 py-3.5 rounded-[14px] border ${palette}`}>
+    <div className={`flex items-center gap-3 px-4 py-3 rounded-[8px] border ${palette}`}>
       {avatar && (
         <span className="flex-shrink-0 w-9 h-9 rounded-full bg-white overflow-hidden flex items-center justify-center text-[13px] font-medium text-[#4A4A4A] border border-[rgba(10,10,10,0.06)]">
           {avatar}
         </span>
       )}
       <div className="flex-1 min-w-0">
-        <p className="text-[13.5px] font-semibold text-[#0A0A0A] tracking-[-0.006em] leading-snug">{text}</p>
+        <p className="text-[13.5px] font-semibold text-[#1E1E1E] leading-snug">{text}</p>
         {subtext && (
-          <p className="text-[12.5px] text-[#6B6B6B] mt-0.5 tracking-[-0.003em] leading-snug">{subtext}</p>
+          <p className="text-[12.5px] text-[#5D5D5D] mt-0.5 leading-snug">{subtext}</p>
         )}
       </div>
       {cta && (
         <button
           onClick={onCtaClick}
-          className="flex-shrink-0 inline-flex items-center gap-1.5 text-[12.5px] font-medium text-[#0A0A0A] hover:gap-2 transition-all"
+          className="flex-shrink-0 inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#1E1E1E] hover:gap-2 transition-all"
         >
           {cta}
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
           </svg>
         </button>
@@ -1231,35 +1228,35 @@ export function StatusDot({ tone = 'success', label, className = '' }) {
 }
 
 // ─── UnderlineTabs ────────────────────────────────────
-// Editorial underline tab navigation — matches the Layout pattern
+// Ramify tab strip: 14px semibold, 2px bronze bar on active
 export function UnderlineTabs({ tabs, active, onChange, className = '' }) {
   return (
-    <div className={`border-b border-[rgba(10,10,10,0.08)] ${className}`}>
-      <div className="flex items-center gap-0.5 overflow-x-auto">
+    <div className={`border-b border-[#E9E4D9] ${className}`}>
+      <div className="flex items-center gap-6 overflow-x-auto">
         {tabs.map(t => {
           const isActive = active === t.id;
           return (
             <button
               key={t.id}
               onClick={() => onChange(t.id)}
-              className={`relative h-11 px-4 text-[13px] font-medium whitespace-nowrap transition-colors tracking-[-0.01em] ${
-                isActive ? 'text-[#0A0A0A]' : 'text-[#6B6B6B] hover:text-[#0A0A0A]'
+              className={`relative py-2.5 text-[14px] font-semibold whitespace-nowrap transition-colors ${
+                isActive ? 'text-[#1E1E1E]' : 'text-[#8A8278] hover:text-[#1E1E1E]'
               }`}
             >
               <span className="inline-flex items-center gap-2">
                 {t.label}
                 {t.count != null && (
-                  <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10.5px] font-medium tabular-nums ${
+                  <span className={`inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-[3px] text-[10.5px] font-semibold tabular-nums ${
                     isActive
-                      ? 'bg-[#0A0A0A] text-white'
-                      : 'bg-[#F5F3EE] text-[#6B6B6B]'
+                      ? 'bg-[#F5E5CE] text-[#7C5E3C]'
+                      : 'bg-[#F5F3EE] text-[#8A8278]'
                   }`}>
                     {t.count}
                   </span>
                 )}
               </span>
               {isActive && (
-                <span className="absolute left-4 right-4 -bottom-px h-[2px] bg-[#0A0A0A] rounded-t-full" />
+                <span className="absolute left-0 right-0 -bottom-px h-[2px] bg-[#7C5E3C] rounded-t-full" />
               )}
             </button>
           );
