@@ -177,7 +177,7 @@ export default function Layout({ children, section, onNavigate }) {
   const roleLabel = profile?.role === 'admin' ? 'Admin · SwissLife' : 'Banquier privé';
 
   return (
-    <div className="min-h-screen bg-white text-[#0A0A0A] flex">
+    <div className="min-h-screen bg-[#FAFAFA] text-[#1E1E1E] flex">
       {/* ── Sidebar ─────────────────────────────────────── */}
       <aside
         className={`flex-shrink-0 border-r border-[#E9E4D9] bg-white flex flex-col h-screen sticky top-0 transition-[width] duration-[280ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
@@ -311,7 +311,7 @@ export default function Layout({ children, section, onNavigate }) {
       />
 
       {/* ── Main ─────────────────────────────────────────── */}
-      <div className="flex-1 min-w-0 flex flex-col bg-white">
+      <div className="flex-1 min-w-0 flex flex-col bg-[#FAFAFA]">
         {/* Utility bar — Ramify: minimal, flush-right */}
         <header className="h-[64px] flex items-center justify-end gap-1 px-10 lg:px-12">
           <button

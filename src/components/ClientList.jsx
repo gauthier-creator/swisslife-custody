@@ -221,6 +221,7 @@ export default function ClientList({ onSelectClient, onNavigate }) {
               title="Chambre forte DFNS, signée par quorum MPC."
               description="Clés privées réparties en 3 shards · signature 2/3 · audit on-chain horodaté. Aucune clé en clair, jamais."
               scene={<SceneVault />}
+              cta="Ouvrir wallets"
               onClick={() => onNavigate?.('wallets')}
             />
             <ProductCard
@@ -233,6 +234,7 @@ export default function ClientList({ onSelectClient, onNavigate }) {
               title="Politiques quatre-yeux & audit ACPR."
               description="Chaque mouvement déclenche une règle d'approbation versionnée et horodatée dans le journal d'audit réglementaire."
               scene={<SceneArch />}
+              cta="Voir policies"
               onClick={() => onNavigate?.('policies')}
             />
             <ProductCard
@@ -245,6 +247,7 @@ export default function ClientList({ onSelectClient, onNavigate }) {
               title="Chainalysis KYT & screening temps réel."
               description="Pré-filtrage AML à la milliseconde · sanctions OFAC/UE · PPE · Travel Rule Art. 7b — tout flux suspect est bloqué."
               scene={<SceneWaves />}
+              cta="Accéder"
               onClick={() => onNavigate?.('compliance')}
             />
             <ProductCard
@@ -257,6 +260,7 @@ export default function ClientList({ onSelectClient, onNavigate }) {
               title="Mandats signés & reporting ACPR automatisé."
               description="Génération des déclarations Tracfin, extraits pour commissaires aux comptes, sceau numérique Sℓ horodaté."
               scene={<SceneDocument />}
+              cta="Générer"
               onClick={() => onNavigate?.('compliance')}
             />
             <ProductCard
@@ -269,6 +273,7 @@ export default function ClientList({ onSelectClient, onNavigate }) {
               title="Ethereum, Bitcoin, Solana — une seule interface."
               description="Bitcoin natif, tous les EVM, Solana, Cosmos · provisionnement de wallet en un clic · reconciliation temps réel."
               scene={<SceneKeys />}
+              cta="Provisionner"
               onClick={() => onNavigate?.('wallets')}
             />
           </ProductCarousel>

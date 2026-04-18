@@ -667,32 +667,28 @@ html, body {
 .cta-gold:hover { background: #B47F38; }
 .cta-gold:active { transform: scale(0.98); }
 
-/* Marble card surface — muted, Ramify-sober: pale cream with almost
-   imperceptible warm tint. No orange/gold saturation. Think Italian
-   Calacatta marble slab photographed in overcast light. */
+/* Marble card surface — stone-grey Ramify tone. Neutral, institutional.
+   All variants share the same DNA now: pale grey → slightly warm grey,
+   with a soft specular wash in the top-left. No orange/peach/gold pull. */
 .marble-cream {
   background:
-    radial-gradient(ellipse 55% 45% at 20% 12%, rgba(255, 255, 255, 0.9), transparent 60%),
-    radial-gradient(ellipse 70% 55% at 82% 88%, rgba(214, 206, 188, 0.3), transparent 60%),
-    linear-gradient(135deg, #F8F5EE 0%, #EFEBE0 100%);
+    radial-gradient(ellipse 55% 45% at 20% 12%, rgba(255, 255, 255, 0.85), transparent 60%),
+    linear-gradient(135deg, #F4F2ED 0%, #E8E4DA 100%);
 }
 .marble-sand {
   background:
-    radial-gradient(ellipse 60% 50% at 20% 10%, rgba(255, 255, 255, 0.88), transparent 60%),
-    radial-gradient(ellipse 70% 55% at 80% 85%, rgba(200, 188, 158, 0.25), transparent 60%),
-    linear-gradient(150deg, #F5F1E6 0%, #E6DFCE 100%);
+    radial-gradient(ellipse 60% 50% at 20% 10%, rgba(255, 255, 255, 0.85), transparent 60%),
+    linear-gradient(150deg, #F2EFE8 0%, #E4DFD2 100%);
 }
 .marble-mist {
   background:
-    radial-gradient(ellipse 60% 50% at 20% 10%, rgba(255, 255, 255, 0.92), transparent 60%),
-    radial-gradient(ellipse 80% 60% at 80% 90%, rgba(200, 200, 205, 0.32), transparent 60%),
-    linear-gradient(150deg, #F3F2EE 0%, #E4E2DC 100%);
+    radial-gradient(ellipse 60% 50% at 20% 10%, rgba(255, 255, 255, 0.9), transparent 60%),
+    linear-gradient(150deg, #F2F1EC 0%, #E2E0D8 100%);
 }
 .marble-peach {
   background:
-    radial-gradient(ellipse 55% 45% at 18% 12%, rgba(255, 255, 255, 0.92), transparent 60%),
-    radial-gradient(ellipse 70% 55% at 82% 88%, rgba(220, 200, 174, 0.32), transparent 60%),
-    linear-gradient(140deg, #F7F2E8 0%, #EADFC8 100%);
+    radial-gradient(ellipse 55% 45% at 18% 12%, rgba(255, 255, 255, 0.88), transparent 60%),
+    linear-gradient(140deg, #F3F0E8 0%, #E6E0D0 100%);
 }
 
 /* Ramify bronze progress bar — sits at bottom of metric cards */

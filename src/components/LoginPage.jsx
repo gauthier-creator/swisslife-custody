@@ -39,7 +39,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-[#1E1E1E] flex flex-col">
+    <div className="min-h-screen bg-[#FAFAFA] text-[#1E1E1E] flex flex-col">
       {/* ── Top nav — tiny brand only, no trust badges ── */}
       <header className="border-b border-[#E9E4D9]">
         <div className="max-w-[1240px] mx-auto px-10 h-[60px] flex items-center">
