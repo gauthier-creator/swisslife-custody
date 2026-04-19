@@ -16,6 +16,7 @@ import {
 } from '../services/complianceApi';
 import ComplianceReports from './ComplianceReports';
 import ACPRReportingDashboard from './ACPRReportingDashboard';
+import { IconCompliance } from './icons';
 
 // ── Helpers ──────────────────────────────────────────────────────────
 const truncAddr = (a) => a ? `${a.slice(0, 6)}...${a.slice(-4)}` : '—';
@@ -411,11 +412,7 @@ export default function ComplianceDashboard() {
     <div className="space-y-10">
       {/* ── Header ─────────────────────────────────────── */}
       <PageHeader
-        icon={
-          <svg className="w-[22px] h-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.7}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.306a11.95 11.95 0 015.814-5.518l2.74-1.22m0 0l-5.94-2.281m5.94 2.28l-2.28 5.941" />
-          </svg>
-        }
+        icon={<IconCompliance size={22} />}
         title="Compliance"
         trailing={
           <>
