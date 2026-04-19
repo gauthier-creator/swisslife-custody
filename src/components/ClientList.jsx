@@ -163,7 +163,7 @@ export default function ClientList({ onSelectClient, onNavigate }) {
             eyebrow="Mandats de conservation"
             title="Les portefeuilles SwissLife Custody."
             trailing={
-              <span className="hidden md:inline-flex items-center gap-1.5 h-9 px-3 mr-2 rounded-full bg-white border border-[#E9E4D9] text-[11px] font-medium text-[#5D5D5D] tracking-[-0.003em]">
+              <span className="hidden md:inline-flex items-center gap-1.5 h-9 px-3 mr-2 rounded-full bg-white border border-[#E7E7E7] text-[11px] font-medium text-[#5D5D5D] tracking-[-0.003em]">
                 <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
                 4 tiers
               </span>
@@ -290,7 +290,7 @@ export default function ClientList({ onSelectClient, onNavigate }) {
       {/* ── Clients list ───────────────────────────────── */}
       {loading ? (
         <Card className="animate-slide-up stagger-2">
-          <div className="px-6 py-4 flex items-center justify-between border-b border-[#E9E4D9]">
+          <div className="px-6 py-4 flex items-center justify-between border-b border-[#E7E7E7]">
             <Skeleton className="h-[14px]" style={{ width: 180 }} />
             <Skeleton className="h-[12px]" style={{ width: 90 }} />
           </div>
@@ -298,7 +298,7 @@ export default function ClientList({ onSelectClient, onNavigate }) {
             {Array.from({ length: 6 }).map((_, i) => (
               <li
                 key={i}
-                className="flex items-center gap-5 px-6 py-5 border-b border-[#E9E4D9] last:border-0 row-stagger"
+                className="flex items-center gap-5 px-6 py-5 border-b border-[#E7E7E7] last:border-0 row-stagger"
                 style={{ '--i': i }}
               >
                 <SkeletonCircle size={44} />
@@ -329,7 +329,7 @@ export default function ClientList({ onSelectClient, onNavigate }) {
       ) : (
         <div className="animate-slide-up stagger-3">
           <Card>
-            <div className="px-6 py-4 flex items-center justify-between border-b border-[#E9E4D9]">
+            <div className="px-6 py-4 flex items-center justify-between border-b border-[#E7E7E7]">
               <div>
                 <h2 className="text-[15px] font-medium text-[#0A0A0A] tracking-[-0.015em]">Registre des clients</h2>
                 <p className="text-[12.5px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">
@@ -347,7 +347,7 @@ export default function ClientList({ onSelectClient, onNavigate }) {
                   key={client.id}
                   onClick={() => onSelectClient(client)}
                   style={{ '--i': i }}
-                  className={`row-stagger flex items-center gap-5 px-6 py-5 cursor-pointer hover:bg-white transition-colors group ${i < clients.length - 1 ? 'border-b border-[#E9E4D9]' : ''}`}
+                  className={`row-stagger flex items-center gap-5 px-6 py-5 cursor-pointer hover:bg-white transition-colors group ${i < clients.length - 1 ? 'border-b border-[#E7E7E7]' : ''}`}
                 >
                   <Avatar name={client.name} size={44} verified={client.type === 'Customer - Direct'} />
                   <div className="flex-1 min-w-0">
@@ -383,7 +383,7 @@ export default function ClientList({ onSelectClient, onNavigate }) {
       )}
 
       {/* ── Editorial signature footer ─────────────────── */}
-      <footer className="pt-10 mt-4 border-t border-[#E9E4D9] space-y-4">
+      <footer className="pt-10 mt-4 border-t border-[#E7E7E7] space-y-4">
         <SignatureMark name="G. Alexandrian" role="Banquier privé" location="Paris" />
         <div className="flex items-center justify-between text-[10.5px] text-[#8A8278] tracking-[0.06em] uppercase font-medium">
           <span>SwissLife Banque Privée · 7 rue Boudreau, 75009 Paris</span>

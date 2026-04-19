@@ -147,7 +147,7 @@ export default function CommandPalette({ open, onClose, onNavigate, isAdmin = fa
         onKeyDown={onKeyDown}
       >
         {/* Header · search */}
-        <div className="flex items-center gap-3 px-5 h-[60px] border-b border-[#E9E4D9]">
+        <div className="flex items-center gap-3 px-5 h-[60px] border-b border-[#E7E7E7]">
           <svg className="w-4 h-4 text-[#8A8278] flex-shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="8.8" cy="8.8" r="5.4" />
             <path d="M13 13 l4 4" />
@@ -162,7 +162,7 @@ export default function CommandPalette({ open, onClose, onNavigate, isAdmin = fa
             autoComplete="off"
             spellCheck="false"
           />
-          <div className="flex items-center gap-1.5 flex-shrink-0 pl-2 border-l border-[#E9E4D9]">
+          <div className="flex items-center gap-1.5 flex-shrink-0 pl-2 border-l border-[#E7E7E7]">
             <Kbd>esc</Kbd>
           </div>
         </div>
@@ -197,7 +197,7 @@ export default function CommandPalette({ open, onClose, onNavigate, isAdmin = fa
                         active ? 'bg-[#F5F3EE]' : ''
                       }`}
                     >
-                      <span className={`w-8 h-8 flex items-center justify-center rounded-[8px] flex-shrink-0 transition-colors ${active ? 'bg-white border border-[#E9E4D9] text-[#7C5E3C]' : 'bg-[#F5F3EE] text-[#1E1E1E] border border-transparent'}`}>
+                      <span className={`w-8 h-8 flex items-center justify-center rounded-[8px] flex-shrink-0 transition-colors ${active ? 'bg-white border border-[#E7E7E7] text-[#7C5E3C]' : 'bg-[#F5F3EE] text-[#1E1E1E] border border-transparent'}`}>
                         <Icon name={it.icon} />
                       </span>
                       <div className="flex-1 min-w-0">
@@ -226,7 +226,7 @@ export default function CommandPalette({ open, onClose, onNavigate, isAdmin = fa
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-5 h-[44px] border-t border-[#E9E4D9] bg-white text-[11px] text-[#5D5D5D] tracking-[-0.003em]">
+        <div className="flex items-center justify-between px-5 h-[44px] border-t border-[#E7E7E7] bg-white text-[11px] text-[#5D5D5D] tracking-[-0.003em]">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1.5"><Kbd>↑</Kbd><Kbd>↓</Kbd> naviguer</span>
             <span className="flex items-center gap-1.5"><Kbd>↵</Kbd> ouvrir</span>

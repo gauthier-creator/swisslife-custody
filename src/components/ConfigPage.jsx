@@ -82,7 +82,7 @@ export default function ConfigPage({ onConfigured }) {
           ) : sfStatus?.configured ? (
             <div className="space-y-3">
               {sfStatus.instanceUrl && (
-                <div className="flex items-center gap-2 px-3 py-2.5 bg-white border border-[#E9E4D9] rounded-[10px]">
+                <div className="flex items-center gap-2 px-3 py-2.5 bg-white border border-[#E7E7E7] rounded-[10px]">
                   <svg className="w-3.5 h-3.5 text-[#8A8278] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                   </svg>
@@ -93,7 +93,7 @@ export default function ConfigPage({ onConfigured }) {
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="bg-white border border-[#E9E4D9] rounded-[10px] p-4">
+              <div className="bg-white border border-[#E7E7E7] rounded-[10px] p-4">
                 <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#8A8278] mb-2">Variables d'environnement requises</p>
                 <div className="font-mono text-[11px] text-[#1E1E1E] space-y-1 leading-relaxed">
                   <p><span className="text-[#7C5E3C]">SF_LOGIN_URL</span>=https://login.salesforce.com</p>
@@ -135,7 +135,7 @@ export default function ConfigPage({ onConfigured }) {
               {testingDfns && <Spinner size="w-3.5 h-3.5" />}
               {testingDfns ? 'Test en cours…' : 'Tester la connexion'}
             </Button>
-            <div className="bg-white border border-[#E9E4D9] rounded-[10px] p-4">
+            <div className="bg-white border border-[#E7E7E7] rounded-[10px] p-4">
               <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#8A8278] mb-2">Variables d'environnement</p>
               <div className="font-mono text-[11px] text-[#1E1E1E] space-y-1 leading-relaxed">
                 <p><span className="text-[#7C5E3C]">DFNS_API_TOKEN</span>=…</p>
@@ -228,7 +228,7 @@ function ComplianceSettings() {
           <div className={`flex items-center gap-2 px-3 py-2.5 rounded-[10px] border ${
             settings?.kyc_module_enabled
               ? 'bg-white border-[rgba(22,163,74,0.18)]'
-              : 'bg-white border-[#E9E4D9]'
+              : 'bg-white border-[#E7E7E7]'
           }`}>
             <span
               className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${settings?.kyc_module_enabled ? 'status-pulse' : ''}`}
@@ -267,7 +267,7 @@ function ComplianceSettings() {
                   className={`flex items-start gap-3 p-3 rounded-[10px] border cursor-pointer transition-all ${
                     selected
                       ? 'border-[#0A0A0A] bg-white shadow-crisp'
-                      : 'border-[#E9E4D9] hover:border-[rgba(10,10,10,0.14)]'
+                      : 'border-[#E7E7E7] hover:border-[rgba(10,10,10,0.14)]'
                   }`}
                 >
                   <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
@@ -341,7 +341,7 @@ function UserManagement() {
               <tr key={u.id} className={trCls}>
                 <td className={tdCls + ' font-medium'}>
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#F5F3EE] border border-[#E9E4D9] flex items-center justify-center flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-[#F5F3EE] border border-[#E7E7E7] flex items-center justify-center flex-shrink-0">
                       <span className="text-[11px] font-medium text-[#1E1E1E] tracking-tight">
                         {(u.full_name || u.email || '?').slice(0, 2).toUpperCase()}
                       </span>

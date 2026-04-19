@@ -223,7 +223,7 @@ export default function RiskConfigPanel({ client }) {
         </Field>
 
         {/* Limits block — grouped, hairline separators */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-[#E9E4D9]">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-[#E7E7E7]">
           <Field label="Transfert max. unique">
             {editing ? (
               <input
@@ -269,7 +269,7 @@ export default function RiskConfigPanel({ client }) {
         </div>
 
         {/* Controls block */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[#E9E4D9]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-[#E7E7E7]">
           <Field label="Whitelist uniquement">
             {editing ? (
               <div className="flex items-center gap-3">
@@ -308,7 +308,7 @@ export default function RiskConfigPanel({ client }) {
         </div>
 
         {/* Networks */}
-        <div className="pt-2 border-t border-[#E9E4D9]">
+        <div className="pt-2 border-t border-[#E7E7E7]">
           <Field label="Réseaux autorisés">
             {editing ? (
               <div className="flex flex-wrap gap-1.5">
@@ -321,8 +321,8 @@ export default function RiskConfigPanel({ client }) {
                       onClick={() => toggleNetwork(n.id)}
                       className={`inline-flex items-center gap-1.5 h-[26px] px-2.5 rounded-full text-[11.5px] font-medium border tracking-[-0.003em] transition-all ${
                         active
-                          ? 'bg-[#FBF6EC] text-[#7C5E3C] border-[#E9E4D9]'
-                          : 'bg-white text-[#8A8278] border-[rgba(10,10,10,0.1)] hover:border-[#E9E4D9] hover:text-[#5D5D5D]'
+                          ? 'bg-[#FBF6EC] text-[#7C5E3C] border-[#E7E7E7]'
+                          : 'bg-white text-[#8A8278] border-[rgba(10,10,10,0.1)] hover:border-[#E7E7E7] hover:text-[#5D5D5D]'
                       }`}
                     >
                       <span
@@ -342,7 +342,7 @@ export default function RiskConfigPanel({ client }) {
                     return (
                       <span
                         key={nId}
-                        className="inline-flex items-center gap-1.5 h-[26px] px-2.5 rounded-full text-[11.5px] font-medium bg-[#FBF6EC] text-[#7C5E3C] border border-[#E9E4D9] tracking-[-0.003em]"
+                        className="inline-flex items-center gap-1.5 h-[26px] px-2.5 rounded-full text-[11.5px] font-medium bg-[#FBF6EC] text-[#7C5E3C] border border-[#E7E7E7] tracking-[-0.003em]"
                       >
                         <span className="w-1.5 h-1.5 rounded-full" style={{ background: n.color }} />
                         {n.name}
@@ -358,7 +358,7 @@ export default function RiskConfigPanel({ client }) {
         </div>
 
         {/* FATCA */}
-        <div className="pt-2 border-t border-[#E9E4D9]">
+        <div className="pt-2 border-t border-[#E7E7E7]">
           <Field label="Statut FATCA">
             {editing ? (
               <select
@@ -377,7 +377,7 @@ export default function RiskConfigPanel({ client }) {
         </div>
 
         {/* Review dates */}
-        <div className="grid grid-cols-2 gap-4 pt-2 border-t border-[#E9E4D9]">
+        <div className="grid grid-cols-2 gap-4 pt-2 border-t border-[#E7E7E7]">
           <Field label="Dernière revue">
             {editing ? (
               <input
@@ -410,7 +410,7 @@ export default function RiskConfigPanel({ client }) {
 
         {/* Edit actions */}
         {editing && (
-          <div className="flex items-center justify-end gap-2 pt-4 border-t border-[#E9E4D9]">
+          <div className="flex items-center justify-end gap-2 pt-4 border-t border-[#E7E7E7]">
             <Button
               variant="ghost"
               size="md"

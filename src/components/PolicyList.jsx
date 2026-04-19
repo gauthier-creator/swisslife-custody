@@ -170,7 +170,7 @@ export default function PolicyList() {
               </select>
             </div>
           </div>
-          <div className="flex justify-end gap-2 pt-5 border-t border-[#E9E4D9]">
+          <div className="flex justify-end gap-2 pt-5 border-t border-[#E7E7E7]">
             <Button variant="ghost" onClick={() => setShowCreate(false)}>Annuler</Button>
             <Button variant="primary" onClick={handleCreate} disabled={creating || !form.name}>
               {creating && <Spinner />}

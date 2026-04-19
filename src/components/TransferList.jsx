@@ -96,7 +96,7 @@ export default function TransferList({ clientId, toast }) {
 
       {/* ── Chainalysis KYT banner ──────────────────────── */}
       <Card className="px-5 py-4 flex items-start gap-4 accent-ruler-left">
-        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white border border-[#E9E4D9] shadow-crisp flex items-center justify-center">
+        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-white border border-[#E7E7E7] shadow-crisp flex items-center justify-center">
           <svg className="w-[18px] h-[18px] text-[#0A0A0A]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
           </svg>
@@ -111,7 +111,7 @@ export default function TransferList({ clientId, toast }) {
 
       {/* ── Toggle + action ──────────────────────────────── */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="inline-flex items-center p-0.5 bg-white border border-[#E9E4D9] rounded-full shadow-crisp">
+        <div className="inline-flex items-center p-0.5 bg-white border border-[#E7E7E7] rounded-full shadow-crisp">
           <button
             onClick={() => setViewMode('transfers')}
             className={`px-4 h-8 text-[12.5px] font-medium rounded-full transition-all tracking-[-0.006em] ${
@@ -150,7 +150,7 @@ export default function TransferList({ clientId, toast }) {
           <Card className="overflow-hidden">
             <table className="w-full text-sm text-left">
               <thead>
-                <tr className="border-b border-[#E9E4D9] bg-white">
+                <tr className="border-b border-[#E7E7E7] bg-white">
                   <th className="px-6 py-3.5 text-[11px] text-[#8A8278] font-medium uppercase tracking-[0.06em]">Date</th>
                   <th className="px-6 py-3.5 text-[11px] text-[#8A8278] font-medium uppercase tracking-[0.06em]">Wallet</th>
                   <th className="px-6 py-3.5 text-[11px] text-[#8A8278] font-medium uppercase tracking-[0.06em]">Destination</th>
@@ -163,7 +163,7 @@ export default function TransferList({ clientId, toast }) {
                 {transfers.slice(0, 50).map((tx) => {
                   const reqBody = tx.requestBody || {};
                   return (
-                    <tr key={tx.id} className="border-b border-[#E9E4D9] hover:bg-white transition-colors">
+                    <tr key={tx.id} className="border-b border-[#E7E7E7] hover:bg-white transition-colors">
                       <td className="px-6 py-4 text-[12.5px] text-[#5D5D5D] tracking-[-0.003em]">
                         {tx.dateRequested ? timeAgo(tx.dateRequested) : '—'}
                       </td>
@@ -221,7 +221,7 @@ export default function TransferList({ clientId, toast }) {
           <Card className="overflow-hidden">
             <table className="w-full text-sm text-left">
               <thead>
-                <tr className="border-b border-[#E9E4D9] bg-white">
+                <tr className="border-b border-[#E7E7E7] bg-white">
                   <th className="px-6 py-3.5 text-[11px] text-[#8A8278] font-medium uppercase tracking-[0.06em]">Date</th>
                   <th className="px-6 py-3.5 text-[11px] text-[#8A8278] font-medium uppercase tracking-[0.06em]">Type</th>
                   <th className="px-6 py-3.5 text-[11px] text-[#8A8278] font-medium uppercase tracking-[0.06em]">Direction</th>
@@ -234,7 +234,7 @@ export default function TransferList({ clientId, toast }) {
                 {history.slice(0, 50).map((tx, i) => {
                   const net = getNetwork(tx.walletNetwork);
                   return (
-                    <tr key={i} className="border-b border-[#E9E4D9] hover:bg-white transition-colors">
+                    <tr key={i} className="border-b border-[#E7E7E7] hover:bg-white transition-colors">
                       <td className="px-6 py-4 text-[12.5px] text-[#5D5D5D]">{tx.timestamp ? timeAgo(tx.timestamp) : '—'}</td>
                       <td className="px-6 py-4"><Badge>{tx.kind || '—'}</Badge></td>
                       <td className="px-6 py-4">
@@ -291,7 +291,7 @@ function StatTile({ label, value, tone }) {
     success: '#16A34A',
   }[tone] || '#0A0A0A';
   return (
-    <div className="bg-white border border-[#E9E4D9] rounded-[8px] shadow-crisp px-5 py-4">
+    <div className="bg-white border border-[#E7E7E7] rounded-[8px] shadow-crisp px-5 py-4">
       <p className="text-eyebrow">{label}</p>
       <p className="text-[32px] font-medium mt-2 tabular-nums leading-none tracking-[-0.025em]" style={{ color: toneColor }}>
         {value}
@@ -431,7 +431,7 @@ function TransferModal({ isOpen, onClose, wallets, toast, onSuccess }) {
           <input type="text" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0.0" className={inputCls} />
         </div>
 
-        <div className="flex justify-end gap-2 pt-5 border-t border-[#E9E4D9]">
+        <div className="flex justify-end gap-2 pt-5 border-t border-[#E7E7E7]">
           <Button variant="ghost" onClick={onClose}>Annuler</Button>
           <Button
             variant="primary"
@@ -451,7 +451,7 @@ function TransferModal({ isOpen, onClose, wallets, toast, onSuccess }) {
 function ScreeningCard({ screening, result, error }) {
   if (screening) {
     return (
-      <div className="rounded-[10px] border border-[#E9E4D9] bg-white px-4 py-3 flex items-center gap-3">
+      <div className="rounded-[10px] border border-[#E7E7E7] bg-white px-4 py-3 flex items-center gap-3">
         <Spinner />
         <div>
           <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#8A8278]">Chainalysis</p>
@@ -478,7 +478,7 @@ function ScreeningCard({ screening, result, error }) {
 
   return (
     <div className={`rounded-[12px] border overflow-hidden ${flagged ? 'border-[rgba(220,38,38,0.25)]' : 'border-[rgba(22,163,74,0.25)]'} bg-white`}>
-      <div className={`px-4 py-3 border-b border-[#E9E4D9] flex items-center gap-3 ${flagged ? 'bg-[rgba(220,38,38,0.04)]' : 'bg-[rgba(22,163,74,0.04)]'}`}>
+      <div className={`px-4 py-3 border-b border-[#E7E7E7] flex items-center gap-3 ${flagged ? 'bg-[rgba(220,38,38,0.04)]' : 'bg-[rgba(22,163,74,0.04)]'}`}>
         <div
           className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
           style={flagged ? { background: '#DC2626', color: '#fff' } : { background: '#0A0A0A', color: '#fff' }}
@@ -508,7 +508,7 @@ function ScreeningCard({ screening, result, error }) {
           {(result.lists || []).map(l => (
             <span
               key={l}
-              className="inline-flex items-center gap-1.5 px-2.5 h-6 rounded-full bg-white border border-[#E9E4D9] text-[10.5px] font-medium text-[#1E1E1E] tracking-[-0.003em]"
+              className="inline-flex items-center gap-1.5 px-2.5 h-6 rounded-full bg-white border border-[#E7E7E7] text-[10.5px] font-medium text-[#1E1E1E] tracking-[-0.003em]"
             >
               <span className="w-1 h-1 rounded-full bg-[#7C5E3C]" />
               {l}

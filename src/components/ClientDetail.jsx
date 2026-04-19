@@ -285,7 +285,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
       </div>
 
       {/* ── Tabs — editorial underline nav ─────────────── */}
-      <div className="border-b border-[#E9E4D9] animate-slide-up stagger-3">
+      <div className="border-b border-[#E7E7E7] animate-slide-up stagger-3">
         <nav className="flex items-center gap-1 -mb-px overflow-x-auto">
           {tabs.map(t => {
             const active = tab === t.id;
@@ -339,7 +339,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
             </SectionCard>
 
             <Card>
-              <div className="px-6 py-4 flex items-center justify-between border-b border-[#E9E4D9]">
+              <div className="px-6 py-4 flex items-center justify-between border-b border-[#E7E7E7]">
                 <h3 className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em]">Contacts</h3>
                 <span className="text-[12px] text-[#5D5D5D] tracking-[-0.003em]">{contacts.length} personne{contacts.length > 1 ? 's' : ''}</span>
               </div>
@@ -354,7 +354,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                     return (
                       <li
                         key={c.Id}
-                        className={`px-6 py-4 flex items-center justify-between gap-4 ${i < contacts.length - 1 ? 'border-b border-[#E9E4D9]' : ''}`}
+                        className={`px-6 py-4 flex items-center justify-between gap-4 ${i < contacts.length - 1 ? 'border-b border-[#E7E7E7]' : ''}`}
                       >
                         <div className="flex items-center gap-4 min-w-0">
                           <Avatar name={name} size={38} />
@@ -380,7 +380,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
           <aside className="lg:col-span-4 space-y-6">
             {/* Wealth breakdown */}
             <Card>
-              <div className="px-6 pt-5 pb-4 border-b border-[#E9E4D9]">
+              <div className="px-6 pt-5 pb-4 border-b border-[#E7E7E7]">
                 <p className="text-eyebrow">Patrimoine consolidé</p>
                 <p className="display-sm text-[#0A0A0A] tabular-nums mt-2">
                   {client.aum ? fmtCompactEUR(client.aum) : '—'}
@@ -447,7 +447,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                 </Button>
               )}
               {parsed.documents.length > 0 && (
-                <div className="mt-5 pt-5 border-t border-[#E9E4D9]">
+                <div className="mt-5 pt-5 border-t border-[#E7E7E7]">
                   <p className="text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em] mb-3">
                     Documents Salesforce
                   </p>
@@ -610,9 +610,9 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                     onClick={() => selectWallet(w)}
                     className={`flex items-center gap-5 px-6 py-5 cursor-pointer transition-colors ${
                       active ? 'bg-white' : 'hover:bg-white'
-                    } ${i < wallets.length - 1 ? 'border-b border-[#E9E4D9]' : ''}`}
+                    } ${i < wallets.length - 1 ? 'border-b border-[#E7E7E7]' : ''}`}
                   >
-                    <div className="w-11 h-11 rounded-[10px] flex items-center justify-center bg-[#F5F3EE] border border-[#E9E4D9] flex-shrink-0">
+                    <div className="w-11 h-11 rounded-[10px] flex items-center justify-center bg-[#F5F3EE] border border-[#E7E7E7] flex-shrink-0">
                       <span className="font-mono text-[12px] font-medium text-[#0A0A0A]">{n.icon}</span>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -642,7 +642,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
             <Card className="p-6">
               <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-[10px] flex items-center justify-center bg-[#F5F3EE] border border-[#E9E4D9]">
+                  <div className="w-12 h-12 rounded-[10px] flex items-center justify-center bg-[#F5F3EE] border border-[#E7E7E7]">
                     <span className="font-mono text-[13px] font-medium text-[#0A0A0A]">{net(selectedWallet.network).icon}</span>
                   </div>
                   <div>
@@ -663,17 +663,17 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="p-4 bg-white rounded-[12px] border border-[#E9E4D9]">
+                <div className="p-4 bg-white rounded-[12px] border border-[#E7E7E7]">
                   <p className="text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em] mb-1.5">Adresse</p>
                   <p className="text-[12px] font-mono text-[#0A0A0A] break-all leading-relaxed">{selectedWallet.address}</p>
                 </div>
-                <div className="p-4 bg-white rounded-[12px] border border-[#E9E4D9]">
+                <div className="p-4 bg-white rounded-[12px] border border-[#E7E7E7]">
                   <p className="text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em] mb-1.5">Valeur nette</p>
                   <p className="text-[22px] font-medium text-[#0A0A0A] tabular-nums tracking-[-0.025em]">
                     {assets?.netWorth?.USD ? `$${assets.netWorth.USD.toLocaleString()}` : '—'}
                   </p>
                 </div>
-                <div className="p-4 bg-white rounded-[12px] border border-[#E9E4D9]">
+                <div className="p-4 bg-white rounded-[12px] border border-[#E7E7E7]">
                   <p className="text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em] mb-1.5">Actifs</p>
                   <p className="text-[22px] font-medium text-[#0A0A0A] tabular-nums tracking-[-0.025em]">
                     {assets?.assets?.length || 0}
@@ -686,9 +686,9 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                   <p className="text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em] mb-3">Portefeuille</p>
                   <div className="space-y-2">
                     {assets.assets.map((a, i) => (
-                      <div key={i} className="flex items-center justify-between py-3 px-4 bg-white rounded-[10px] border border-[#E9E4D9]">
+                      <div key={i} className="flex items-center justify-between py-3 px-4 bg-white rounded-[10px] border border-[#E7E7E7]">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-white border border-[#E9E4D9] flex items-center justify-center">
+                          <div className="w-9 h-9 rounded-full bg-white border border-[#E7E7E7] flex items-center justify-center">
                             <span className="text-[10px] font-medium font-mono">{a.symbol?.slice(0, 3)}</span>
                           </div>
                           <div>
@@ -742,7 +742,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
             <Card className="overflow-hidden">
               <table className="w-full text-[13px]">
                 <thead>
-                  <tr className="border-b border-[#E9E4D9]">
+                  <tr className="border-b border-[#E7E7E7]">
                     <th className="text-left px-6 h-12 text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em]">Direction</th>
                     <th className="text-left px-6 h-12 text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em]">Adresse</th>
                     <th className="text-right px-6 h-12 text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em]">Montant</th>
@@ -752,7 +752,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                 </thead>
                 <tbody>
                   {history.map((tx, i) => (
-                    <tr key={tx.id || i} className="border-b border-[#E9E4D9] last:border-0 hover:bg-white transition-colors">
+                    <tr key={tx.id || i} className="border-b border-[#E7E7E7] last:border-0 hover:bg-white transition-colors">
                       <td className="px-6 py-3.5">
                         <Badge variant={tx.direction === 'In' ? 'success' : 'default'} size="sm" dot>{tx.direction || '—'}</Badge>
                       </td>
@@ -806,10 +806,10 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                 return (
                   <div
                     key={w.id}
-                    className={`px-6 py-4 flex items-center justify-between gap-4 ${i < wallets.length - 1 ? 'border-b border-[#E9E4D9]' : ''}`}
+                    className={`px-6 py-4 flex items-center justify-between gap-4 ${i < wallets.length - 1 ? 'border-b border-[#E7E7E7]' : ''}`}
                   >
                     <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-[10px] flex items-center justify-center bg-[#F5F3EE] border border-[#E9E4D9]">
+                      <div className="w-10 h-10 rounded-[10px] flex items-center justify-center bg-[#F5F3EE] border border-[#E7E7E7]">
                         <span className="font-mono text-[11px] font-medium">{n.icon}</span>
                       </div>
                       <div>
@@ -958,7 +958,7 @@ function MetaRow({ label, value, mono }) {
 
 function WealthRow({ label, sub, value, pct, last }) {
   return (
-    <li className={`px-6 py-4 ${!last ? 'border-b border-[#E9E4D9]' : ''}`}>
+    <li className={`px-6 py-4 ${!last ? 'border-b border-[#E7E7E7]' : ''}`}>
       <div className="flex items-center justify-between mb-2">
         <div>
           <p className="text-[13.5px] font-medium text-[#0A0A0A] tracking-[-0.01em]">{label}</p>

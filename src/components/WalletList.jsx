@@ -126,7 +126,7 @@ export default function WalletList() {
         <div className="space-y-8 animate-slide-up stagger-2">
           {Array.from({ length: 2 }).map((_, g) => (
             <Card key={g}>
-              <div className="px-6 py-4 border-b border-[#E9E4D9] flex items-center gap-3">
+              <div className="px-6 py-4 border-b border-[#E7E7E7] flex items-center gap-3">
                 <Skeleton className="h-7 w-7 rounded-[8px]" />
                 <Skeleton className="h-[14px]" style={{ width: 140 }} />
                 <Skeleton className="h-[11px]" style={{ width: 60 }} />

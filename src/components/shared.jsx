@@ -41,17 +41,17 @@ export function ToastContainer({ toasts }) {
 }
 
 // ─── Form primitives ──────────────────────────────────
-// Ramify inputs: 6px radius, hairline #E9E4D9, subtle bronze focus.
+// Ramify inputs: 6px radius, hairline #E7E7E7, subtle bronze focus.
 // Focus-visible adds a 2px bronze ring (only on keyboard focus, not click)
 // for WCAG 2.2 AA compliance (non-text contrast 3:1).
 export const inputCls =
-  "w-full h-10 px-3.5 text-[14px] text-[#1E1E1E] bg-white border border-[#E9E4D9] rounded-[6px] outline-none transition-[border-color,box-shadow] duration-150 focus-visible:border-[#7C5E3C] focus-visible:ring-[3px] focus-visible:ring-[rgba(124,94,60,0.18)] placeholder:text-[#8A8278]";
+  "w-full h-10 px-3.5 text-[14px] text-[#1E1E1E] bg-white border border-[#E7E7E7] rounded-[6px] outline-none transition-[border-color,box-shadow] duration-150 focus-visible:border-[#7C5E3C] focus-visible:ring-[3px] focus-visible:ring-[rgba(124,94,60,0.12)] placeholder:text-[#8A8278]";
 
 export const selectCls =
-  "w-full h-10 px-3.5 pr-9 text-[14px] text-[#1E1E1E] bg-white border border-[#E9E4D9] rounded-[6px] outline-none transition-[border-color,box-shadow] duration-150 focus-visible:border-[#7C5E3C] focus-visible:ring-[3px] focus-visible:ring-[rgba(124,94,60,0.18)] appearance-none cursor-pointer";
+  "w-full h-10 px-3.5 pr-9 text-[14px] text-[#1E1E1E] bg-white border border-[#E7E7E7] rounded-[6px] outline-none transition-[border-color,box-shadow] duration-150 focus-visible:border-[#7C5E3C] focus-visible:ring-[3px] focus-visible:ring-[rgba(124,94,60,0.12)] appearance-none cursor-pointer";
 
 export const textareaCls =
-  "w-full px-3.5 py-2.5 text-[14px] text-[#1E1E1E] bg-white border border-[#E9E4D9] rounded-[6px] outline-none transition-[border-color,box-shadow] duration-150 focus-visible:border-[#7C5E3C] focus-visible:ring-[3px] focus-visible:ring-[rgba(124,94,60,0.18)] placeholder:text-[#8A8278] resize-none";
+  "w-full px-3.5 py-2.5 text-[14px] text-[#1E1E1E] bg-white border border-[#E7E7E7] rounded-[6px] outline-none transition-[border-color,box-shadow] duration-150 focus-visible:border-[#7C5E3C] focus-visible:ring-[3px] focus-visible:ring-[rgba(124,94,60,0.12)] placeholder:text-[#8A8278] resize-none";
 
 export const labelCls =
   "block text-[12px] font-medium text-[#5D5D5D] mb-1.5";
@@ -92,7 +92,7 @@ export function Button({ variant = 'primary', size = 'md', children, className =
     accent:
       'bg-[#C8924B] text-white border border-[#C8924B] hover:bg-[#B47F38]',
     secondary:
-      'bg-white text-[#1E1E1E] border border-[#E9E4D9] hover:border-[#C8BEA4] hover:bg-[#FDFBF6]',
+      'bg-white text-[#1E1E1E] border border-[#E7E7E7] hover:border-[#D1D5DB] hover:bg-[#FDFBF6]',
     soft:
       'bg-[#F5EEE0] text-[#1E1E1E] border border-transparent hover:bg-[#EFE4CE]',
     ghost:
@@ -111,7 +111,7 @@ export function Button({ variant = 'primary', size = 'md', children, className =
   return (
     <button
       {...props}
-      className={`inline-flex items-center justify-center gap-2 font-semibold transition-[background,border-color,color] duration-150 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap outline-none focus-visible:ring-[2px] focus-visible:ring-[#C8BEA4] active:scale-[0.98] ${variants[variant]} ${variant !== 'link' ? sizes[size] : ''} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 font-semibold transition-[background,border-color,color] duration-150 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap outline-none focus-visible:ring-[2px] focus-visible:ring-[#D1D5DB] active:scale-[0.98] ${variants[variant]} ${variant !== 'link' ? sizes[size] : ''} ${className}`}
     >
       {children}
     </button>
@@ -147,7 +147,7 @@ export function SkeletonCircle({ size = 36, className = '' }) {
 export function SkeletonRow({ cols = 4, className = '' }) {
   // Editorial table skeleton row — matches our tdCls padding
   return (
-    <tr className={`border-b border-[#E9E4D9] ${className}`}>
+    <tr className={`border-b border-[#E7E7E7] ${className}`}>
       {Array.from({ length: cols }).map((_, i) => (
         <td key={i} className="px-6 py-4">
           <Skeleton
@@ -260,13 +260,13 @@ export function Badge({ children, variant = 'default', dot = false, size = 'md' 
 // ─── Card ─────────────────────────────────────────────
 // Hairline border, warm white, barely-there shadow. Apple restraint.
 export function Card({ children, className = '', variant = 'elevated', ...props }) {
-  // Ramify DNA: 8px radius, 1px hairline #E9E4D9, no shadow — pure editorial.
+  // Ramify DNA: 8px radius, 1px hairline #E7E7E7, no shadow — pure editorial.
   // `elevated` and `flat` are kept for API compatibility but render identically
   // (Ramify never uses drop shadows on data cards).
   const variants = {
-    elevated: 'bg-white rounded-[8px] border border-[#E9E4D9]',
-    flat:     'bg-white rounded-[8px] border border-[#E9E4D9]',
-    soft:     'bg-[#FDFBF6] rounded-[8px] border border-[#E9E4D9]',
+    elevated: 'bg-white rounded-[8px] border border-[#E7E7E7]',
+    flat:     'bg-white rounded-[8px] border border-[#E7E7E7]',
+    soft:     'bg-[#FDFBF6] rounded-[8px] border border-[#E7E7E7]',
     dark:     'bg-[#1E1E1E] text-white rounded-[8px]',
   };
   return (
@@ -301,10 +301,10 @@ export function IconButton({
   }[size] || 'w-9 h-9 rounded-[6px]';
 
   const tones = {
-    white: 'bg-white border-[#E9E4D9] text-[#5D5D5D] hover:text-[#1E1E1E] hover:border-[#C8BEA4] hover:bg-[#FDFBF6]',
+    white: 'bg-white border-[#E7E7E7] text-[#5D5D5D] hover:text-[#1E1E1E] hover:border-[#D1D5DB] hover:bg-[#FDFBF6]',
     cream: 'bg-[#F5E5CE] border-transparent text-[#7C5E3C] hover:bg-[#EFDCBC]',
     dark:  'bg-[#1E1E1E] border-transparent text-white hover:bg-[#000000]',
-  }[tone] || 'bg-white border-[#E9E4D9] text-[#5D5D5D] hover:text-[#1E1E1E] hover:border-[#C8BEA4]';
+  }[tone] || 'bg-white border-[#E7E7E7] text-[#5D5D5D] hover:text-[#1E1E1E] hover:border-[#D1D5DB]';
 
   return (
     <button
@@ -471,7 +471,7 @@ export function StatCard({
 }) {
   return (
     <div
-      className={`relative bg-white rounded-[8px] border border-[#E9E4D9] p-5 ${className}`}
+      className={`relative bg-white rounded-[8px] border border-[#E7E7E7] p-5 ${className}`}
     >
       <div className="flex items-start justify-between gap-3">
         {/* Category eyebrow (matches ProductCard "CONSERVATION" pattern) */}
@@ -480,8 +480,8 @@ export function StatCard({
         </p>
         {icon && <span className="flex-shrink-0 -mt-0.5 opacity-75">{icon}</span>}
       </div>
-      <p className="mt-2 font-display text-[28px] text-[#1E1E1E] leading-[1.05] tabular-nums"
-         style={{ letterSpacing: '-0.012em', fontWeight: 400 }}>
+      <p className="mt-2 text-[26px] font-bold text-[#0F0F10] leading-[1.1] tabular-nums"
+         style={{ letterSpacing: '-0.025em' }}>
         {value}
       </p>
       <div className="mt-1.5 flex items-center justify-between gap-2">
@@ -607,7 +607,7 @@ export function SignatureMark({ name = 'G. Alexandrian', role = 'Banquier privé
   return (
     <div className={`flex items-center gap-4 ${className}`}>
       <div
-        className="flex-shrink-0 w-9 h-9 rounded-[9px] bg-white border border-[#E9E4D9] flex items-center justify-center"
+        className="flex-shrink-0 w-9 h-9 rounded-[9px] bg-white border border-[#E7E7E7] flex items-center justify-center"
         style={{ boxShadow: '0 1px 0 rgba(255,255,255,0.9) inset, 0 1px 2px rgba(10,10,10,0.05), 0 4px 12px -8px rgba(124,94,60,0.35)' }}
       >
         <span className="font-display text-[14px] text-[#0A0A0A] leading-none" style={{ letterSpacing: '-0.04em' }}>Sℓ</span>
@@ -644,7 +644,7 @@ export function AvatarStack({ items = [], size = 32, max = 3 }) {
       ))}
       {rest > 0 && (
         <div
-          className="-ml-2 rounded-full bg-[#F5F3EE] text-[#0A0A0A] flex items-center justify-center font-medium ring-[3px] ring-white border border-[#E9E4D9]"
+          className="-ml-2 rounded-full bg-[#F5F3EE] text-[#0A0A0A] flex items-center justify-center font-medium ring-[3px] ring-white border border-[#E7E7E7]"
           style={{ width: size, height: size, fontSize: Math.round(size * 0.32) }}
         >
           +{rest}
@@ -712,8 +712,8 @@ export function Metric({ label, value, caption, delta, progress, align = 'left',
         {label}
       </span>
       <span
-        className="mt-3 font-display text-[30px] text-[#0A0A0A] tabular-nums leading-[1.04]"
-        style={{ letterSpacing: '-0.03em' }}
+        className="mt-3 text-[28px] font-bold text-[#0F0F10] tabular-nums leading-[1.05]"
+        style={{ letterSpacing: '-0.028em' }}
       >
         {value}
       </span>
@@ -754,7 +754,7 @@ export function MarbleCard({
   }[variant] || 'marble-cream';
   return (
     <div
-      className={`relative overflow-hidden rounded-[12px] border border-[#E9E4D9] ${surface}
+      className={`relative overflow-hidden rounded-[12px] border border-[#E7E7E7] ${surface}
         shadow-[0_1px_0_rgba(255,255,255,0.9)_inset,0_1px_2px_rgba(10,10,10,0.04),0_24px_48px_-24px_rgba(124,94,60,0.3),0_12px_24px_-12px_rgba(10,10,10,0.08)]
         ${className}`}
       {...props}
@@ -783,7 +783,7 @@ export function MarbleCard({
           </p>
         )}
         {title && (
-          <h2 className="font-display text-[34px] text-[#2A1F12] leading-[1.05] max-w-[32ch]" style={{ letterSpacing: '-0.028em' }}>
+          <h2 className="text-[30px] font-bold text-[#0F0F10] leading-[1.1] max-w-[32ch]" style={{ letterSpacing: '-0.025em' }}>
             {title}
           </h2>
         )}
@@ -835,11 +835,11 @@ export function KPITile({ label, value, delta, visual, onClick, className = '' }
   return (
     <div
       onClick={onClick}
-      className={`bg-white rounded-[8px] p-5 border border-[#E9E4D9] ${clickable ? 'cursor-pointer hover:border-[#C8BEA4]' : ''} transition-colors ${className}`}
+      className={`bg-white rounded-[8px] p-5 border border-[#E7E7E7] ${clickable ? 'cursor-pointer hover:border-[#D1D5DB]' : ''} transition-colors ${className}`}
     >
       <p className="text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.1em]">{label}</p>
-      <p className="mt-2 font-display text-[28px] text-[#1E1E1E] tabular-nums leading-[1.05]"
-         style={{ letterSpacing: '-0.012em', fontWeight: 400 }}>
+      <p className="mt-2 text-[26px] font-bold text-[#0F0F10] tabular-nums leading-[1.1]"
+         style={{ letterSpacing: '-0.025em' }}>
         {value}
       </p>
       {delta && (
@@ -874,7 +874,7 @@ export function ListRow({ icon, tone = 'default', title, subtitle, trailing, tra
   return (
     <div
       onClick={onClick}
-      className={`flex items-center gap-4 px-6 py-4 ${divider ? 'border-b border-[#E9E4D9] last:border-0' : ''} ${clickable ? 'cursor-pointer hover:bg-white transition-colors' : ''}`}
+      className={`flex items-center gap-4 px-6 py-4 ${divider ? 'border-b border-[#E7E7E7] last:border-0' : ''} ${clickable ? 'cursor-pointer hover:bg-white transition-colors' : ''}`}
     >
       {icon && (
         typeof icon === 'string' || typeof icon === 'number'
@@ -899,7 +899,7 @@ export function ListRow({ icon, tone = 'default', title, subtitle, trailing, tra
 // Ramify pattern: eyebrow uppercase + hairline border bottom
 export function SectionTitle({ children, action }) {
   return (
-    <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-[#E9E4D9]">
+    <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-[#E7E7E7]">
       <h3 className="text-[11px] font-semibold text-[#8A8278] uppercase tracking-[0.08em]">{children}</h3>
       {action}
     </div>
@@ -923,10 +923,10 @@ export function Modal({ isOpen, onClose, title, subtitle, children, maxWidth = '
         onClick={onClose}
       />
       <div
-        className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white z-50 w-[calc(100%-2rem)] ${maxWidth} max-h-[85vh] rounded-[10px] shadow-[0_12px_40px_-12px_rgba(30,30,30,0.2)] flex flex-col animate-scale border border-[#E9E4D9] overflow-hidden`}
+        className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white z-50 w-[calc(100%-2rem)] ${maxWidth} max-h-[85vh] rounded-[10px] shadow-[0_12px_40px_-12px_rgba(30,30,30,0.2)] flex flex-col animate-scale border border-[#E7E7E7] overflow-hidden`}
       >
         {(title || subtitle) && (
-          <header className="px-7 pt-7 pb-5 flex items-start justify-between gap-4 border-b border-[#E9E4D9]">
+          <header className="px-7 pt-7 pb-5 flex items-start justify-between gap-4 border-b border-[#E7E7E7]">
             <div>
               {title && <h2 className="text-[20px] font-medium text-[#0A0A0A] tracking-[-0.025em]">{title}</h2>}
               {subtitle && <p className="mt-1.5 text-[13px] text-[#5D5D5D] leading-relaxed max-w-md tracking-[-0.003em]">{subtitle}</p>}
@@ -998,11 +998,11 @@ export function Drawer({
         role="dialog"
         aria-modal="true"
         aria-label={typeof title === 'string' ? title : 'Panel'}
-        className={`fixed top-0 right-0 h-screen max-w-[calc(100vw-32px)] ${widthCls} bg-white z-50 flex flex-col animate-slide-right border-l border-[#E9E4D9] ${className}`}
+        className={`fixed top-0 right-0 h-screen max-w-[calc(100vw-32px)] ${widthCls} bg-white z-50 flex flex-col animate-slide-right border-l border-[#E7E7E7] ${className}`}
         style={{ boxShadow: '-32px 0 64px -24px rgba(10,10,10,0.28), -8px 0 16px -8px rgba(10,10,10,0.08)' }}
       >
         {(title || subtitle || trailing || eyebrow) && (
-          <header className="px-8 pt-7 pb-5 flex items-start justify-between gap-6 border-b border-[#E9E4D9] flex-shrink-0">
+          <header className="px-8 pt-7 pb-5 flex items-start justify-between gap-6 border-b border-[#E7E7E7] flex-shrink-0">
             <div className="min-w-0 flex-1">
               {eyebrow && (
                 <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-[#7C5E3C] mb-2 flex items-center gap-1.5">
@@ -1012,7 +1012,7 @@ export function Drawer({
               )}
               {title && (
                 typeof title === 'string'
-                  ? <h2 className="font-display text-[26px] text-[#0A0A0A] leading-[1.1]" style={{ letterSpacing: '-0.022em' }}>{title}</h2>
+                  ? <h2 className="text-[24px] font-bold text-[#0F0F10] leading-[1.15]" style={{ letterSpacing: '-0.022em' }}>{title}</h2>
                   : title
               )}
               {subtitle && <p className="mt-2 text-[13px] text-[#5D5D5D] leading-relaxed tracking-[-0.003em]">{subtitle}</p>}
@@ -1021,7 +1021,7 @@ export function Drawer({
               {trailing}
               <button
                 onClick={onClose}
-                className="w-9 h-9 flex items-center justify-center rounded-full text-[#5D5D5D] hover:text-[#0A0A0A] hover:bg-[#F5F3EE] transition-colors border border-transparent hover:border-[#E9E4D9]"
+                className="w-9 h-9 flex items-center justify-center rounded-full text-[#5D5D5D] hover:text-[#0A0A0A] hover:bg-[#F5F3EE] transition-colors border border-transparent hover:border-[#E7E7E7]"
                 aria-label="Fermer"
                 title="Fermer · Échap"
               >
@@ -1055,12 +1055,12 @@ export function EmptyState({ title, description, action, icon, illustration }) {
         </div>
       ) : (
         /* Default: the SwissLife compass brand glyph — monochrome, quiet */
-        <div className="mx-auto flex items-center justify-center text-[#C8BEA4]">
+        <div className="mx-auto flex items-center justify-center text-[#D1D5DB]">
           <BrandGlyph name="compass" size={28} />
         </div>
       )}
-      <p className="font-display text-[20px] text-[#1E1E1E] mt-4"
-         style={{ letterSpacing: '-0.01em', fontWeight: 400 }}>
+      <p className="text-[17px] font-semibold text-[#0F0F10] mt-4"
+         style={{ letterSpacing: '-0.015em' }}>
         {title}
       </p>
       {description && (
@@ -1075,7 +1075,7 @@ export function EmptyState({ title, description, action, icon, illustration }) {
 export function Spinner({ size = 'w-4 h-4' }) {
   return (
     <span
-      className={`${size} inline-block border-[1.5px] border-[#E9E4D9] border-t-[#1E1E1E] rounded-full animate-spin`}
+      className={`${size} inline-block border-[1.5px] border-[#E7E7E7] border-t-[#1E1E1E] rounded-full animate-spin`}
     />
   );
 }
@@ -1087,8 +1087,8 @@ export function StatCell({ label, value, sub, className = '' }) {
   return (
     <div className={`px-5 py-4 ${className}`}>
       <p className="text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.1em]">{label}</p>
-      <p className="mt-2 font-display text-[22px] text-[#1E1E1E] tabular-nums truncate leading-[1.1]"
-         style={{ letterSpacing: '-0.012em', fontWeight: 400 }}>
+      <p className="mt-2 text-[22px] font-bold text-[#0F0F10] tabular-nums truncate leading-[1.15]"
+         style={{ letterSpacing: '-0.02em' }}>
         {value || '—'}
       </p>
       {sub && <p className="text-[12.5px] text-[#5D5D5D] mt-1 truncate">{sub}</p>}
@@ -1101,7 +1101,7 @@ export function StatCell({ label, value, sub, className = '' }) {
 export function ActionButton({ icon, label, onClick }) {
   return (
     <button onClick={onClick} className="flex flex-col items-center gap-2 group">
-      <div className="w-10 h-10 rounded-[6px] flex items-center justify-center bg-white border border-[#E9E4D9] text-[#1E1E1E] group-hover:border-[#C8BEA4] group-hover:bg-[#FDFBF6] transition-colors">
+      <div className="w-10 h-10 rounded-[6px] flex items-center justify-center bg-white border border-[#E7E7E7] text-[#1E1E1E] group-hover:border-[#D1D5DB] group-hover:bg-[#FDFBF6] transition-colors">
         {icon}
       </div>
       <span className="text-[11.5px] font-medium text-[#5D5D5D] group-hover:text-[#1E1E1E] transition-colors">
@@ -1113,7 +1113,7 @@ export function ActionButton({ icon, label, onClick }) {
 
 // ─── Divider ──────────────────────────────────────────
 export function Divider({ className = '' }) {
-  return <div className={`h-px bg-[#E9E4D9] ${className}`} />;
+  return <div className={`h-px bg-[#E7E7E7] ${className}`} />;
 }
 
 // ─── PageHeader ───────────────────────────────────────
@@ -1132,19 +1132,19 @@ export function PageHeader({ icon, duoIcon, title, eyebrow, trailing, banner, cl
       : null;
 
   return (
-    <header className={`space-y-5 animate-fade ${className}`}>
+    <header className={`space-y-4 animate-fade ${className}`}>
       <div className="flex items-end justify-between gap-6 flex-wrap">
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2.5 min-w-0">
           {iconNode}
           <div className="min-w-0">
             {eyebrow && (
-              <p className="text-[10.5px] font-medium text-[#8A8278] uppercase tracking-[0.14em] mb-1.5">
+              <p className="text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.12em] mb-1">
                 {eyebrow}
               </p>
             )}
             <h1
-              className="font-display text-[30px] text-[#1E1E1E] leading-[1.1] truncate"
-              style={{ letterSpacing: '-0.012em', fontWeight: 400 }}
+              className="text-[26px] font-semibold text-[#0F0F10] leading-[1.15] truncate"
+              style={{ letterSpacing: '-0.018em' }}
             >
               {title}
             </h1>
@@ -1164,15 +1164,15 @@ export function PageHeader({ icon, duoIcon, title, eyebrow, trailing, banner, cl
 // Tones: cream (warm peach #F5EEE0), advisor (cool blue #EBF5FF), paper, warn
 export function PageBanner({ avatar, text, subtext, cta, onCtaClick, tone = 'cream' }) {
   const palette = {
-    cream:   'bg-[#F5EEE0] border-[#E9E4D9]',
+    cream:   'bg-[#F5EEE0] border-[#E7E7E7]',
     advisor: 'bg-[#EBF5FF] border-[rgba(59,130,246,0.1)]',
-    paper:   'bg-[#FDFCFA] border-[#E9E4D9]',
+    paper:   'bg-[#FDFCFA] border-[#E7E7E7]',
     warn:    'bg-[#FEF5E7] border-[rgba(202,138,4,0.22)]',
-  }[tone] || 'bg-[#F5EEE0] border-[#E9E4D9]';
+  }[tone] || 'bg-[#F5EEE0] border-[#E7E7E7]';
   return (
     <div className={`flex items-center gap-3 px-4 py-3 rounded-[8px] border ${palette}`}>
       {avatar && (
-        <span className="flex-shrink-0 w-9 h-9 rounded-full bg-white overflow-hidden flex items-center justify-center text-[13px] font-medium text-[#1E1E1E] border border-[#E9E4D9]">
+        <span className="flex-shrink-0 w-9 h-9 rounded-full bg-white overflow-hidden flex items-center justify-center text-[13px] font-medium text-[#1E1E1E] border border-[#E7E7E7]">
           {avatar}
         </span>
       )}
@@ -1224,7 +1224,7 @@ export function StatusDot({ tone = 'success', label, className = '' }) {
 // Ramify tab strip: 14px semibold, 2px bronze bar on active
 export function UnderlineTabs({ tabs, active, onChange, className = '' }) {
   return (
-    <div className={`border-b border-[#E9E4D9] ${className}`}>
+    <div className={`border-b border-[#E7E7E7] ${className}`}>
       <div className="flex items-center gap-6 overflow-x-auto">
         {tabs.map(t => {
           const isActive = active === t.id;
@@ -1265,7 +1265,7 @@ export function Table({ headers, children, className = '' }) {
     <div className={`overflow-x-auto ${className}`}>
       <table className="w-full text-sm text-left border-collapse">
         <thead>
-          <tr className="border-b border-[#E9E4D9]">
+          <tr className="border-b border-[#E7E7E7]">
             {headers.map((h, i) => {
               const label = typeof h === 'string' ? h : h.label;
               const right = typeof h === 'object' && h.right;
@@ -1287,7 +1287,7 @@ export function Table({ headers, children, className = '' }) {
 }
 export const tdCls = 'px-5 py-3.5 text-[14px] text-[#1E1E1E]';
 export const tdMuted = 'px-5 py-3.5 text-[13px] text-[#5D5D5D]';
-export const trCls = 'group/row relative border-b border-[#E9E4D9] transition-colors hover:bg-[#FDFBF6]';
+export const trCls = 'group/row relative border-b border-[#E7E7E7] transition-colors hover:bg-[#FDFBF6]';
 
 // ─── Illustrations — monochrome, editorial ───────────
 // Small refined SVGs for empty states & headers
@@ -1390,7 +1390,7 @@ export function SectionCard({ title, caption, action, children, className = '', 
   return (
     <Card className={className}>
       {(title || caption || action) && (
-        <div className="px-5 py-4 border-b border-[#E9E4D9] flex items-center justify-between gap-4 flex-wrap">
+        <div className="px-5 py-4 border-b border-[#E7E7E7] flex items-center justify-between gap-4 flex-wrap">
           <div className="min-w-0">
             {title && <h3 className="text-[13.5px] font-semibold text-[#1E1E1E]">{title}</h3>}
             {caption && <p className="text-[12.5px] text-[#5D5D5D] mt-0.5">{caption}</p>}
@@ -1410,9 +1410,9 @@ export function SectionCard({ title, caption, action, children, className = '', 
 // centred between the two halves as a quiet watermark.
 export function FooterDisclosure({ left = "SwissLife Banque Privée · Paris", right = "AMF · ACPR · Tracfin · MiCA Art. 60" }) {
   return (
-    <footer className="pt-6 mt-12 border-t border-[#E9E4D9] flex items-center justify-between text-[11px] text-[#8A8278] flex-wrap gap-4">
+    <footer className="pt-6 mt-12 border-t border-[#E7E7E7] flex items-center justify-between text-[11px] text-[#8A8278] flex-wrap gap-4">
       <span>{left}</span>
-      <span className="hidden md:inline-flex items-center text-[#C8BEA4]">
+      <span className="hidden md:inline-flex items-center text-[#D1D5DB]">
         <BrandGlyph name="fleur" size={11} />
       </span>
       <span>{right}</span>

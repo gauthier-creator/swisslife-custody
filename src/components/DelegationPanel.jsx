@@ -166,7 +166,7 @@ export default function DelegationPanel({ client }) {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-[#E9E4D9] bg-white">
+                    <tr className="border-b border-[#E7E7E7] bg-white">
                       <th className="px-6 py-3.5 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase">Délégataire</th>
                       <th className="px-6 py-3.5 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase">Email</th>
                       <th className="px-6 py-3.5 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase">Permission</th>
@@ -181,7 +181,7 @@ export default function DelegationPanel({ client }) {
                     {activeDelegations.map((d, i) => (
                       <tr
                         key={d.id}
-                        className="border-b border-[#E9E4D9] transition-colors hover:bg-white hover:bg-[#FDFBF6] row-stagger"
+                        className="border-b border-[#E7E7E7] transition-colors hover:bg-white hover:bg-[#FDFBF6] row-stagger"
                         style={{ '--i': i }}
                       >
                         <td className="px-6 py-4 text-[13px] font-medium text-[#0A0A0A] tracking-[-0.006em]">{d.delegate_name || '—'}</td>
@@ -225,7 +225,7 @@ export default function DelegationPanel({ client }) {
               <Card className="mt-3 overflow-hidden opacity-75">
                 <table className="w-full text-sm text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-[#E9E4D9] bg-white">
+                    <tr className="border-b border-[#E7E7E7] bg-white">
                       <th className="px-6 py-3 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase">Délégataire</th>
                       <th className="px-6 py-3 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase">Permission</th>
                       <th className="px-6 py-3 text-[10px] font-medium text-[#7C5E3C] tracking-[0.1em] uppercase">Statut</th>
@@ -234,7 +234,7 @@ export default function DelegationPanel({ client }) {
                   </thead>
                   <tbody>
                     {inactiveDelegations.map(d => (
-                      <tr key={d.id} className="border-b border-[#E9E4D9]">
+                      <tr key={d.id} className="border-b border-[#E7E7E7]">
                         <td className="px-6 py-3 text-[13px] text-[#5D5D5D] tracking-[-0.003em]">{d.delegate_name || d.delegate_email}</td>
                         <td className="px-6 py-3">{permBadge(d.permission_level)}</td>
                         <td className="px-6 py-3">{statusBadge(d.status)}</td>
@@ -333,7 +333,7 @@ export default function DelegationPanel({ client }) {
               rows={3}
             />
           </div>
-          <div className="flex justify-end gap-2 pt-5 border-t border-[#E9E4D9]">
+          <div className="flex justify-end gap-2 pt-5 border-t border-[#E7E7E7]">
             <Button variant="ghost" onClick={() => setShowModal(false)}>Annuler</Button>
             <Button variant="primary" onClick={handleCreate} disabled={!form.delegateEmail}>
               Créer la délégation

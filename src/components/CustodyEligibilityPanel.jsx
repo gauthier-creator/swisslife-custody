@@ -337,7 +337,7 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
 
       {/* ── Checklist card ──────────────────────────────── */}
       <Card>
-        <div className="px-7 py-5 border-b border-[#E9E4D9] flex items-center justify-between">
+        <div className="px-7 py-5 border-b border-[#E7E7E7] flex items-center justify-between">
           <div>
             <h3 className="text-[15px] font-medium text-[#0A0A0A] tracking-[-0.015em]">Conditions réglementaires</h3>
             <p className="text-[12.5px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">
@@ -352,7 +352,7 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
           {items.map((item, i) => (
             <li
               key={item.key}
-              className={`px-7 py-5 ${i < items.length - 1 ? 'border-b border-[#E9E4D9]' : ''}`}
+              className={`px-7 py-5 ${i < items.length - 1 ? 'border-b border-[#E7E7E7]' : ''}`}
             >
               <div className="flex items-start justify-between gap-6">
                 <div className="flex items-start gap-5 min-w-0 flex-1">
@@ -458,7 +458,7 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
             </div>
           )}
 
-          <div className="flex justify-end gap-2 pt-5 border-t border-[#E9E4D9]">
+          <div className="flex justify-end gap-2 pt-5 border-t border-[#E7E7E7]">
             <Button variant="ghost" onClick={() => setShowAdequacy(false)}>Annuler</Button>
             <Button
               variant="primary"
@@ -489,7 +489,7 @@ function SigningLinkCard({ title, caption, link, copied, onCopy }) {
     <Card className="px-7 py-6">
       <div className="flex items-start justify-between gap-4 mb-5 flex-wrap">
         <div className="flex items-start gap-4 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-[#F5F3EE] border border-[#E9E4D9] flex items-center justify-center text-[#0A0A0A] flex-shrink-0">
+          <div className="w-10 h-10 rounded-full bg-[#F5F3EE] border border-[#E7E7E7] flex items-center justify-center text-[#0A0A0A] flex-shrink-0">
             <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
             </svg>
@@ -501,7 +501,7 @@ function SigningLinkCard({ title, caption, link, copied, onCopy }) {
         </div>
         <Badge variant="success" dot>Prêt</Badge>
       </div>
-      <div className="flex items-center gap-2 p-2 bg-white border border-[#E9E4D9] rounded-[10px]">
+      <div className="flex items-center gap-2 p-2 bg-white border border-[#E7E7E7] rounded-[10px]">
         <div className="flex-1 min-w-0 text-[12px] text-[#0A0A0A] font-mono truncate px-3">
           {link}
         </div>
@@ -544,11 +544,11 @@ function ScreeningReport({ check, error }) {
     <div
       className={`rounded-[12px] border overflow-hidden ${
         clear
-          ? 'border-[#E9E4D9] bg-white'
+          ? 'border-[#E7E7E7] bg-white'
           : 'border-[rgba(220,38,38,0.22)] bg-white'
       }`}
     >
-      <div className="px-5 py-4 border-b border-[#E9E4D9] flex items-center justify-between gap-4">
+      <div className="px-5 py-4 border-b border-[#E7E7E7] flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           <div
             className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
@@ -588,7 +588,7 @@ function ScreeningReport({ check, error }) {
                 className={`px-3.5 py-3 rounded-[10px] border ${
                   c.n > 0
                     ? 'bg-[rgba(220,38,38,0.04)] border-[rgba(220,38,38,0.15)]'
-                    : 'bg-white border-[#E9E4D9]'
+                    : 'bg-white border-[#E7E7E7]'
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
@@ -604,7 +604,7 @@ function ScreeningReport({ check, error }) {
         </div>
 
         {check.complycube_check_id && (
-          <div className="flex items-center justify-between pt-3 border-t border-[#E9E4D9]">
+          <div className="flex items-center justify-between pt-3 border-t border-[#E7E7E7]">
             <span className="text-[10.5px] font-medium uppercase tracking-[0.08em] text-[#8A8278]">Référence ComplyCube</span>
             <span className="text-[11px] font-mono text-[#1E1E1E] truncate ml-4">{check.complycube_check_id}</span>
           </div>
@@ -625,7 +625,7 @@ function AdequacyQuestion({ n, question, value, onChange }) {
   return (
     <div>
       <div className="flex items-start gap-3 mb-3">
-        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#F5F3EE] border border-[#E9E4D9] text-[11px] font-medium text-[#1E1E1E] flex items-center justify-center tabular-nums mt-0.5">
+        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#F5F3EE] border border-[#E7E7E7] text-[11px] font-medium text-[#1E1E1E] flex items-center justify-center tabular-nums mt-0.5">
           {n}
         </span>
         <p className="flex-1 text-[14px] text-[#0A0A0A] leading-relaxed tracking-[-0.006em]">{question}</p>

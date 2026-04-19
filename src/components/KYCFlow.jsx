@@ -341,7 +341,7 @@ export default function KYCFlow({ client, onComplete }) {
         </div>
 
         {/* ── Navigation ── */}
-        <div className="flex items-center justify-between mt-6 pt-5 border-t border-[#E9E4D9]">
+        <div className="flex items-center justify-between mt-6 pt-5 border-t border-[#E7E7E7]">
           <Button
             variant="ghost"
             onClick={() => setCurrentStep(p => Math.max(0, p - 1))}
@@ -403,7 +403,7 @@ function StepRail({ steps, currentStep, onSelect, isComplete, isPending }) {
                       ? 'bg-white border border-[rgba(22,163,74,0.35)] text-[#16A34A]'
                       : pending
                         ? 'bg-white border border-[rgba(124,94,60,0.35)] text-[#7C5E3C]'
-                        : 'bg-[#F5F3EE] border border-[#E9E4D9] text-[#8A8278]'
+                        : 'bg-[#F5F3EE] border border-[#E7E7E7] text-[#8A8278]'
                 }`}
               >
                 {complete ? (
@@ -458,7 +458,7 @@ function DocumentUploadStep({
 
       {isComplete && (
         <div className="mb-4 px-4 py-3 rounded-[10px] bg-white border border-[rgba(22,163,74,0.22)] flex items-center gap-3">
-          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-[#E9E4D9] flex items-center justify-center shadow-crisp">
+          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-[#E7E7E7] flex items-center justify-center shadow-crisp">
             <svg className="w-4 h-4 text-[#16A34A]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
@@ -471,7 +471,7 @@ function DocumentUploadStep({
       )}
 
       {isPending && (
-        <div className="mb-4 px-4 py-3 rounded-[10px] bg-white border border-[#E9E4D9] flex items-center gap-3">
+        <div className="mb-4 px-4 py-3 rounded-[10px] bg-white border border-[#E7E7E7] flex items-center gap-3">
           <Spinner size="w-4 h-4" />
           <div className="min-w-0">
             <p className="text-[13px] font-medium text-[#0A0A0A] tracking-[-0.006em]">Vérification en cours</p>
@@ -482,7 +482,7 @@ function DocumentUploadStep({
 
       {isFailed && (
         <div className="mb-4 px-4 py-3 rounded-[10px] bg-white border border-[rgba(220,38,38,0.22)] flex items-center gap-3">
-          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-[#E9E4D9] flex items-center justify-center shadow-crisp">
+          <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-[#E7E7E7] flex items-center justify-center shadow-crisp">
             <svg className="w-4 h-4 text-[#DC2626]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -520,7 +520,7 @@ function DocumentUploadStep({
 
           {uploading ? (
             <div className="relative flex flex-col items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-white border border-[#E9E4D9] flex items-center justify-center shadow-crisp">
+              <div className="w-12 h-12 rounded-full bg-white border border-[#E7E7E7] flex items-center justify-center shadow-crisp">
                 <Spinner size="w-5 h-5" />
               </div>
               <p className="text-[13px] text-[#5D5D5D] tracking-[-0.006em]">Envoi et analyse du document…</p>
@@ -544,7 +544,7 @@ function DocumentUploadStep({
                   {['Passeport', "Carte d'identité", 'Permis de conduire'].map(t => (
                     <span
                       key={t}
-                      className="px-2.5 py-1 rounded-full bg-white border border-[#E9E4D9] text-[10.5px] font-medium text-[#5D5D5D] tracking-[-0.003em]"
+                      className="px-2.5 py-1 rounded-full bg-white border border-[#E7E7E7] text-[10.5px] font-medium text-[#5D5D5D] tracking-[-0.003em]"
                     >
                       {t}
                     </span>
@@ -558,7 +558,7 @@ function DocumentUploadStep({
 
       {/* Company requirements reminder */}
       {step.id === 'company_docs' && (
-        <div className="mt-4 rounded-[10px] bg-white border border-[#E9E4D9] p-4">
+        <div className="mt-4 rounded-[10px] bg-white border border-[#E7E7E7] p-4">
           <p className="text-[11px] font-medium uppercase tracking-[0.06em] text-[#8A8278] mb-2">
             Documents requis · Personne morale
           </p>
@@ -633,9 +633,9 @@ function AmlScreeningStep({ checks, screening, onStartScreening, clientName }) {
         <div className="text-center py-6">
           {screening ? (
             <div className="flex flex-col items-center gap-5">
-              <div className="relative w-16 h-16 rounded-full bg-white border border-[#E9E4D9] shadow-crisp flex items-center justify-center">
+              <div className="relative w-16 h-16 rounded-full bg-white border border-[#E7E7E7] shadow-crisp flex items-center justify-center">
                 <Spinner size="w-6 h-6" />
-                <div className="absolute inset-0 rounded-full border-2 border-[#E9E4D9]" />
+                <div className="absolute inset-0 rounded-full border-2 border-[#E7E7E7]" />
               </div>
               <div>
                 <p className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em]">Analyse en cours…</p>
@@ -647,7 +647,7 @@ function AmlScreeningStep({ checks, screening, onStartScreening, clientName }) {
                 {['Sanctions', 'PEP', 'Média défavorable'].map((item) => (
                   <span
                     key={item}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-[#E9E4D9] shadow-crisp"
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-[#E7E7E7] shadow-crisp"
                   >
                     <Spinner size="w-2.5 h-2.5" />
                     <span className="text-[10.5px] text-[#5D5D5D] tracking-[-0.003em]">{item}</span>
@@ -750,7 +750,7 @@ function ResultStep({ kycStatus, checks, isAdmin, onValidate, overallComplete })
 function SummaryCard({ label, value, ok, hint }) {
   return (
     <div className={`rounded-[12px] p-4 bg-white border ${
-      ok ? 'border-[rgba(22,163,74,0.22)] shadow-crisp' : 'border-[#E9E4D9]'
+      ok ? 'border-[rgba(22,163,74,0.22)] shadow-crisp' : 'border-[#E7E7E7]'
     }`}>
       <div className="flex items-center gap-2">
         <span className="w-1.5 h-1.5 rounded-full" style={{ background: ok ? '#16A34A' : '#9B9B9B' }} />
@@ -778,7 +778,7 @@ function CheckRow({ check }) {
   return (
     <div className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-white transition-colors">
       <div className="flex items-center gap-3 min-w-0">
-        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-[#E9E4D9] flex items-center justify-center shadow-crisp">
+        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-white border border-[#E7E7E7] flex items-center justify-center shadow-crisp">
           {check.status === 'complete' ? (
             <svg className="w-4 h-4" style={{ color: statusCfg.color }} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />

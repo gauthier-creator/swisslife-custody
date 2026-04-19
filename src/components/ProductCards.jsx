@@ -65,9 +65,9 @@ export function ProductCard({
       className={`
         group relative flex-shrink-0 w-[304px] snap-start
         rounded-[12px] overflow-hidden flex flex-col
-        bg-white border border-[#E9E4D9]
+        bg-white border border-[#E7E7E7]
         transition-colors duration-200
-        hover:border-[#C8BEA4]
+        hover:border-[#D1D5DB]
         ${className}
       `}
     >
@@ -76,7 +76,7 @@ export function ProductCard({
         {scene}
         {/* Small square icon badge top-left (Ramify pattern) */}
         <span
-          className="absolute top-3.5 left-3.5 w-8 h-8 rounded-[6px] bg-white/90 border border-[#E9E4D9] backdrop-blur-sm
+          className="absolute top-3.5 left-3.5 w-8 h-8 rounded-[6px] bg-white/90 border border-[#E7E7E7] backdrop-blur-sm
                      flex items-center justify-center text-[#1E1E1E] shadow-[0_1px_2px_rgba(10,10,10,0.04)]"
         >
           {categoryIcon}
@@ -162,7 +162,7 @@ export function ProductCarousel({ title, eyebrow, children, className = '' }) {
             </p>
           )}
           <h2
-            className="font-display text-[24px] text-[#0A0A0A] leading-[1.15]"
+            className="text-[22px] font-bold text-[#0F0F10] leading-[1.15]"
             style={{ letterSpacing: '-0.022em' }}
           >
             {title}
@@ -193,7 +193,7 @@ function CarouselNav({ direction, disabled, onClick }) {
       disabled={disabled}
       aria-label={direction === 'left' ? 'Précédent' : 'Suivant'}
       className={`
-        w-10 h-10 rounded-full bg-white border border-[#E9E4D9]
+        w-10 h-10 rounded-full bg-white border border-[#E7E7E7]
         shadow-[0_1px_0_rgba(255,255,255,0.95)_inset,0_1px_2px_rgba(10,10,10,0.05),0_4px_10px_-4px_rgba(10,10,10,0.12)]
         flex items-center justify-center text-[#1E1E1E]
         disabled:opacity-30 disabled:cursor-not-allowed
@@ -328,10 +328,10 @@ export function MandatCard({
     <button
       type="button"
       onClick={onClick}
-      className="group relative flex-shrink-0 w-[280px] snap-start text-left rounded-[12px] border border-[#E9E4D9] bg-white p-3 transition-colors duration-150 hover:border-[#C8BEA4]"
+      className="group relative flex-shrink-0 w-[280px] snap-start text-left rounded-[12px] border border-[#E7E7E7] bg-white p-3 transition-colors duration-150 hover:border-[#D1D5DB]"
     >
       {/* Marble hero — muted cream, no inner glow */}
-      <div className="relative h-[180px] rounded-[8px] overflow-hidden border border-[#E9E4D9]">
+      <div className="relative h-[180px] rounded-[8px] overflow-hidden border border-[#E7E7E7]">
         <MarbleTexture variant={marble} seed={seed} />
 
         {/* Portfolio label — centered, serif */}
@@ -339,8 +339,8 @@ export function MandatCard({
           <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8A8278]">
             Portefeuille
           </span>
-          <span className="font-display text-[22px] text-[#1E1E1E] mt-1"
-                style={{ letterSpacing: '-0.012em', fontWeight: 400 }}>
+          <span className="text-[20px] font-bold text-[#0F0F10] mt-1"
+                style={{ letterSpacing: '-0.02em' }}>
             {label}
           </span>
         </div>
@@ -375,7 +375,7 @@ export function MandatCard({
 
       {/* CTA button — mirrors ProductCard cta-primary on hover */}
       <div className="mt-3">
-        <span className="inline-flex items-center justify-center gap-1.5 w-full h-9 rounded-[6px] bg-white border border-[#E9E4D9] text-[13.5px] font-semibold text-[#1E1E1E] transition-colors group-hover:bg-[#1E1E1E] group-hover:text-white group-hover:border-[#1E1E1E]">
+        <span className="inline-flex items-center justify-center gap-1.5 w-full h-9 rounded-[6px] bg-white border border-[#E7E7E7] text-[13.5px] font-semibold text-[#1E1E1E] transition-colors group-hover:bg-[#1E1E1E] group-hover:text-white group-hover:border-[#1E1E1E]">
           {cta}
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
@@ -403,7 +403,7 @@ export function MarbleHero({
   className = '',
 }) {
   return (
-    <div className={`relative overflow-hidden rounded-[12px] border border-[#E9E4D9] ${className}`}>
+    <div className={`relative overflow-hidden rounded-[12px] border border-[#E7E7E7] ${className}`}>
       {/* Muted marble background — no specular, no watermark, no seal */}
       <div className="absolute inset-0 overflow-hidden">
         <MarbleTexture variant={marble} seed={seed} />
@@ -417,8 +417,8 @@ export function MarbleHero({
           </p>
         )}
         {title && (
-          <h2 className="font-display text-[32px] text-[#1E1E1E] leading-[1.08]"
-              style={{ letterSpacing: '-0.012em', fontWeight: 400 }}>
+          <h2 className="text-[28px] font-bold text-[#0F0F10] leading-[1.12]"
+              style={{ letterSpacing: '-0.025em' }}>
             {title}
           </h2>
         )}
@@ -448,7 +448,7 @@ export function MarbleHero({
           <div className="mt-4 flex items-center gap-3 flex-wrap">
             {meta.map((m, i) => (
               <span key={i} className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold text-[#8A8278] tracking-[0.06em] uppercase">
-                {i > 0 && <span className="w-[3px] h-[3px] rounded-full bg-[#C8BEA4]" />}
+                {i > 0 && <span className="w-[3px] h-[3px] rounded-full bg-[#D1D5DB]" />}
                 {m}
               </span>
             ))}
@@ -501,7 +501,7 @@ export function MandatCarousel({ title, eyebrow, children, trailing, className =
             </p>
           )}
           <h2
-            className="font-display text-[24px] text-[#0A0A0A] leading-[1.15]"
+            className="text-[22px] font-bold text-[#0F0F10] leading-[1.15]"
             style={{ letterSpacing: '-0.022em' }}
           >
             {title}

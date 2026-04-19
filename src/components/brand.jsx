@@ -32,7 +32,7 @@ export function BrandMark({ size = 64, label }) {
         className="absolute inset-0 rounded-full animate-halo-pulse"
         style={{
           background:
-            'radial-gradient(circle, rgba(212,165,116,0.38) 0%, rgba(124,94,60,0.18) 45%, transparent 72%)',
+            'radial-gradient(circle, rgba(212,165,116,0.38) 0%, rgba(124,94,60,0.12) 45%, transparent 72%)',
         }}
       />
       {/* Conic gradient ring — masked to become a donut */}

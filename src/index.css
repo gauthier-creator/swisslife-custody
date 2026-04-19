@@ -476,7 +476,7 @@ html, body {
 /* Fintech aesthetic utilities collapsed to plain surfaces — Ramify doesn't
    do dot meshes, glassmorphism, or gradient rings. Kept as noop. */
 .bg-dot-mesh { background-color: #FFFFFF; }
-.glass-card  { background: #FFFFFF; border: 1px solid #E9E4D9; }
+.glass-card  { background: #FFFFFF; border: 1px solid #E7E7E7; }
 .gradient-ring { background: #FFFFFF; border-radius: 8px; }
 .gradient-ring::before { display: none; }
 
@@ -498,7 +498,7 @@ html, body {
 /* Ramify fund-card — 1px hairline, 8px radius, no shadow, 24px pad */
 .card-fund {
   background: #FFFFFF;
-  border: 1px solid #E9E4D9;
+  border: 1px solid #E7E7E7;
   border-radius: 8px;
   overflow: hidden;
   transition: border-color 220ms cubic-bezier(0.2, 0, 0, 1);
@@ -513,7 +513,7 @@ html, body {
   align-items: center;
   justify-content: space-between;
   padding: 14px 24px;
-  border-top: 1px solid #E9E4D9;
+  border-top: 1px solid #E7E7E7;
   font-size: 14px;
 }
 .metric-row > .label {
@@ -565,14 +565,14 @@ html, body {
 .card-highlight.gold    > .body > .value { color: #B8823A; }
 .card-highlight.green   { background: #ECFAF0; }
 .card-highlight.green   > .body > .value { color: #0F9868; }
-.card-highlight.neutral { background: #FFFFFF; border: 1px solid #E9E4D9; }
+.card-highlight.neutral { background: #FFFFFF; border: 1px solid #E7E7E7; }
 .card-highlight.neutral > .body > .value { color: #1E1E1E; }
 
 /* Tab underline (Ramify: 14px semibold, active has 2px bronze bar) */
 .tab-strip {
   display: flex;
   gap: 24px;
-  border-bottom: 1px solid #E9E4D9;
+  border-bottom: 1px solid #E7E7E7;
 }
 .tab-item {
   position: relative;
@@ -641,7 +641,7 @@ html, body {
   padding: 8px 16px;
   background: #FFFFFF;
   color: #1E1E1E;
-  border: 1px solid #E9E4D9;
+  border: 1px solid #E7E7E7;
   border-radius: 4px;
   font-size: 14px;
   font-weight: 600;
@@ -649,7 +649,7 @@ html, body {
   outline: none;
   transition: border-color 180ms, background 180ms, box-shadow 120ms;
 }
-.cta-secondary:hover { border-color: #C8BEA4; background: #FDFBF6; }
+.cta-secondary:hover { border-color: #D1D5DB; background: #FDFBF6; }
 .cta-secondary:focus-visible { box-shadow: 0 0 0 3px rgba(124, 94, 60, 0.25); border-color: #7C5E3C; }
 
 /* Ramify gold CTA — for the big hero "Simulez" buttons */

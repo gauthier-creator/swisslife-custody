@@ -145,11 +145,11 @@ export function BrandGlyph({ name = 'fleur', size = 14, className = '', style })
 export function BrandGlyphRule({ name = 'fleur', size = 12, className = '', glyphClassName = 'text-[#8A8278]' }) {
   return (
     <div className={`flex items-center gap-3 ${className}`} aria-hidden="true">
-      <span className="flex-1 h-px bg-[#E9E4D9]" />
+      <span className="flex-1 h-px bg-[#E7E7E7]" />
       <span className={glyphClassName}>
         <BrandGlyph name={name} size={size} />
       </span>
-      <span className="flex-1 h-px bg-[#E9E4D9]" />
+      <span className="flex-1 h-px bg-[#E7E7E7]" />
     </div>
   );
 }

@@ -137,7 +137,7 @@ export default function Layout({ children, section, onNavigate }) {
       {/* ── Sidebar ─────────────────────────────────────── */}
       <aside
         aria-label="Navigation principale"
-        className={`flex-shrink-0 border-r border-[#E9E4D9] bg-white flex flex-col h-screen sticky top-0 transition-[width] duration-[280ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
+        className={`flex-shrink-0 border-r border-[#E7E7E7] bg-white flex flex-col h-screen sticky top-0 transition-[width] duration-[280ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
           collapsed ? 'w-[72px]' : 'w-[256px]'
         }`}
       >
@@ -175,7 +175,7 @@ export default function Layout({ children, section, onNavigate }) {
 
           {adminItems.length > 0 && (
             <>
-              <div className="my-4 h-px bg-[#E9E4D9]" />
+              <div className="my-4 h-px bg-[#E7E7E7]" />
               <div className="space-y-0.5">
                 {adminItems.map((item) => (
                   <NavButton
@@ -211,7 +211,7 @@ export default function Layout({ children, section, onNavigate }) {
         </div>
 
         {/* Account — Ramify footer: avatar + name + MEMBRE label + chevrons */}
-        <div className={`pb-4 pt-2 border-t border-[#E9E4D9] ${collapsed ? 'px-2' : 'px-3'}`}>
+        <div className={`pb-4 pt-2 border-t border-[#E7E7E7] ${collapsed ? 'px-2' : 'px-3'}`}>
           {collapsed ? (
             <div className="flex flex-col items-center gap-2">
               <div title={displayName}>
@@ -254,7 +254,7 @@ export default function Layout({ children, section, onNavigate }) {
           onClick={toggleSidebar}
           aria-label={collapsed ? 'Déployer le menu' : 'Réduire le menu'}
           title={collapsed ? 'Déployer (⌘\\)' : 'Réduire (⌘\\)'}
-          className="absolute top-[44px] -right-3 z-10 w-6 h-6 flex items-center justify-center rounded-full bg-white border border-[#E9E4D9] text-[#8A8278] hover:text-[#1E1E1E] hover:border-[#C8BEA4] transition-colors"
+          className="absolute top-[44px] -right-3 z-10 w-6 h-6 flex items-center justify-center rounded-full bg-white border border-[#E7E7E7] text-[#8A8278] hover:text-[#1E1E1E] hover:border-[#D1D5DB] transition-colors"
         >
           <IconChevron className={`w-3 h-3 transition-transform duration-300 ${collapsed ? 'rotate-180' : ''}`} />
         </button>

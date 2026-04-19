@@ -42,7 +42,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[#FAFAFA] text-[#1E1E1E] flex flex-col">
       {/* ── Top nav — tiny brand only, no trust badges ── */}
-      <header className="border-b border-[#E9E4D9]">
+      <header className="border-b border-[#E7E7E7]">
         <div className="max-w-[1240px] mx-auto px-10 h-[60px] flex items-center">
           <div className="flex items-center gap-2">
             <span className="w-7 h-7 rounded-[6px] bg-[#1E1E1E] text-white flex items-center justify-center">
@@ -59,7 +59,7 @@ export default function LoginPage() {
       <main className="flex-1 grid grid-cols-1 lg:grid-cols-2 max-w-[1240px] mx-auto w-full">
 
         {/* Left — institutional statement + compliance strip */}
-        <section className="relative hidden lg:flex flex-col justify-center px-12 py-16 border-r border-[#E9E4D9]">
+        <section className="relative hidden lg:flex flex-col justify-center px-12 py-16 border-r border-[#E7E7E7]">
           <div className="animate-fade space-y-7 max-w-[440px]">
             <div className="flex items-center gap-2.5 text-[#8A8278]">
               <BrandGlyph name="compass" size={14} />
@@ -68,8 +68,8 @@ export default function LoginPage() {
               </p>
             </div>
 
-            <h1 className="font-display text-[34px] leading-[1.15] text-[#1E1E1E]"
-                style={{ letterSpacing: '-0.01em', fontWeight: 400, fontVariationSettings: '"opsz" 36' }}>
+            <h1 className="text-[36px] font-bold leading-[1.1] text-[#0F0F10]"
+                style={{ letterSpacing: '-0.028em' }}>
               Conservation institutionnelle d'actifs numériques.
             </h1>
 
@@ -79,7 +79,7 @@ export default function LoginPage() {
             </p>
 
             {/* Compliance quartet — sober label/value rows */}
-            <div className="grid grid-cols-4 gap-5 pt-6 border-t border-[#E9E4D9]">
+            <div className="grid grid-cols-4 gap-5 pt-6 border-t border-[#E7E7E7]">
               {[
                 { k: 'AMF',    v: 'Régulé' },
                 { k: 'ACPR',   v: 'n° 17328' },
@@ -183,7 +183,7 @@ export default function LoginPage() {
                           className={`h-10 text-[13px] font-semibold rounded-[6px] border transition-colors ${
                             active
                               ? 'bg-[#1E1E1E] text-white border-[#1E1E1E]'
-                              : 'bg-white text-[#5D5D5D] border-[#E9E4D9] hover:text-[#1E1E1E] hover:border-[#C8BEA4]'
+                              : 'bg-white text-[#5D5D5D] border-[#E7E7E7] hover:text-[#1E1E1E] hover:border-[#D1D5DB]'
                           }`}
                         >
                           {r.label}
@@ -211,15 +211,15 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            <div className="mt-6 pt-5 border-t border-[#E9E4D9] text-center">
+            <div className="mt-6 pt-5 border-t border-[#E7E7E7] text-center">
               <button
                 type="button"
                 onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setSuccess(''); }}
                 className="text-[13px] text-[#5D5D5D] hover:text-[#1E1E1E] transition-colors"
               >
                 {mode === 'login'
-                  ? <>Pas encore de compte ? <span className="font-semibold text-[#1E1E1E] underline underline-offset-[3px] decoration-[#C8BEA4] hover:decoration-[#1E1E1E]">Créer un compte</span></>
-                  : <>Déjà inscrit ? <span className="font-semibold text-[#1E1E1E] underline underline-offset-[3px] decoration-[#C8BEA4] hover:decoration-[#1E1E1E]">Se connecter</span></>}
+                  ? <>Pas encore de compte ? <span className="font-semibold text-[#1E1E1E] underline underline-offset-[3px] decoration-[#D1D5DB] hover:decoration-[#1E1E1E]">Créer un compte</span></>
+                  : <>Déjà inscrit ? <span className="font-semibold text-[#1E1E1E] underline underline-offset-[3px] decoration-[#D1D5DB] hover:decoration-[#1E1E1E]">Se connecter</span></>}
               </button>
             </div>
           </div>
@@ -227,7 +227,7 @@ export default function LoginPage() {
       </main>
 
       {/* Minimal footer */}
-      <footer className="border-t border-[#E9E4D9]">
+      <footer className="border-t border-[#E7E7E7]">
         <div className="max-w-[1240px] mx-auto px-10 h-12 flex items-center justify-between text-[11px] text-[#8A8278]">
           <span>© 2026 SwissLife Banque Privée</span>
           <span>support@swisslife-custody.com</span>

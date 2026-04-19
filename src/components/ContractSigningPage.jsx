@@ -95,7 +95,7 @@ export default function ContractSigningPage({ token }) {
           </div>
           <h1 className="text-[15px] font-semibold text-[#0A0A0A]">Lien invalide</h1>
           <p className="text-[13px] text-[#5D5D5D] mt-2 leading-relaxed">{error}</p>
-          <p className="mt-6 pt-4 border-t border-[#E9E4D9] text-[11px] text-[#8A8278] font-medium uppercase tracking-wider">
+          <p className="mt-6 pt-4 border-t border-[#E7E7E7] text-[11px] text-[#8A8278] font-medium uppercase tracking-wider">
             SwissLife Banque Privée
           </p>
         </Card>
@@ -119,7 +119,7 @@ export default function ContractSigningPage({ token }) {
           <p className="mt-2 text-[13px] text-[#5D5D5D] leading-relaxed max-w-sm mx-auto">
             Votre contrat de conservation d'actifs numériques a été enregistré et versé à votre dossier. Votre banquier privé vous contactera pour les prochaines étapes.
           </p>
-          <div className="mt-8 pt-5 border-t border-[#E9E4D9]">
+          <div className="mt-8 pt-5 border-t border-[#E7E7E7]">
             <p className="text-[11px] text-[#8A8278] font-medium uppercase tracking-wider">
               SwissLife Banque Privée · Paris
             </p>
@@ -153,7 +153,7 @@ export default function ContractSigningPage({ token }) {
   return (
     <div className="min-h-screen bg-white text-[#0A0A0A]">
       {/* ── Top nav ─────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-[#E9E4D9]">
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-[#E7E7E7]">
         <div className="max-w-[760px] mx-auto px-6 h-12 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-6 h-6 bg-[#0A0A0A] rounded-md flex items-center justify-center">
@@ -186,9 +186,9 @@ export default function ContractSigningPage({ token }) {
         </div>
 
         {/* ── Contract body card ─────────────────────── */}
-        <div ref={contractRef} className="bg-white border border-[#E9E4D9] rounded-lg p-8">
+        <div ref={contractRef} className="bg-white border border-[#E7E7E7] rounded-lg p-8">
           {/* Parties */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pb-6 border-b border-[#E9E4D9]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pb-6 border-b border-[#E7E7E7]">
             <div>
               <p className="label text-[11px] font-semibold text-[#5D5D5D] uppercase tracking-wider mb-1.5">La Banque</p>
               <p className="text-[14px] font-semibold text-[#0A0A0A]">SwissLife Banque Privée</p>
@@ -227,7 +227,7 @@ export default function ContractSigningPage({ token }) {
           </div>
 
           {/* Closing */}
-          <div className="mt-8 pt-6 border-t border-[#E9E4D9]">
+          <div className="mt-8 pt-6 border-t border-[#E7E7E7]">
             <p className="text-[13px] text-[#1E1E1E]">Fait à Paris, le {currentDate}.</p>
             <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="border-t border-[#0A0A0A] pt-2">
@@ -278,7 +278,7 @@ export default function ContractSigningPage({ token }) {
         </Card>
 
         {/* ── Footer ──────────────────────────────────── */}
-        <footer className="mt-8 pt-4 border-t border-[#E9E4D9] flex items-center justify-between">
+        <footer className="mt-8 pt-4 border-t border-[#E7E7E7] flex items-center justify-between">
           <p className="text-[11px] text-[#8A8278] font-medium uppercase tracking-wider">
             SwissLife Banque Privée · Paris
           </p>

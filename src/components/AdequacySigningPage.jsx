@@ -80,7 +80,7 @@ export default function AdequacySigningPage({ token }) {
           </div>
           <h1 className="text-[15px] font-semibold text-[#0A0A0A]">Lien invalide</h1>
           <p className="text-[13px] text-[#5D5D5D] mt-2 leading-relaxed">{error}</p>
-          <p className="mt-6 pt-4 border-t border-[#E9E4D9] text-[11px] text-[#8A8278] font-medium uppercase tracking-wider">
+          <p className="mt-6 pt-4 border-t border-[#E7E7E7] text-[11px] text-[#8A8278] font-medium uppercase tracking-wider">
             SwissLife Banque Privée
           </p>
         </Card>
@@ -104,7 +104,7 @@ export default function AdequacySigningPage({ token }) {
           <p className="mt-2 text-[13px] text-[#5D5D5D] leading-relaxed max-w-sm mx-auto">
             Votre questionnaire d'adéquation a été enregistré et versé à votre dossier.
           </p>
-          <div className="mt-8 pt-5 border-t border-[#E9E4D9]">
+          <div className="mt-8 pt-5 border-t border-[#E7E7E7]">
             <p className="text-[11px] text-[#8A8278] font-medium uppercase tracking-wider">
               SwissLife Banque Privée · Paris
             </p>
@@ -121,7 +121,7 @@ export default function AdequacySigningPage({ token }) {
   return (
     <div className="min-h-screen bg-white text-[#0A0A0A]">
       {/* ── Top nav ─────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-[#E9E4D9]">
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-[#E7E7E7]">
         <div className="max-w-[760px] mx-auto px-6 h-12 flex items-center gap-3">
           <div className="w-6 h-6 bg-[#0A0A0A] rounded-md flex items-center justify-center">
             <span className="text-white text-[10px] font-bold tracking-tight">SL</span>
@@ -161,7 +161,7 @@ export default function AdequacySigningPage({ token }) {
 
         {/* ── Questions card ─────────────────────────── */}
         <Card className="mb-4">
-          <div className="px-5 py-3 border-b border-[#E9E4D9] bg-white">
+          <div className="px-5 py-3 border-b border-[#E7E7E7] bg-white">
             <p className="text-[11px] font-semibold text-[#5D5D5D] uppercase tracking-wider">
               Évaluation — réponses préparées
             </p>
@@ -173,7 +173,7 @@ export default function AdequacySigningPage({ token }) {
               return (
                 <li
                   key={i}
-                  className={`px-5 py-4 flex items-start justify-between gap-4 ${i < QUESTIONS.length - 1 ? 'border-b border-[#E9E4D9]' : ''}`}
+                  className={`px-5 py-4 flex items-start justify-between gap-4 ${i < QUESTIONS.length - 1 ? 'border-b border-[#E7E7E7]' : ''}`}
                 >
                   <div className="flex items-start gap-3 min-w-0 flex-1">
                     <span className="flex-shrink-0 w-5 h-5 rounded-full bg-[#F5F3EE] text-[11px] font-semibold text-[#1E1E1E] flex items-center justify-center tabular-nums mt-0.5">
@@ -191,7 +191,7 @@ export default function AdequacySigningPage({ token }) {
             })}
           </ul>
           {assessment.notes && (
-            <div className="px-5 py-4 border-t border-[#E9E4D9] bg-white">
+            <div className="px-5 py-4 border-t border-[#E7E7E7] bg-white">
               <p className="text-[11px] font-semibold text-[#5D5D5D] uppercase tracking-wider mb-1.5">
                 Notes du banquier
               </p>
@@ -236,7 +236,7 @@ export default function AdequacySigningPage({ token }) {
         </Card>
 
         {/* ── Footer ──────────────────────────────────── */}
-        <footer className="mt-8 pt-4 border-t border-[#E9E4D9] flex items-center justify-between">
+        <footer className="mt-8 pt-4 border-t border-[#E7E7E7] flex items-center justify-between">
           <p className="text-[11px] text-[#8A8278] font-medium uppercase tracking-wider">
             SwissLife Banque Privée · Paris
           </p>
