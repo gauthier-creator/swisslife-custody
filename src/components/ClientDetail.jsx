@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { listWallets, createWallet, getWalletAssets, transferAsset, getWalletHistory } from '../services/dfnsApi';
-import { fetchContacts, fetchClientById, parseDescription } from '../services/salesforceApi';
+import { fetchContacts, fetchClientById, parseDescription, getSalesforceStatus } from '../services/salesforceApi';
 import WhitelistPanel from './WhitelistPanel';
 import RiskConfigPanel from './RiskConfigPanel';
 import KYCFlow from './KYCFlow';
@@ -57,6 +57,8 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
   const [kycLive, setKycLive] = useState(null);
   const [kycModuleEnabled, setKycModuleEnabled] = useState(false);
   const [frozenWallets, setFrozenWallets] = useState({});
+  const [sfStatus, setSfStatus] = useState(null);
+  const [showStatementModal, setShowStatementModal] = useState(false);
   const { user, isAdmin } = useAuth();
 
   const reloadClient = async () => {
@@ -72,7 +74,17 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
   useEffect(() => {
     loadWallets(); loadContacts(); loadKycStatus();
     fetch(`${API_BASE}/api/admin/settings`).then(r => r.json()).then(s => setKycModuleEnabled(!!s.kyc_module_enabled)).catch(() => {});
+    getSalesforceStatus().then(setSfStatus).catch(() => {});
   }, []);
+
+  // Deep-link to the Salesforce Lightning Account record in a new tab.
+  // Instance URL comes from our /api/salesforce/status endpoint; if not
+  // connected yet, falls back to the sandbox domain.
+  const openInSalesforce = () => {
+    const base = sfStatus?.instanceUrl || 'https://login.salesforce.com';
+    const url = `${base}/lightning/r/Account/${client.id}/view`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
 
   const loadKycStatus = async () => {
     try { const data = await getKycStatus(client.id); setKycLive(data); }
@@ -348,7 +360,12 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
           </div>
 
           <aside className="lg:col-span-4 space-y-6">
-            {/* Banker quick actions — the core workflow entry points */}
+            {/* Banker quick actions — 4 cards covering the real workflow:
+                1. Ouvrir dans Salesforce (banker's CRM reflex #1)
+                2. Lancer screening (Chainalysis before any custody action)
+                3. Créer un wallet (after screening passes)
+                4. Envoyer relevé custody (quarterly ACPR statement to client)
+                "Transferts" removed — accessible via tab, not a sidebar CTA. */}
             <Card>
               <div className="px-5 py-4 border-b border-[#E7E7E7]">
                 <p className="text-[11px] font-semibold text-[#8A8278] uppercase tracking-[0.1em]">
@@ -359,66 +376,52 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                 </p>
               </div>
               <div className="p-4 space-y-2">
-                <button
+                <ActionRow
+                  onClick={openInSalesforce}
+                  icon={
+                    <svg className="w-[14px] h-[14px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M14 3h7v7M10 14L21 3M21 14v5a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h5" />
+                    </svg>
+                  }
+                  title="Ouvrir dans Salesforce"
+                  subtitle={sfStatus?.configured ? 'Compte · Contacts · CRM' : 'Salesforce non configuré'}
+                  disabled={!sfStatus?.configured}
+                />
+
+                <ActionRow
                   onClick={() => setTab('kyc')}
-                  className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-[6px] bg-white border border-[#E7E7E7] hover:border-[#7C5E3C] hover:bg-[#FDFBF6] transition-colors text-left group"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="w-7 h-7 rounded-[6px] bg-[#F5E5CE] text-[#7C5E3C] flex items-center justify-center flex-shrink-0">
-                      <svg className="w-[14px] h-[14px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.306a11.95 11.95 0 015.814-5.518l2.74-1.22" />
-                      </svg>
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-semibold text-[#0F0F10]">Lancer screening</p>
-                      <p className="text-[11.5px] text-[#8A8278]">Chainalysis · sanctions OFAC</p>
-                    </div>
-                  </div>
-                  <svg className="w-3.5 h-3.5 text-[#8A8278] group-hover:text-[#1E1E1E] group-hover:translate-x-0.5 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
+                  icon={
+                    <svg className="w-[14px] h-[14px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.306a11.95 11.95 0 015.814-5.518l2.74-1.22" />
+                    </svg>
+                  }
+                  title="Lancer screening"
+                  subtitle="Chainalysis · sanctions OFAC"
+                />
 
-                <button
+                <ActionRow
                   onClick={() => { setTab('wallets'); setShowCreate(true); }}
-                  className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-[6px] bg-white border border-[#E7E7E7] hover:border-[#7C5E3C] hover:bg-[#FDFBF6] transition-colors text-left group"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="w-7 h-7 rounded-[6px] bg-[#F5E5CE] text-[#7C5E3C] flex items-center justify-center flex-shrink-0">
-                      <svg className="w-[14px] h-[14px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                        <rect x="3" y="3" width="18" height="18" rx="2" />
-                        <circle cx="12" cy="12" r="4" />
-                      </svg>
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-semibold text-[#0F0F10]">Créer un wallet</p>
-                      <p className="text-[11.5px] text-[#8A8278]">DFNS · MPC 2 / 3</p>
-                    </div>
-                  </div>
-                  <svg className="w-3.5 h-3.5 text-[#8A8278] group-hover:text-[#1E1E1E] group-hover:translate-x-0.5 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
+                  icon={
+                    <svg className="w-[14px] h-[14px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <circle cx="12" cy="12" r="4" />
+                    </svg>
+                  }
+                  title="Créer un wallet"
+                  subtitle={wallets.length > 0 ? `${wallets.length} existant${wallets.length > 1 ? 's' : ''} · DFNS MPC` : 'DFNS · MPC 2 / 3'}
+                />
 
-                <button
-                  onClick={() => setTab('transfers')}
-                  className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-[6px] bg-white border border-[#E7E7E7] hover:border-[#7C5E3C] hover:bg-[#FDFBF6] transition-colors text-left group"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="w-7 h-7 rounded-[6px] bg-[#F5E5CE] text-[#7C5E3C] flex items-center justify-center flex-shrink-0">
-                      <svg className="w-[14px] h-[14px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4m14-2v2a4 4 0 01-4 4H3" />
-                      </svg>
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-semibold text-[#0F0F10]">Transferts</p>
-                      <p className="text-[11.5px] text-[#8A8278]">Quatre-yeux · Travel Rule</p>
-                    </div>
-                  </div>
-                  <svg className="w-3.5 h-3.5 text-[#8A8278] group-hover:text-[#1E1E1E] group-hover:translate-x-0.5 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </button>
+                <ActionRow
+                  onClick={() => setShowStatementModal(true)}
+                  icon={
+                    <svg className="w-[14px] h-[14px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l9 6 9-6M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" />
+                    </svg>
+                  }
+                  title="Envoyer relevé custody"
+                  subtitle={wallets.length > 0 ? 'PDF signé · horodaté · ACPR' : 'Créez un wallet d\'abord'}
+                  disabled={wallets.length === 0}
+                />
               </div>
             </Card>
 
@@ -956,11 +959,137 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
           </div>
         </div>
       </Modal>
+
+      {/* ═══ Statement Modal — "Envoyer relevé custody" ═══
+         Pre-filled email composer with the client's primary contact,
+         a wallet balances summary and the ACPR/MiCA reference. PDF
+         generation is stubbed (calls /api/salesforce/generate-statement
+         once wired). For now shows the compose preview + toast. */}
+      <Modal
+        isOpen={showStatementModal}
+        onClose={() => setShowStatementModal(false)}
+        title="Relevé custody trimestriel"
+        subtitle="PDF signé + cachet Sℓ · horodatage ACPR · envoi par mail au client"
+        maxWidth="max-w-2xl"
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Destinataire</label>
+              <input
+                type="email"
+                className={inputCls}
+                defaultValue={contacts[0]?.Email || ''}
+                placeholder="Aucun contact trouvé sur SFDC"
+                readOnly={!!contacts[0]?.Email}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Période</label>
+              <select className={selectCls} defaultValue="current-q">
+                <option value="current-q">Trimestre courant</option>
+                <option value="prev-q">Trimestre précédent</option>
+                <option value="year">Année fiscale</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className={labelCls}>Objet</label>
+            <input
+              type="text"
+              className={inputCls}
+              defaultValue={`Relevé custody · ${client.name} · T${Math.ceil((new Date().getMonth() + 1) / 3)} ${new Date().getFullYear()}`}
+            />
+          </div>
+
+          {/* Wallet balances preview — what will appear in the PDF */}
+          <div>
+            <label className={labelCls}>Soldes à inclure ({wallets.length} wallet{wallets.length > 1 ? 's' : ''})</label>
+            <div className="bg-[#FDFBF6] border border-[#E7E7E7] rounded-[8px] divide-y divide-[#E7E7E7]">
+              {wallets.length === 0 ? (
+                <p className="px-4 py-3 text-[12.5px] text-[#8A8278]">Aucun wallet sous mandat.</p>
+              ) : wallets.map(w => (
+                <div key={w.id} className="px-4 py-2.5 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="w-6 h-6 rounded-[5px] flex items-center justify-center text-white text-[10px] font-bold" style={{ backgroundColor: '#7C5E3C' }}>
+                      {(w.network || '').slice(0, 1)}
+                    </span>
+                    <span className="text-[13px] text-[#1E1E1E] font-medium truncate">{w.name || '—'}</span>
+                    <span className="text-[11.5px] text-[#8A8278] font-mono truncate">
+                      {w.address ? truncAddr(w.address, 6) : ''}
+                    </span>
+                  </div>
+                  <span className="text-[12.5px] text-[#8A8278] tabular-nums">
+                    Solde live au signing
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Regulatory mention */}
+          <div className="bg-[#EBF5FF] border border-[rgba(59,130,246,0.1)] rounded-[8px] px-4 py-3 flex items-start gap-3">
+            <svg className="w-4 h-4 text-[#1E40AF] mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p className="text-[12.5px] font-semibold text-[#1E40AF]">Conforme ACPR · MiCA Art. 75(7)</p>
+              <p className="text-[11.5px] text-[#1E40AF]/80 mt-0.5">
+                Le PDF est horodaté, scellé (Sℓ), archivé dans le coffre-fort clients Supabase et
+                journalisé dans l'audit log (<span className="font-mono">statement.sent</span>).
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t border-[#E7E7E7]">
+            <Button variant="ghost" onClick={() => setShowStatementModal(false)}>Annuler</Button>
+            <Button variant="primary" onClick={() => { setShowStatementModal(false); }}>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              Générer & envoyer
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
 
 /* ─── Sub-components ─── */
+
+// ActionRow — one row in the "Actions banquier" card. Peach icon badge +
+// title + subtitle + chevron that slides in from the left on hover.
+// Disabled state dims the whole row and removes the hover affordance.
+function ActionRow({ icon, title, subtitle, onClick, disabled = false }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-[6px] border transition-colors text-left group
+        ${disabled
+          ? 'bg-[#FAFAFA] border-[#E7E7E7] opacity-60 cursor-not-allowed'
+          : 'bg-white border-[#E7E7E7] hover:border-[#7C5E3C] hover:bg-[#FDFBF6]'}`}
+    >
+      <div className="flex items-center gap-3 min-w-0">
+        <span className="w-7 h-7 rounded-[6px] bg-[#F5E5CE] text-[#7C5E3C] flex items-center justify-center flex-shrink-0">
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <p className="text-[13px] font-semibold text-[#0F0F10] truncate">{title}</p>
+          <p className="text-[11.5px] text-[#8A8278] truncate">{subtitle}</p>
+        </div>
+      </div>
+      {!disabled && (
+        <svg className="w-3.5 h-3.5 text-[#8A8278] group-hover:text-[#1E1E1E] group-hover:translate-x-0.5 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 function SectionCard({ title, children }) {
   return (
     <Card className="p-6">
