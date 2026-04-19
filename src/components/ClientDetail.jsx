@@ -202,103 +202,73 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* ── Back link (hidden when embedded in drawer) ──── */}
       {!embedded && (
         <button
           onClick={onBack}
-          className="flex items-center gap-1.5 text-[13px] font-medium text-[#5D5D5D] hover:text-[#0A0A0A] transition-colors group -mt-4"
+          className="flex items-center gap-1.5 text-[13px] font-medium text-[#8A8278] hover:text-[#1E1E1E] transition-colors group"
         >
-          <svg className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <svg className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
-          Retour au registre
+          Registre clients
         </button>
       )}
 
-      {/* ── Editorial header ───────────────────────────── */}
-      <header className="flex items-start justify-between gap-10 flex-wrap animate-slide-up">
-        <div className="flex items-start gap-6 min-w-0 flex-1">
-          <Avatar name={client.name} size={72} />
-          <div className="min-w-0 pt-1">
-            <p className="text-eyebrow">Dossier client · Conservation</p>
-            <div className="flex items-center gap-3 flex-wrap mt-2">
-              <h1 className="display-md text-[#0A0A0A]">
-                {client.name}
-              </h1>
-            </div>
-            <div className="flex items-center gap-2 mt-3 flex-wrap">
-              <Badge variant={typeVariant(client.type)} size="sm" dot>{typeLabel(client.type)}</Badge>
-              <span className="text-[13px] text-[#5D5D5D] tracking-[-0.003em]">
+      {/* ── Client identity row — operational, not editorial ───── */}
+      <header className="flex items-start justify-between gap-6 flex-wrap">
+        <div className="flex items-center gap-4 min-w-0">
+          <Avatar name={client.name} size={48} />
+          <div className="min-w-0">
+            <h1 className="text-[22px] font-semibold text-[#0F0F10] leading-[1.2]" style={{ letterSpacing: '-0.016em' }}>
+              {client.name}
+            </h1>
+            <div className="flex items-center gap-2 mt-1 flex-wrap text-[12.5px]">
+              <Badge variant={typeVariant(client.type)} size="sm">{typeLabel(client.type)}</Badge>
+              <span className="text-[#5D5D5D]">
                 {[client.city, client.country].filter(Boolean).join(' · ') || '—'}
                 {client.industry && <span className="text-[#8A8278]"> · {client.industry}</span>}
               </span>
+              {client.accountNumber && (
+                <span className="text-[#8A8278] font-mono text-[11.5px] ml-1">№ {client.accountNumber}</span>
+              )}
             </div>
           </div>
         </div>
-        <div className="flex items-start gap-5 flex-shrink-0 animate-slide-up stagger-1">
-          {kycValid && (
-            <div className="hidden lg:block pt-2">
-              <VerifiedBadge size={60} label="KYC validé" />
-            </div>
-          )}
+        <div className="flex items-center gap-6">
           <div className="text-right">
-            <p className="text-eyebrow">Actifs sous gestion</p>
-            <p className="display-md text-[#0A0A0A] tabular-nums mt-2">
+            <p className="text-[11px] font-medium text-[#8A8278]">Actifs sous gestion</p>
+            <p className="text-[22px] font-semibold text-[#0F0F10] tabular-nums leading-[1.15]" style={{ letterSpacing: '-0.018em' }}>
               {client.aum ? fmtCompactEUR(client.aum) : '—'}
             </p>
-            <div className="flex items-center justify-end gap-2 mt-2.5">
-              <Delta value="2.4%" positive prefix="+" />
-              <span className="text-[12px] text-[#5D5D5D] tracking-[-0.003em]">12 mois</span>
-            </div>
-            {client.accountNumber && (
-              <p className="text-[11px] text-[#8A8278] font-mono mt-3 tracking-wider">№ {client.accountNumber}</p>
-            )}
           </div>
+          {kycValid && (
+            <div className="hidden lg:flex items-center gap-2 h-9 px-3 rounded-[6px] bg-[#ECFAF0] text-[#0F9868] text-[12.5px] font-semibold">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              KYC validé
+            </div>
+          )}
         </div>
       </header>
 
-      {/* ── Metric row ─────────────────────────────────── */}
-      <div className="animate-slide-up stagger-2">
-        <MetricRow>
-          <Metric
-            label="Conformité KYC"
-            value={kycStatusText}
-            caption="MiCA Art. 66"
-          />
-          <Metric
-            label="Profil de risque"
-            value={parsed.risk || 'Non défini'}
-            caption={parsed.allocation ? `Cible ${parsed.allocation}` : 'À définir'}
-          />
-          <Metric
-            label="Wallets actifs"
-            value={wallets.length}
-            caption={`${wallets.filter(w => w.status === 'Active').length} opérationnel${wallets.filter(w => w.status === 'Active').length > 1 ? 's' : ''}`}
-          />
-          <Metric
-            label="Client depuis"
-            value={fmtDate(client.createdDate)}
-            caption="Mandat continu"
-          />
-        </MetricRow>
-      </div>
-
-      {/* ── Tabs — editorial underline nav ─────────────── */}
-      <div className="border-b border-[#E7E7E7] animate-slide-up stagger-3">
-        <nav className="flex items-center gap-1 -mb-px overflow-x-auto">
+      {/* ── Tabs ─────────────────────────────────────── */}
+      <div className="border-b border-[#E7E7E7]">
+        <nav className="flex items-center gap-6 -mb-px overflow-x-auto">
           {tabs.map(t => {
             const active = tab === t.id;
             return (
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
-                className={`relative h-11 px-4 text-[13.5px] font-medium whitespace-nowrap transition-colors tracking-[-0.01em] ${
-                  active ? 'text-[#0A0A0A]' : 'text-[#5D5D5D] hover:text-[#0A0A0A]'
+                className={`relative py-2.5 text-[13.5px] font-semibold whitespace-nowrap transition-colors ${
+                  active ? 'text-[#0F0F10]' : 'text-[#8A8278] hover:text-[#0F0F10]'
                 }`}
               >
                 {t.label}
-                {active && <span className="absolute left-4 right-4 -bottom-px h-[2px] bg-[#0A0A0A] rounded-t-full" />}
+                {active && <span className="absolute left-0 right-0 -bottom-px h-[2px] bg-[#7C5E3C] rounded-t-full" />}
               </button>
             );
           })}
