@@ -412,39 +412,36 @@ export default function ComplianceDashboard() {
     <div className="space-y-10">
       {/* ── Header ─────────────────────────────────────── */}
       <PageHeader
-        icon={<IconCompliance size={22} />}
+        icon={<IconCompliance size={18} />}
         title="Compliance"
         trailing={
-          <>
-            <LiveIndicator tone="success" label="Flux temps-réel" />
-            {stats.openAlerts === 0 && stats.pendingApprovals === 0 && (
-              <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#F0FDF4] border border-[rgba(22,163,74,0.22)]">
-                <svg className="w-3.5 h-3.5 text-[#16A34A]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+          stats.openAlerts === 0 && stats.pendingApprovals === 0
+            ? (
+              <div className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[6px] bg-[#ECFAF0] text-[#0F9868] text-[12.5px] font-semibold">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="text-[11.5px] font-medium text-[#15803D] tracking-[-0.003em]">Cockpit clear</span>
+                Aucune alerte
               </div>
-            )}
-          </>
+            )
+            : <LiveIndicator tone="success" label="Flux temps-réel" />
         }
       />
 
-      {/* ── Marble hero ───────────────────────────────── */}
-      <div className="animate-slide-up stagger-1">
-        <MarbleCard
-          variant="peach"
-          eyebrow="Conformité AMF · ACPR · Tracfin"
-          title="Le cockpit conformité, sans angle mort."
-          description="Chaque transaction, chaque adresse, chaque approbation passe par un quintuple contrôle : Chainalysis KYT, sanctions OFAC/UE, screening PPE, Travel Rule Art. 7b et approbation quatre yeux."
-        />
-      </div>
-
-      {/* ── Stat tiles ───────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-5 animate-slide-up stagger-2">
-        <StatCard label="Approbations" value={stats.pendingApprovals} tone="orange" hint="En attente · quatre yeux" />
-        <StatCard label="Alertes" value={stats.openAlerts} tone="red" hint="Ouvertes · AML screening" />
-        <StatCard label="Clients" value={stats.activeClients} tone="blue" hint="Actifs sous mandat" />
-        <StatCard label="Wallets" value={stats.totalWallets} tone="green" hint="Provisionnés DFNS" />
+      {/* Compact 4-metric strip — hairline-separated, no loud decorations */}
+      <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-[#E7E7E7] bg-white border border-[#E7E7E7] rounded-[10px]">
+        {[
+          { k: 'Approbations', v: stats.pendingApprovals, c: 'En attente · quatre yeux', tone: stats.pendingApprovals > 0 ? '#CA8A04' : '#8A8278' },
+          { k: 'Alertes',      v: stats.openAlerts,       c: 'Ouvertes · AML',           tone: stats.openAlerts > 0 ? '#DC2626' : '#8A8278' },
+          { k: 'Clients',      v: stats.activeClients,    c: 'Actifs sous mandat',       tone: '#8A8278' },
+          { k: 'Wallets',      v: stats.totalWallets,     c: 'Provisionnés DFNS',        tone: '#8A8278' },
+        ].map(({ k, v, c, tone }) => (
+          <div key={k} className="px-5 py-3.5">
+            <p className="text-[11px] font-medium" style={{ color: tone }}>{k}</p>
+            <p className="mt-1 text-[20px] font-semibold text-[#0F0F10] tabular-nums leading-[1.15]" style={{ letterSpacing: '-0.015em' }}>{v}</p>
+            <p className="text-[11.5px] text-[#8A8278] mt-0.5">{c}</p>
+          </div>
+        ))}
       </div>
 
       {/* ── Tabs ─────────────────────────────────────── */}

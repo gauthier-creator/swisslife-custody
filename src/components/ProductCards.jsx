@@ -162,7 +162,7 @@ export function ProductCarousel({ title, eyebrow, children, className = '' }) {
             </p>
           )}
           <h2
-            className="text-[22px] font-bold text-[#0F0F10] leading-[1.15]"
+            className="text-[20px] font-semibold text-[#0F0F10] leading-[1.2]"
             style={{ letterSpacing: '-0.022em' }}
           >
             {title}
@@ -339,8 +339,8 @@ export function MandatCard({
           <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8A8278]">
             Portefeuille
           </span>
-          <span className="text-[20px] font-bold text-[#0F0F10] mt-1"
-                style={{ letterSpacing: '-0.02em' }}>
+          <span className="text-[19px] font-semibold text-[#0F0F10] mt-1"
+                style={{ letterSpacing: '-0.015em' }}>
             {label}
           </span>
         </div>
@@ -501,7 +501,7 @@ export function MandatCarousel({ title, eyebrow, children, trailing, className =
             </p>
           )}
           <h2
-            className="text-[22px] font-bold text-[#0F0F10] leading-[1.15]"
+            className="text-[20px] font-semibold text-[#0F0F10] leading-[1.2]"
             style={{ letterSpacing: '-0.022em' }}
           >
             {title}

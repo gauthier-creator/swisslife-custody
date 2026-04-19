@@ -68,8 +68,8 @@ export default function LoginPage() {
               </p>
             </div>
 
-            <h1 className="text-[36px] font-bold leading-[1.1] text-[#0F0F10]"
-                style={{ letterSpacing: '-0.028em' }}>
+            <h1 className="text-[32px] font-semibold leading-[1.15] text-[#0F0F10]"
+                style={{ letterSpacing: '-0.022em' }}>
               Conservation institutionnelle d'actifs numériques.
             </h1>
 

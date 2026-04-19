@@ -72,211 +72,49 @@ export default function ClientList({ onSelectClient, onNavigate }) {
     <div className="space-y-8">
       {/* ── Header ─────────────────────────────────────── */}
       <PageHeader
-        icon={<IconClients size={22} />}
+        icon={<IconClients size={18} />}
         title="Clients"
         trailing={
-          <>
-            <div className="relative">
-              <svg
-                className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8A8278] pointer-events-none"
-                fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.2-5.2m2.2-5.3a7.5 7.5 0 11-15 0 7.5 7.5 0 0115 0z" />
-              </svg>
-              <input
-                type="text"
-                value={search}
-                onChange={handleSearch}
-                placeholder="Rechercher un client…"
-                className="h-10 pl-10 pr-4 w-[300px] text-[13px] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none focus:border-[rgba(124,94,60,0.4)] focus:ring-4 focus:ring-[rgba(124,94,60,0.1)] placeholder:text-[#8A8278] tracking-[-0.006em] transition-[border-color,box-shadow] duration-200"
-              />
-            </div>
-            <div className="flex items-center gap-3">
-              <StatusDot tone="success" label="Salesforce sync" />
-              <span className="h-4 w-px bg-[rgba(10,10,10,0.1)]" />
-              <Timestamp label="Registre" />
-            </div>
-          </>
+          <div className="relative">
+            <svg
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-[15px] h-[15px] text-[#8A8278] pointer-events-none"
+              fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.2-5.2m2.2-5.3a7.5 7.5 0 11-15 0 7.5 7.5 0 0115 0z" />
+            </svg>
+            <input
+              type="text"
+              value={search}
+              onChange={handleSearch}
+              placeholder="Rechercher un client…"
+              aria-label="Rechercher un client"
+              className="h-9 pl-9 pr-3 w-[260px] text-[13px] bg-white border border-[#E7E7E7] rounded-[6px] outline-none focus-visible:border-[#7C5E3C] focus-visible:ring-[3px] focus-visible:ring-[rgba(124,94,60,0.12)] placeholder:text-[#8A8278] transition-[border-color,box-shadow] duration-150"
+            />
+          </div>
         }
       />
 
-      {/* ── Marble hero (live KPIs) — Ramify signature ─── */}
+      {/* ── Aggregate strip — 3 concise KPIs, hairline-separated (banker context) */}
       {!loading && clients.length > 0 && (
-        <div className="animate-slide-up stagger-1">
-          <MarbleHero
-            marble="peach"
-            seed={5}
-            eyebrow="Cockpit du banquier privé"
-            title="Vos clients, vos mandats, en un seul coup d'œil."
-            description="Le registre Salesforce est synchronisé en temps réel avec la chambre forte DFNS. Chaque mouvement est horodaté et signé par quorum MPC."
-            primaryCta={{
-              label: 'Nouveau mandat',
-              icon: (
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-              ),
-            }}
-            secondaryCta={{ label: 'Guide AMF · Onboarding' }}
-            meta={['Salesforce sync', 'ACPR registre', 'Tracfin ready']}
-          />
-        </div>
-      )}
-
-      {/* ── Metric row — Mercury-style strip ─────────────── */}
-      {!loading && clients.length > 0 && (
-        <div className="animate-slide-up stagger-2">
-          <MetricRow>
-            <Metric
-              label="Actifs sous gestion"
-              value={<CountUpNumber value={totalAum} format={fmtCompactEUR} />}
-              delta="+2.4%"
-              caption="12 mois"
-              progress={Math.min(100, (totalAum / 100_000_000) * 100)}
-            />
-            <Metric
-              label="Clients actifs"
-              value={<CountUpNumber value={clients.length} />}
-              caption="Registre Salesforce"
-              progress={Math.min(100, clients.length * 8)}
-            />
-            <Metric
-              label="UHNWI"
-              value={<CountUpNumber value={uhnwiCount} />}
-              caption={clients.length ? `${Math.round((uhnwiCount / clients.length) * 100)}% du livre` : '—'}
-              progress={clients.length ? (uhnwiCount / clients.length) * 100 : 0}
-            />
-            <Metric
-              label="Ticket moyen"
-              value={<CountUpNumber value={avgAum} format={fmtCompactEUR} />}
-              caption="Par mandat"
-              progress={Math.min(100, (avgAum / 20_000_000) * 100)}
-            />
-          </MetricRow>
-        </div>
-      )}
-
-      {/* ── Mandats — marble portfolio tiles (Ramify style) ─ */}
-      {!loading && clients.length > 0 && (
-        <div className="animate-slide-up stagger-3">
-          <MandatCarousel
-            eyebrow="Mandats de conservation"
-            title="Les portefeuilles SwissLife Custody."
-            trailing={
-              <span className="hidden md:inline-flex items-center gap-1.5 h-9 px-3 mr-2 rounded-full bg-white border border-[#E7E7E7] text-[11px] font-medium text-[#5D5D5D] tracking-[-0.003em]">
-                <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
-                4 tiers
-              </span>
-            }
-          >
-            <MandatCard
-              label="Essential"
-              marble="pearl"
-              seed={2}
-              assetClasses={['Bitcoin', 'Ethereum', 'Stablecoins']}
-              disabled={['Private Assets', 'Staking']}
-            />
-            <MandatCard
-              label="Privilège"
-              marble="ivory"
-              seed={5}
-              assetClasses={['BTC', 'ETH', 'SOL', 'Stablecoins', 'Staking']}
-              disabled={['Private Assets']}
-            />
-            <MandatCard
-              label="Flagship"
-              marble="peach"
-              seed={8}
-              assetClasses={['BTC', 'ETH', 'Multi-chain', 'Staking', 'Private Assets']}
-            />
-            <MandatCard
-              label="Institutionnel"
-              marble="bronze"
-              seed={11}
-              assetClasses={['BTC', 'ETH', 'Multi-chain', 'OTC', 'Tracfin Reporting']}
-            />
-          </MandatCarousel>
-        </div>
-      )}
-
-      {/* ── Editorial hairline break ────────────────────── */}
-      {!loading && clients.length > 0 && (
-        <FleuronRule className="max-w-md mx-auto opacity-90" />
-      )}
-
-      {/* ── Product carousel — editorial product tiles ── */}
-      {!loading && clients.length > 0 && (
-        <div className="animate-slide-up stagger-3">
-          <ProductCarousel
-            eyebrow="Explorez les services"
-            title="Les rails institutionnels SwissLife Custody."
-          >
-            <ProductCard
-              category="Conservation"
-              categoryIcon={
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              }
-              title="Chambre forte DFNS, signée par quorum MPC."
-              description="Clés privées réparties en 3 shards · signature 2/3 · audit on-chain horodaté. Aucune clé en clair, jamais."
-              scene={<SceneVault />}
-              cta="Ouvrir wallets"
-              onClick={() => onNavigate?.('wallets')}
-            />
-            <ProductCard
-              category="Gouvernance"
-              categoryIcon={
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-                </svg>
-              }
-              title="Politiques quatre-yeux & audit ACPR."
-              description="Chaque mouvement déclenche une règle d'approbation versionnée et horodatée dans le journal d'audit réglementaire."
-              scene={<SceneArch />}
-              cta="Voir policies"
-              onClick={() => onNavigate?.('policies')}
-            />
-            <ProductCard
-              category="Surveillance"
-              categoryIcon={
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.306a11.95 11.95 0 015.814-5.518l2.74-1.22m0 0l-5.94-2.281m5.94 2.28l-2.28 5.941" />
-                </svg>
-              }
-              title="Chainalysis KYT & screening temps réel."
-              description="Pré-filtrage AML à la milliseconde · sanctions OFAC/UE · PPE · Travel Rule Art. 7b — tout flux suspect est bloqué."
-              scene={<SceneWaves />}
-              cta="Accéder"
-              onClick={() => onNavigate?.('compliance')}
-            />
-            <ProductCard
-              category="Reporting"
-              categoryIcon={
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              }
-              title="Mandats signés & reporting ACPR automatisé."
-              description="Génération des déclarations Tracfin, extraits pour commissaires aux comptes, sceau numérique Sℓ horodaté."
-              scene={<SceneDocument />}
-              cta="Générer"
-              onClick={() => onNavigate?.('compliance')}
-            />
-            <ProductCard
-              category="Multi-chain"
-              categoryIcon={
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                </svg>
-              }
-              title="Ethereum, Bitcoin, Solana — une seule interface."
-              description="Bitcoin natif, tous les EVM, Solana, Cosmos · provisionnement de wallet en un clic · reconciliation temps réel."
-              scene={<SceneKeys />}
-              cta="Provisionner"
-              onClick={() => onNavigate?.('wallets')}
-            />
-          </ProductCarousel>
+        <div className="grid grid-cols-3 divide-x divide-[#E7E7E7] bg-white border border-[#E7E7E7] rounded-[10px] px-2">
+          <div className="px-6 py-4">
+            <p className="text-[11px] font-medium text-[#8A8278]">Actifs sous gestion</p>
+            <p className="mt-1 text-[22px] font-semibold text-[#0F0F10] tabular-nums leading-[1.1]" style={{ letterSpacing: '-0.02em' }}>
+              <CountUpNumber value={totalAum} format={fmtCompactEUR} />
+            </p>
+          </div>
+          <div className="px-6 py-4">
+            <p className="text-[11px] font-medium text-[#8A8278]">Clients actifs</p>
+            <p className="mt-1 text-[22px] font-semibold text-[#0F0F10] tabular-nums leading-[1.1]" style={{ letterSpacing: '-0.02em' }}>
+              <CountUpNumber value={clients.length} />
+            </p>
+          </div>
+          <div className="px-6 py-4">
+            <p className="text-[11px] font-medium text-[#8A8278]">UHNWI · Institutionnel</p>
+            <p className="mt-1 text-[22px] font-semibold text-[#0F0F10] tabular-nums leading-[1.1]" style={{ letterSpacing: '-0.02em' }}>
+              {uhnwiCount} · {institutionalCount}
+            </p>
+          </div>
         </div>
       )}
 

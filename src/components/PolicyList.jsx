@@ -66,54 +66,32 @@ export default function PolicyList() {
     <div className="space-y-10">
       {/* ── Header ─────────────────────────────────────── */}
       <PageHeader
-        icon={<IconPolicies size={22} />}
+        icon={<IconPolicies size={18} />}
         title="Policies"
         trailing={
-          <>
-            <StatusDot tone="bronze" label="Quatre yeux · Actif" />
-            <Button variant="primary" onClick={() => setShowCreate(true)}>
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              Nouvelle politique
-            </Button>
-          </>
+          <Button variant="primary" onClick={() => setShowCreate(true)}>
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Nouvelle politique
+          </Button>
         }
       />
 
-      {/* ── Marble hero (live KPIs) ───────────────────── */}
-      {!loading && (
-        <div className="animate-slide-up stagger-1">
-          <MarbleHero
-            marble="ivory"
-            seed={11}
-            eyebrow="Gouvernance DFNS · ACPR"
-            title="Les règles qui encadrent chaque signature."
-            description="Chaque politique est auditée, horodatée, versionnée. Rien n'est signé en dehors de ces rails — transferts, whitelistings, rotations de clé."
-            primaryCta={{
-              label: 'Nouvelle politique',
-              icon: (
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-              ),
-              onClick: () => setShowCreate(true),
-            }}
-            secondaryCta={{ label: "Journal d’audit · ACPR" }}
-            meta={['ACPR', 'AMF', 'Quatre yeux', 'DFNS MPC 2/3']}
-          />
-        </div>
-      )}
-
-      {/* ── Metrics ───────────────────────────────────── */}
-      {!loading && (
-        <div className="animate-slide-up stagger-2">
-          <MetricRow>
-            <Metric label="Politiques actives" value={activeCount} caption="Appliquées en temps réel" progress={Math.min(100, activeCount * 25)} />
-            <Metric label="En attente" value={pendingCount} caption="Approbation admin requise" progress={Math.min(100, pendingCount * 20)} />
-            <Metric label="Couverture" value={policies.length} caption="Règles définies" progress={Math.min(100, policies.length * 15)} />
-            <Metric label="Signataires" value="2 / 3" caption="Quorum MPC threshold" progress={66} />
-          </MetricRow>
+      {/* Compact summary strip — only numbers the banker actually needs */}
+      {!loading && policies.length > 0 && (
+        <div className="grid grid-cols-3 divide-x divide-[#E7E7E7] bg-white border border-[#E7E7E7] rounded-[10px]">
+          {[
+            { k: 'Actives',      v: activeCount,       c: 'Appliquées en temps réel' },
+            { k: 'En attente',   v: pendingCount,      c: 'Admin requis' },
+            { k: 'Signataires',  v: '2 / 3',           c: 'Quorum MPC' },
+          ].map(({ k, v, c }) => (
+            <div key={k} className="px-5 py-3.5">
+              <p className="text-[11px] font-medium text-[#8A8278]">{k}</p>
+              <p className="mt-1 text-[20px] font-semibold text-[#0F0F10] tabular-nums leading-[1.15]" style={{ letterSpacing: '-0.015em' }}>{v}</p>
+              <p className="text-[11.5px] text-[#8A8278] mt-0.5">{c}</p>
+            </div>
+          ))}
         </div>
       )}
 

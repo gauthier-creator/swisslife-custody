@@ -480,8 +480,8 @@ export function StatCard({
         </p>
         {icon && <span className="flex-shrink-0 -mt-0.5 opacity-75">{icon}</span>}
       </div>
-      <p className="mt-2 text-[26px] font-bold text-[#0F0F10] leading-[1.1] tabular-nums"
-         style={{ letterSpacing: '-0.025em' }}>
+      <p className="mt-1.5 text-[22px] font-semibold text-[#0F0F10] leading-[1.15] tabular-nums"
+         style={{ letterSpacing: '-0.02em' }}>
         {value}
       </p>
       <div className="mt-1.5 flex items-center justify-between gap-2">
@@ -707,26 +707,25 @@ export function Metric({ label, value, caption, delta, progress, align = 'left',
   const alignCls = align === 'right' ? 'text-right items-end' : 'text-left items-start';
   return (
     <div className={`flex flex-col ${alignCls} ${className}`}>
-      <span className="inline-flex items-center gap-1.5 text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.12em]">
-        <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
+      <span className="text-[11px] font-medium text-[#8A8278]">
         {label}
       </span>
       <span
-        className="mt-3 text-[28px] font-bold text-[#0F0F10] tabular-nums leading-[1.05]"
-        style={{ letterSpacing: '-0.028em' }}
+        className="mt-1.5 text-[22px] font-semibold text-[#0F0F10] tabular-nums leading-[1.1]"
+        style={{ letterSpacing: '-0.02em' }}
       >
         {value}
       </span>
       {(caption || delta) && (
-        <div className="mt-2 flex items-center gap-2">
+        <div className="mt-1 flex items-center gap-2">
           {delta && (typeof delta === 'string' || typeof delta === 'number'
             ? <Delta value={delta} positive prefix={typeof delta === 'string' && delta.startsWith('-') ? '' : '+'} />
             : delta)}
-          {caption && <span className="text-[12px] text-[#5D5D5D] tracking-[-0.003em]">{caption}</span>}
+          {caption && <span className="text-[12px] text-[#8A8278]">{caption}</span>}
         </div>
       )}
       {typeof progress === 'number' && (
-        <div className="progress-bronze mt-4 w-full" style={{ '--value': `${Math.max(0, Math.min(100, progress))}%` }} />
+        <div className="progress-bronze mt-3 w-full" style={{ '--value': `${Math.max(0, Math.min(100, progress))}%` }} />
       )}
     </div>
   );
@@ -1087,8 +1086,8 @@ export function StatCell({ label, value, sub, className = '' }) {
   return (
     <div className={`px-5 py-4 ${className}`}>
       <p className="text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.1em]">{label}</p>
-      <p className="mt-2 text-[22px] font-bold text-[#0F0F10] tabular-nums truncate leading-[1.15]"
-         style={{ letterSpacing: '-0.02em' }}>
+      <p className="mt-1.5 text-[20px] font-semibold text-[#0F0F10] tabular-nums truncate leading-[1.15]"
+         style={{ letterSpacing: '-0.015em' }}>
         {value || '—'}
       </p>
       {sub && <p className="text-[12.5px] text-[#5D5D5D] mt-1 truncate">{sub}</p>}
@@ -1123,38 +1122,30 @@ export function Divider({ className = '' }) {
 // Legacy props (eyebrow/accent/description) are accepted but ignored in favor
 // of the simpler Ramify aesthetic.
 export function PageHeader({ icon, duoIcon, title, eyebrow, trailing, banner, className = '' }) {
-  // Ramify pattern: small icon (22px, inline, no chrome) + serif title (~28px PP Fragment)
-  // No duo-icon gradient; just the glyph in a muted color beside the title.
+  // Ramify pattern: tiny icon + compact title (22px, semibold, muted ink).
+  // No eyebrow, no banner in this header — each page owns its first content
+  // block. Height matches a single row so headers never feel "banner-ed".
   const iconNode = icon
-    ? <span className="flex-shrink-0 text-[#1E1E1E] opacity-90">{icon}</span>
+    ? <span className="flex-shrink-0 text-[#5D5D5D]">{icon}</span>
     : duoIcon
-      ? <DuoIcon name={duoIcon.name} tone={duoIcon.tone || 'bronze'} size={22} />
+      ? <DuoIcon name={duoIcon.name} tone={duoIcon.tone || 'bronze'} size={18} />
       : null;
 
   return (
-    <header className={`space-y-4 animate-fade ${className}`}>
-      <div className="flex items-end justify-between gap-6 flex-wrap">
-        <div className="flex items-center gap-2.5 min-w-0">
-          {iconNode}
-          <div className="min-w-0">
-            {eyebrow && (
-              <p className="text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.12em] mb-1">
-                {eyebrow}
-              </p>
-            )}
-            <h1
-              className="text-[26px] font-semibold text-[#0F0F10] leading-[1.15] truncate"
-              style={{ letterSpacing: '-0.018em' }}
-            >
-              {title}
-            </h1>
-          </div>
-        </div>
-        {trailing && (
-          <div className="flex-shrink-0 flex items-center gap-2">{trailing}</div>
-        )}
+    <header className={`flex items-center justify-between gap-6 flex-wrap ${className}`}>
+      <div className="flex items-center gap-2 min-w-0">
+        {iconNode}
+        <h1
+          className="text-[22px] font-semibold text-[#0F0F10] leading-[1.2] truncate"
+          style={{ letterSpacing: '-0.016em' }}
+        >
+          {title}
+        </h1>
       </div>
-      {banner && <PageBanner {...banner} />}
+      {trailing && (
+        <div className="flex-shrink-0 flex items-center gap-2">{trailing}</div>
+      )}
+      {banner && <div className="w-full"><PageBanner {...banner} /></div>}
     </header>
   );
 }

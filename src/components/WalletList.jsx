@@ -62,62 +62,40 @@ export default function WalletList() {
     <div className="space-y-10">
       {/* ── Header ─────────────────────────────────────── */}
       <PageHeader
-        icon={<IconWallets size={22} />}
+        icon={<IconWallets size={18} />}
         title="Wallets"
         trailing={
-          <>
-            <div className="relative">
-              <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8A8278] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.2-5.2m2.2-5.3a7.5 7.5 0 11-15 0 7.5 7.5 0 0115 0z" />
-              </svg>
-              <input
-                type="text"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Rechercher un wallet…"
-                className="h-10 pl-10 pr-16 w-[280px] text-[13px] bg-white border border-[rgba(10,10,10,0.1)] rounded-[10px] outline-none focus:border-[rgba(124,94,60,0.4)] focus:ring-4 focus:ring-[rgba(124,94,60,0.1)] placeholder:text-[#8A8278] tracking-[-0.006em] transition-[border-color,box-shadow] duration-200"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:inline-flex">
-                <span className="kbd">⌘K</span>
-              </span>
-            </div>
-            <StatusDot tone="success" label="DFNS sync" />
-          </>
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-[15px] h-[15px] text-[#8A8278] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.2-5.2m2.2-5.3a7.5 7.5 0 11-15 0 7.5 7.5 0 0115 0z" />
+            </svg>
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Rechercher un wallet…"
+              aria-label="Rechercher un wallet"
+              className="h-9 pl-9 pr-3 w-[260px] text-[13px] bg-white border border-[#E7E7E7] rounded-[6px] outline-none focus-visible:border-[#7C5E3C] focus-visible:ring-[3px] focus-visible:ring-[rgba(124,94,60,0.12)] placeholder:text-[#8A8278] transition-[border-color,box-shadow] duration-150"
+            />
+          </div>
         }
       />
 
-      {/* ── Marble hero (live KPIs) ───────────────────── */}
+      {/* Inline summary row — 4 compact numbers on a hairline-separated bar */}
       {!loading && wallets.length > 0 && (
-        <div className="animate-slide-up stagger-1">
-          <MarbleHero
-            marble="peach"
-            seed={7}
-            eyebrow="Chambre forte DFNS"
-            title="Chaque wallet, signé par quorum MPC."
-            description="Threshold 2-sur-3 · ségrégation stricte des clés · audit trail on-chain. Reporting MiCA Art. 60 généré en continu."
-            primaryCta={{
-              label: 'Provisionner un wallet',
-              icon: (
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-              ),
-            }}
-            secondaryCta={{ label: 'Travel Rule · Art. 7b' }}
-            meta={['DFNS', 'MPC 2/3', 'Chainalysis KYT', 'MiCA Art. 60']}
-          />
-        </div>
-      )}
-
-      {/* ── Metric row ────────────────────────────────── */}
-      {!loading && wallets.length > 0 && (
-        <div className="animate-slide-up stagger-2">
-          <MetricRow>
-            <Metric label="Wallets totaux" value={<CountUpNumber value={wallets.length} />} caption={`${activeCount} actifs`} progress={Math.min(100, wallets.length * 12)} />
-            <Metric label="Réseaux actifs" value={<CountUpNumber value={networkCount} />} caption="Multi-chain" progress={Math.min(100, networkCount * 16)} />
-            <Metric label="Clients liés" value={<CountUpNumber value={clientCount} />} caption="Mandats de conservation" progress={Math.min(100, clientCount * 10)} />
-            <Metric label="Signatures MPC" value="2 / 3" caption="Threshold cryptography" progress={66} />
-          </MetricRow>
+        <div className="grid grid-cols-4 divide-x divide-[#E7E7E7] bg-white border border-[#E7E7E7] rounded-[10px]">
+          {[
+            { k: 'Wallets',    v: wallets.length, c: `${activeCount} actifs` },
+            { k: 'Réseaux',    v: networkCount,   c: 'Multi-chain' },
+            { k: 'Clients',    v: clientCount,    c: 'Liés à un mandat' },
+            { k: 'MPC',        v: '2 / 3',        c: 'Threshold' },
+          ].map(({ k, v, c }) => (
+            <div key={k} className="px-5 py-3.5">
+              <p className="text-[11px] font-medium text-[#8A8278]">{k}</p>
+              <p className="mt-1 text-[20px] font-semibold text-[#0F0F10] tabular-nums leading-[1.15]" style={{ letterSpacing: '-0.015em' }}>{v}</p>
+              <p className="text-[11.5px] text-[#8A8278] mt-0.5">{c}</p>
+            </div>
+          ))}
         </div>
       )}
 
