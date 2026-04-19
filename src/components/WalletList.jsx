@@ -81,21 +81,32 @@ export default function WalletList() {
         }
       />
 
-      {/* Inline summary row — 4 compact numbers on a hairline-separated bar */}
+      {/* Network chips — Ramify filter pattern. Unique to WalletList: crypto
+         networks are the natural grouping, not arbitrary KPIs. */}
       {!loading && wallets.length > 0 && (
-        <div className="grid grid-cols-4 divide-x divide-[#E7E7E7] bg-white border border-[#E7E7E7] rounded-[10px]">
-          {[
-            { k: 'Wallets',    v: wallets.length, c: `${activeCount} actifs` },
-            { k: 'Réseaux',    v: networkCount,   c: 'Multi-chain' },
-            { k: 'Clients',    v: clientCount,    c: 'Liés à un mandat' },
-            { k: 'MPC',        v: '2 / 3',        c: 'Threshold' },
-          ].map(({ k, v, c }) => (
-            <div key={k} className="px-5 py-3.5">
-              <p className="text-[11px] font-medium text-[#8A8278]">{k}</p>
-              <p className="mt-1 text-[20px] font-semibold text-[#0F0F10] tabular-nums leading-[1.15]" style={{ letterSpacing: '-0.015em' }}>{v}</p>
-              <p className="text-[11.5px] text-[#8A8278] mt-0.5">{c}</p>
-            </div>
-          ))}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <button
+            className="inline-flex items-center gap-2 h-8 px-3 rounded-[6px] bg-[#1E1E1E] text-white text-[12.5px] font-semibold"
+          >
+            Tous
+            <span className="tabular-nums text-[#C8BEA4]">{wallets.length}</span>
+          </button>
+          {Object.entries(byNetwork).map(([networkId, nws]) => {
+            const n = net(networkId);
+            return (
+              <button
+                key={networkId}
+                className="inline-flex items-center gap-2 h-8 px-3 rounded-[6px] bg-white border border-[#E7E7E7] text-[#5D5D5D] hover:text-[#1E1E1E] hover:border-[#D1D5DB] text-[12.5px] font-semibold transition-colors"
+              >
+                <span className="w-3.5 h-3.5 rounded-[3px] flex items-center justify-center text-white text-[9px] font-bold" style={{ backgroundColor: n.color }}>{n.icon}</span>
+                {n.name}
+                <span className="tabular-nums text-[#8A8278]">{nws.length}</span>
+              </button>
+            );
+          })}
+          <span className="ml-auto text-[11.5px] text-[#8A8278] tabular-nums">
+            Threshold MPC 2 / 3 · {clientCount} client{clientCount > 1 ? 's' : ''} lié{clientCount > 1 ? 's' : ''}
+          </span>
         </div>
       )}
 

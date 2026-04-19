@@ -78,20 +78,28 @@ export default function PolicyList() {
         }
       />
 
-      {/* Compact summary strip — only numbers the banker actually needs */}
+      {/* State filter chips — governance UIs show status pills, not KPI cards */}
       {!loading && policies.length > 0 && (
-        <div className="grid grid-cols-3 divide-x divide-[#E7E7E7] bg-white border border-[#E7E7E7] rounded-[10px]">
-          {[
-            { k: 'Actives',      v: activeCount,       c: 'Appliquées en temps réel' },
-            { k: 'En attente',   v: pendingCount,      c: 'Admin requis' },
-            { k: 'Signataires',  v: '2 / 3',           c: 'Quorum MPC' },
-          ].map(({ k, v, c }) => (
-            <div key={k} className="px-5 py-3.5">
-              <p className="text-[11px] font-medium text-[#8A8278]">{k}</p>
-              <p className="mt-1 text-[20px] font-semibold text-[#0F0F10] tabular-nums leading-[1.15]" style={{ letterSpacing: '-0.015em' }}>{v}</p>
-              <p className="text-[11.5px] text-[#8A8278] mt-0.5">{c}</p>
-            </div>
-          ))}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <button className="inline-flex items-center gap-2 h-8 px-3 rounded-[6px] bg-[#1E1E1E] text-white text-[12.5px] font-semibold">
+            Toutes
+            <span className="tabular-nums text-[#C8BEA4]">{policies.length}</span>
+          </button>
+          <button className="inline-flex items-center gap-2 h-8 px-3 rounded-[6px] bg-white border border-[#E7E7E7] text-[#5D5D5D] hover:text-[#1E1E1E] hover:border-[#D1D5DB] text-[12.5px] font-semibold transition-colors">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#0F9868]" />
+            Actives
+            <span className="tabular-nums text-[#8A8278]">{activeCount}</span>
+          </button>
+          {pendingCount > 0 && (
+            <button className="inline-flex items-center gap-2 h-8 px-3 rounded-[6px] bg-white border border-[#E7E7E7] text-[#5D5D5D] hover:text-[#1E1E1E] hover:border-[#D1D5DB] text-[12.5px] font-semibold transition-colors">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#CA8A04]" />
+              En attente
+              <span className="tabular-nums text-[#8A8278]">{pendingCount}</span>
+            </button>
+          )}
+          <span className="ml-auto text-[11.5px] text-[#8A8278]">
+            Quorum MPC 2 / 3 · Quatre-yeux actif
+          </span>
         </div>
       )}
 
