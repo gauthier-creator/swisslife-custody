@@ -60,6 +60,8 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
   const [frozenWallets, setFrozenWallets] = useState({});
   const [sfStatus, setSfStatus] = useState(null);
   const [showStatementModal, setShowStatementModal] = useState(false);
+  const [holdings, setHoldings] = useState(null);
+  const [holdingsLoading, setHoldingsLoading] = useState(false);
   const { user, isAdmin } = useAuth();
 
   const reloadClient = async () => {
@@ -103,10 +105,62 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
         catch { freezeMap[w.id] = false; }
       }));
       setFrozenWallets(freezeMap);
+      // Kick off the aggregated holdings fetch (parallel per-wallet /assets)
+      loadHoldings(all);
     } catch (err) {
       console.error(err); setError(err.message); setWallets([]);
     }
     setLoading(false);
+  };
+
+  // Rough EUR prices for demo — in production these come from a pricing
+  // oracle (Chainlink, CoinGecko) called server-side with cache.
+  const PRICES_EUR = {
+    BTC: 58000, ETH: 2950, SOL: 135,
+    USDC: 0.92, USDT: 0.92, DAI: 0.92,
+    // Testnets render 0 — we still show the asset row so the banker sees
+    // which chains are provisioned, just with €0.00 (clearly flagged).
+    SepoliaETH: 0, EthereumGoerli: 0, BitcoinTestnet: 0,
+  };
+  const humanBalance = (a) => {
+    const raw = parseFloat(a.balance || 0);
+    const dec = a.decimals || 0;
+    // DFNS usually returns decimal-adjusted already; fall back to raw if no decimals.
+    return dec > 6 ? raw / Math.pow(10, dec) : raw;
+  };
+  const assetValueEur = (a) => humanBalance(a) * (PRICES_EUR[a.symbol] ?? 0);
+
+  const loadHoldings = async (wlts) => {
+    if (!wlts || wlts.length === 0) { setHoldings(null); return; }
+    setHoldingsLoading(true);
+    try {
+      const results = await Promise.all(
+        wlts.map(w =>
+          getWalletAssets(w.id)
+            .then(data => ({ wallet: w, assets: data.assets || [] }))
+            .catch(() => ({ wallet: w, assets: [] }))
+        )
+      );
+      // Aggregate by asset symbol
+      const byAsset = {};
+      results.forEach(({ wallet, assets }) => {
+        assets.forEach(a => {
+          const key = a.symbol || a.kind || '?';
+          if (!byAsset[key]) byAsset[key] = { symbol: key, kind: a.kind, balance: 0, valueEur: 0, walletCount: 0 };
+          byAsset[key].balance += humanBalance(a);
+          byAsset[key].valueEur += assetValueEur(a);
+          byAsset[key].walletCount += 1;
+        });
+      });
+      const totalValueEur = Object.values(byAsset).reduce((s, a) => s + a.valueEur, 0);
+      const assetList = Object.values(byAsset)
+        .map(a => ({ ...a, percentage: totalValueEur > 0 ? (a.valueEur / totalValueEur) * 100 : 0 }))
+        .sort((a, b) => b.valueEur - a.valueEur);
+      setHoldings({ totalValueEur, assets: assetList, walletsBreakdown: results });
+    } catch (err) {
+      console.error('loadHoldings error:', err); setHoldings(null);
+    }
+    setHoldingsLoading(false);
   };
 
   const loadContacts = async () => {
@@ -462,6 +516,14 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                 />
               </ul>
             </Card>
+
+            {/* Crypto holdings — real DFNS data aggregated per asset + per wallet */}
+            <CryptoHoldingsCard
+              wallets={wallets}
+              holdings={holdings}
+              loading={holdingsLoading}
+              net={(id) => SUPPORTED_NETWORKS.find(n => n.id === id) || { icon: '?', color: '#8A8278', name: id }}
+            />
 
             {/* KYC summary */}
             <SectionCard title="Conformité KYC">
@@ -1136,6 +1198,126 @@ function WealthRow({ label, sub, value, pct, last }) {
         />
       </div>
     </li>
+  );
+}
+
+// ═══ CryptoHoldingsCard — the "combien de crypto a mon client" card ═══════
+// Shows: (1) total custody value in EUR, (2) per-asset breakdown with a
+// stacked bar + rows (symbol · balance · €value · %), (3) per-wallet
+// breakdown below with network badge + wallet name + inline asset summary.
+// Uses BrandGlyph 'briefcase' as the signature icon.
+// Asset colors come from a lookup tuned for recognisability (BTC orange,
+// ETH blue, USDC blue-teal, SOL green).
+const ASSET_COLORS = {
+  BTC:  '#F7931A', ETH: '#627EEA', SOL: '#14F195',
+  USDC: '#2775CA', USDT: '#26A17B', DAI: '#F4B731',
+  SepoliaETH: '#AAB7D1', EthereumGoerli: '#AAB7D1', BitcoinTestnet: '#D2B48C',
+};
+const colorForAsset = (symbol) => ASSET_COLORS[symbol] || '#7C5E3C';
+
+function CryptoHoldingsCard({ wallets, holdings, loading, net }) {
+  if (!wallets || wallets.length === 0) return null;
+  const networkCount = new Set(wallets.map(w => w.network)).size;
+  const walletsWithAssets = holdings?.walletsBreakdown || wallets.map(w => ({ wallet: w, assets: [] }));
+
+  return (
+    <Card>
+      <div className="px-5 pt-4 pb-4 border-b border-[#E7E7E7]">
+        <div className="flex items-center gap-2.5">
+          <span className="flex-shrink-0 text-[#7C5E3C]">
+            <BrandGlyph name="briefcase" size={18} />
+          </span>
+          <p className="text-[13.5px] font-semibold text-[#0F0F10]">Cryptos détenues</p>
+          {loading && <Spinner size="w-3 h-3" />}
+        </div>
+        <p className="text-[24px] font-semibold text-[#0F0F10] tabular-nums mt-2 leading-[1.1]"
+           style={{ letterSpacing: '-0.02em' }}>
+          {holdings ? fmtEUR(Math.round(holdings.totalValueEur)) : '—'}
+        </p>
+        <p className="text-[11.5px] text-[#8A8278] mt-1">
+          {wallets.length} wallet{wallets.length > 1 ? 's' : ''} · {networkCount} réseau{networkCount > 1 ? 'x' : ''}
+          {holdings?.totalValueEur === 0 && <span className="ml-2 text-[#CA8A04]">· solde testnet</span>}
+        </p>
+      </div>
+
+      {/* Stacked bar + per-asset rows */}
+      {holdings && holdings.assets.length > 0 && (
+        <div className="px-5 pt-4 pb-1">
+          <div className="flex h-2 rounded-[3px] overflow-hidden bg-[#F3F2EE]">
+            {holdings.assets.map((a, i) => (
+              <div
+                key={i}
+                className="h-full transition-all"
+                style={{ width: `${Math.max(2, a.percentage)}%`, background: colorForAsset(a.symbol) }}
+                title={`${a.symbol}: ${a.percentage.toFixed(1)}%`}
+              />
+            ))}
+          </div>
+          <ul className="mt-3 space-y-1.5">
+            {holdings.assets.map((a, i) => (
+              <li key={i} className="flex items-center gap-2.5 text-[12.5px]">
+                <span className="w-2 h-2 rounded-[2px] flex-shrink-0" style={{ background: colorForAsset(a.symbol) }} />
+                <span className="text-[#0F0F10] font-semibold w-14 flex-shrink-0">{a.symbol}</span>
+                <span className="text-[#5D5D5D] tabular-nums flex-1 truncate">{a.balance.toFixed(a.balance > 1 ? 2 : 6)}</span>
+                <span className="text-[#0F0F10] font-medium tabular-nums">
+                  {a.valueEur > 0 ? fmtEUR(Math.round(a.valueEur)) : '—'}
+                </span>
+                <span className="text-[#8A8278] tabular-nums w-10 text-right">
+                  {a.valueEur > 0 ? `${Math.round(a.percentage)}%` : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {holdings && holdings.assets.length === 0 && !loading && (
+        <p className="px-5 py-5 text-[12.5px] text-[#8A8278] text-center">
+          Aucun actif en conservation — les wallets sont provisionnés mais vides.
+        </p>
+      )}
+
+      {/* Per-wallet breakdown */}
+      <div className="border-t border-[#E7E7E7] mt-3">
+        <p className="px-5 pt-3 pb-1 text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.1em]">
+          Détail par wallet
+        </p>
+        <ul className="divide-y divide-[#E7E7E7]">
+          {walletsWithAssets.map(({ wallet, assets }) => {
+            const walletEur = assets.reduce((s, a) => {
+              const bal = (a.decimals > 6 ? parseFloat(a.balance || 0) / Math.pow(10, a.decimals) : parseFloat(a.balance || 0));
+              const price = { BTC: 58000, ETH: 2950, SOL: 135, USDC: 0.92, USDT: 0.92 }[a.symbol] || 0;
+              return s + bal * price;
+            }, 0);
+            const n = net(wallet.network);
+            const summary = assets.length > 0
+              ? assets.map(a => {
+                  const bal = (a.decimals > 6 ? parseFloat(a.balance || 0) / Math.pow(10, a.decimals) : parseFloat(a.balance || 0));
+                  return `${bal.toFixed(bal > 1 ? 2 : 4)} ${a.symbol || a.kind || ''}`;
+                }).join(' · ')
+              : 'Wallet vide';
+            return (
+              <li key={wallet.id} className="px-5 py-2.5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="w-5 h-5 rounded-[4px] flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0" style={{ backgroundColor: n.color }}>
+                      {n.icon}
+                    </span>
+                    <span className="text-[12.5px] font-medium text-[#1E1E1E] truncate">{wallet.name || n.name}</span>
+                  </div>
+                  <span className="text-[12.5px] font-semibold text-[#0F0F10] tabular-nums flex-shrink-0">
+                    {walletEur > 0 ? fmtEUR(Math.round(walletEur)) : '€0'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#8A8278] mt-0.5 truncate">
+                  {summary}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </Card>
   );
 }
 
