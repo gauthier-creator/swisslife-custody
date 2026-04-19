@@ -188,6 +188,70 @@ html, body {
   background-color: #FFFFFF;
 }
 
+/* ═════════════════════════════════════════════════════
+   REFINED HOVER / SHADOW DETAILS
+   The professional polish pass — subtle, never loud.
+   ═════════════════════════════════════════════════════ */
+
+/* Card hover lift — borderless depth via shadow only.
+   Use on bg-white + border-[#E7E7E7] cards to get a subtle pop on hover.
+   No translate-Y (which fights the list row height), just shadow. */
+.card-hover {
+  transition: border-color 180ms cubic-bezier(0.2, 0, 0, 1),
+              box-shadow 180ms cubic-bezier(0.2, 0, 0, 1);
+  box-shadow: 0 0 0 0 rgba(10, 10, 10, 0);
+}
+.card-hover:hover {
+  border-color: #D1D5DB;
+  box-shadow: 0 2px 8px -4px rgba(10, 10, 10, 0.05),
+              0 1px 2px -1px rgba(10, 10, 10, 0.03);
+}
+
+/* Lift-on-hover variant — for cards that SHOULD translate on hover
+   (product-style tiles, feature cards). Keeps GPU-accelerated transform. */
+.card-lift {
+  transition: border-color 180ms cubic-bezier(0.2, 0, 0, 1),
+              box-shadow 180ms cubic-bezier(0.2, 0, 0, 1),
+              transform 180ms cubic-bezier(0.2, 0, 0, 1);
+  will-change: transform;
+}
+.card-lift:hover {
+  transform: translateY(-1px);
+  border-color: #D1D5DB;
+  box-shadow: 0 4px 12px -4px rgba(10, 10, 10, 0.06),
+              0 2px 4px -2px rgba(10, 10, 10, 0.04);
+}
+
+/* Row hover — table rows, list rows. Matches our cream peach tint system. */
+.row-hover {
+  transition: background-color 120ms linear;
+}
+.row-hover:hover {
+  background-color: #FDFBF6;
+}
+
+/* Inline link — clean underline offset animation */
+.link-inline {
+  color: #1E1E1E;
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: rgba(124, 94, 60, 0.35);
+  text-underline-offset: 3px;
+  transition: text-decoration-color 150ms, color 150ms;
+}
+.link-inline:hover {
+  color: #0F0F10;
+  text-decoration-color: #7C5E3C;
+}
+
+/* Tap / active press — subtle scale that doesn't reflow. */
+.tap-press {
+  transition: transform 120ms cubic-bezier(0.2, 0, 0, 1);
+}
+.tap-press:active {
+  transform: scale(0.985);
+}
+
 /* Quiet gradient for empty states — very subtle warm cream */
 .mesh-warm {
   background: linear-gradient(180deg, #FFFFFF 0%, #FAF8F3 100%);

@@ -259,20 +259,20 @@ export function Badge({ children, variant = 'default', dot = false, size = 'md' 
 
 // ─── Card ─────────────────────────────────────────────
 // Hairline border, warm white, barely-there shadow. Apple restraint.
-export function Card({ children, className = '', variant = 'elevated', ...props }) {
-  // Ramify DNA: 8px radius, 1px hairline #E7E7E7, no shadow — pure editorial.
-  // `elevated` and `flat` are kept for API compatibility but render identically
-  // (Ramify never uses drop shadows on data cards).
+export function Card({ children, className = '', variant = 'elevated', hover = false, ...props }) {
+  // Ramify DNA: 8px radius, 1px hairline #E7E7E7, no static shadow.
+  // `hover` opt-in adds a subtle shadow on hover via .card-hover utility.
   const variants = {
     elevated: 'bg-white rounded-[8px] border border-[#E7E7E7]',
     flat:     'bg-white rounded-[8px] border border-[#E7E7E7]',
     soft:     'bg-[#FDFBF6] rounded-[8px] border border-[#E7E7E7]',
     dark:     'bg-[#1E1E1E] text-white rounded-[8px]',
   };
+  const hoverCls = hover ? 'card-hover' : '';
   return (
     <div
       {...props}
-      className={`${variants[variant] || variants.elevated} ${className}`}
+      className={`${variants[variant] || variants.elevated} ${hoverCls} ${className}`}
     >
       {children}
     </div>
@@ -1113,6 +1113,97 @@ export function ActionButton({ icon, label, onClick }) {
 // ─── Divider ──────────────────────────────────────────
 export function Divider({ className = '' }) {
   return <div className={`h-px bg-[#E7E7E7] ${className}`} />;
+}
+
+// ─── SubSection ───────────────────────────────────────
+// Ramify pattern: inline section title + optional right action, NO card
+// wrapper. Used to break up a page into semantic zones without nesting
+// another hairline box. Children flow directly under the title.
+//
+// Example:
+//   <SubSection title="Actualités & ressources" action={<a>Voir tout →</a>}>
+//     <LinkListItem ... />
+//     <LinkListItem ... />
+//   </SubSection>
+export function SubSection({ title, subtitle, action, children, className = '' }) {
+  return (
+    <section className={`space-y-3 ${className}`}>
+      <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div>
+          <h3 className="text-[15px] font-semibold text-[#0F0F10]" style={{ letterSpacing: '-0.012em' }}>
+            {title}
+          </h3>
+          {subtitle && <p className="text-[12.5px] text-[#8A8278] mt-0.5">{subtitle}</p>}
+        </div>
+        {action && <div className="flex-shrink-0">{action}</div>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+// ─── LinkListItem ─────────────────────────────────────
+// Ramify inline list row: 36px square icon badge + title + subtitle + hover
+// chevron, separated only by a hairline, NO card wrapper. Used to present
+// lists of actions / resources without adding another box layer.
+// - If href is set, renders as <a>. Otherwise as <button> (calls onClick).
+// - The `tone` prop colours the icon badge: cream (default), peach, blue, green
+export function LinkListItem({
+  icon,
+  title,
+  subtitle,
+  href,
+  onClick,
+  tone = 'cream',
+  trailing,
+  className = '',
+}) {
+  const tones = {
+    cream: 'bg-[#F5F2EB] text-[#1E1E1E]',
+    peach: 'bg-[#F5E5CE] text-[#7C5E3C]',
+    blue:  'bg-[#EBF5FF] text-[#1E40AF]',
+    green: 'bg-[#ECFAF0] text-[#0F9868]',
+    ink:   'bg-[#1E1E1E] text-white',
+  };
+  const Tag = href ? 'a' : 'button';
+  const extra = href ? { href } : { type: 'button', onClick };
+  return (
+    <Tag
+      {...extra}
+      className={`group w-full flex items-center gap-3.5 py-3 text-left transition-colors ${className}`}
+    >
+      <span className={`flex-shrink-0 w-9 h-9 rounded-[7px] flex items-center justify-center transition-transform duration-200 group-hover:scale-[1.04] ${tones[tone] || tones.cream}`}>
+        {icon}
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="text-[13.5px] font-semibold text-[#0F0F10] leading-[1.3] truncate">
+          {title}
+        </p>
+        {subtitle && (
+          <p className="text-[12.5px] text-[#8A8278] mt-0.5 leading-[1.35] truncate">
+            {subtitle}
+          </p>
+        )}
+      </div>
+      {trailing || (
+        <svg className="w-3.5 h-3.5 text-[#8A8278] flex-shrink-0 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+      )}
+    </Tag>
+  );
+}
+
+// ─── LinkList ─────────────────────────────────────────
+// Container for LinkListItems — just adds dividers between children.
+// Uses negative margin + padding trick so the first/last have no outer
+// dividers, only between rows.
+export function LinkList({ children, className = '' }) {
+  return (
+    <div className={`divide-y divide-[#E7E7E7] ${className}`}>
+      {children}
+    </div>
+  );
 }
 
 // ─── PageHeader ───────────────────────────────────────

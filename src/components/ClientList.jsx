@@ -5,7 +5,9 @@ import {
   SkeletonCircle, Skeleton, useCountUp,
   PageHeader, StatusDot, Timestamp, SignatureMark, FleuronRule,
   Metric, MetricRow,
+  SubSection, LinkList, LinkListItem,
 } from './shared';
+import { BrandGlyph } from './BrandGlyphs';
 import {
   ProductCard, ProductCarousel,
   SceneVault, SceneArch, SceneWaves, SceneDocument, SceneKeys,
@@ -353,6 +355,74 @@ export default function ClientList({ onSelectClient, onNavigate }) {
               ))}
             </ul>
           </Card>
+        </div>
+      )}
+
+      {/* ── Ramify-style sous-section: Ressources & compliance ────
+         Inline list without card wrapper — section title + LinkList.
+         Mixes internal shortcuts (compliance cockpit, audit export) and
+         external resources (ACPR / MiCA guides). Each row is a LinkListItem
+         with a bespoke BrandGlyph icon on the left, title + subtitle middle,
+         hover chevron right. */}
+      {!loading && clients.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-2 pt-6">
+          <SubSection
+            title="Ressources compliance"
+            subtitle="Documentation opérationnelle mise à jour en continu"
+          >
+            <LinkList>
+              <LinkListItem
+                icon={<BrandGlyph name="scroll" size={16} />}
+                title="Guide ACPR · Custody d'actifs numériques"
+                subtitle="Questionnaire LCB-FT · obligations CASP"
+                onClick={() => window.open('https://acpr.banque-france.fr', '_blank', 'noopener')}
+                tone="cream"
+              />
+              <LinkListItem
+                icon={<BrandGlyph name="hex" size={16} />}
+                title="Checklist MiCA Art. 60 & 75"
+                subtitle="Ségrégation des actifs · politique de conservation"
+                onClick={() => onNavigate?.('policies')}
+                tone="cream"
+              />
+              <LinkListItem
+                icon={<BrandGlyph name="eye" size={16} />}
+                title="Rapport Tracfin mensuel"
+                subtitle="Déclarations SAR / STR déposées"
+                onClick={() => onNavigate?.('compliance')}
+                tone="peach"
+              />
+            </LinkList>
+          </SubSection>
+
+          <SubSection
+            title="Accompagnement"
+            subtitle="Chat direct avec les équipes opérationnelles"
+          >
+            <LinkList>
+              <LinkListItem
+                icon={<BrandGlyph name="infinity" size={16} />}
+                title="Cellule RCSI"
+                subtitle="Support conformité 24 / 7 via messagerie interne"
+                onClick={() => onNavigate?.('compliance')}
+                tone="blue"
+              />
+              <LinkListItem
+                icon={<BrandGlyph name="key" size={16} />}
+                title="Support DFNS · Clés MPC"
+                subtitle="Rotation · cérémonie de clé · audit crypto"
+                onClick={() => onNavigate?.('wallets')}
+                tone="cream"
+              />
+              <LinkListItem
+                icon={<BrandGlyph name="crest" size={16} />}
+                title="Juridique SwissLife"
+                subtitle="Contrats-cadres · mandats · clauses MiCA"
+                href="mailto:juridique@swisslife-banque-privee.fr"
+                tone="cream"
+              />
+            </LinkList>
+          </SubSection>
         </div>
       )}
 
