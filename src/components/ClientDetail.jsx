@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   fmtEUR, fmtCompactEUR, Badge, Card, Modal, Spinner, EmptyState, Button,
   Avatar, Metric, MetricRow, Delta, inputCls, selectCls, labelCls, useCountUp,
+  Drawer, CopyButton,
 } from './shared';
 import { VerifiedBadge } from './brand';
 import { BrandGlyph } from './BrandGlyphs';
@@ -62,6 +63,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
   const [showStatementModal, setShowStatementModal] = useState(false);
   const [holdings, setHoldings] = useState(null);
   const [holdingsLoading, setHoldingsLoading] = useState(false);
+  const [walletDrawerId, setWalletDrawerId] = useState(null);
   const { user, isAdmin } = useAuth();
 
   const reloadClient = async () => {
@@ -523,7 +525,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
               holdings={holdings}
               loading={holdingsLoading}
               net={(id) => SUPPORTED_NETWORKS.find(n => n.id === id) || { icon: '?', color: '#8A8278', name: id }}
-              onSelectWallet={(w) => { setTab('wallets'); setSelectedWallet(w); }}
+              onSelectWallet={(w) => setWalletDrawerId(w.id)}
             />
 
             {/* KYC summary */}
@@ -1102,27 +1104,158 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
           </div>
         </div>
       </Modal>
+
+      {/* ═══ Wallet drawer — slide-in from the right, same UX as the client
+          profile drawer. Triggered by clicking a row in CryptoHoldingsCard
+          or the Wallets tab. Closes on Esc / backdrop click. */}
+      {(() => {
+        const w = wallets.find(x => x.id === walletDrawerId);
+        const breakdown = holdings?.walletsBreakdown?.find(x => x.wallet.id === walletDrawerId);
+        const walletAssets = breakdown?.assets || [];
+        const n = w ? (SUPPORTED_NETWORKS.find(s => s.id === w.network) || { icon: '?', color: '#8A8278', name: w.network }) : null;
+        const walletEur = walletAssets.reduce((s, a) => {
+          const bal = (a.decimals > 6 ? parseFloat(a.balance || 0) / Math.pow(10, a.decimals) : parseFloat(a.balance || 0));
+          const price = { BTC: 58000, ETH: 2950, SOL: 135, USDC: 0.92, USDT: 0.92 }[a.symbol] || 0;
+          return s + bal * price;
+        }, 0);
+        return (
+          <Drawer
+            isOpen={!!walletDrawerId && !!w}
+            onClose={() => setWalletDrawerId(null)}
+            size="md"
+            title={w?.name || 'Wallet'}
+            eyebrow={n?.name}
+            trailing={
+              <Badge variant={w?.status === 'Active' ? 'success' : 'warning'}>
+                {w?.status || 'Inconnu'}
+              </Badge>
+            }
+          >
+            {w && (
+              <div className="space-y-5 animate-fade">
+                {/* Live balance — big number same pattern as CryptoHoldingsCard */}
+                <div className="bg-[#F9F8F5] border border-[#E7E7E7] rounded-[8px] p-5">
+                  <p className="text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.1em]">
+                    Solde en conservation
+                  </p>
+                  <p className="text-[32px] font-semibold text-[#0F0F10] tabular-nums mt-1 leading-[1.05]" style={{ letterSpacing: '-0.022em' }}>
+                    {walletEur > 0 ? fmtEUR(Math.round(walletEur)) : '€0'}
+                  </p>
+                  <p className="text-[11.5px] text-[#8A8278] mt-1">
+                    {walletAssets.length} actif{walletAssets.length > 1 ? 's' : ''} · réseau {n?.name}
+                  </p>
+                </div>
+
+                {/* Deposit address */}
+                <div>
+                  <p className="text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.1em] mb-2">
+                    Adresse de dépôt
+                  </p>
+                  <div className="flex items-center gap-2 bg-white border border-[#E7E7E7] rounded-[8px] px-3 py-2.5">
+                    <span className="font-mono text-[12px] text-[#0F0F10] break-all flex-1 leading-relaxed">
+                      {w.address || '—'}
+                    </span>
+                    {w.address && <CopyButton value={w.address} label="" />}
+                  </div>
+                  <p className="text-[11px] text-[#8A8278] mt-1.5">
+                    Partagez uniquement cette adresse avec le client — elle est propre au wallet.
+                  </p>
+                </div>
+
+                {/* Assets list */}
+                {walletAssets.length > 0 && (
+                  <div>
+                    <p className="text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.1em] mb-2">
+                      Actifs
+                    </p>
+                    <ul className="bg-white border border-[#E7E7E7] rounded-[8px] divide-y divide-[#E7E7E7]">
+                      {walletAssets.map((a, i) => {
+                        const bal = (a.decimals > 6 ? parseFloat(a.balance || 0) / Math.pow(10, a.decimals) : parseFloat(a.balance || 0));
+                        const price = { BTC: 58000, ETH: 2950, SOL: 135, USDC: 0.92, USDT: 0.92 }[a.symbol] || 0;
+                        const eur = bal * price;
+                        return (
+                          <li key={i} className="px-4 py-3 flex items-center gap-3">
+                            <span className="w-2 h-2 rounded-[2px] flex-shrink-0" style={{ background: colorForAsset(a.symbol) }} />
+                            <span className="text-[13px] text-[#0F0F10] font-semibold w-16">{a.symbol}</span>
+                            <span className="text-[12.5px] text-[#5D5D5D] tabular-nums flex-1">{bal.toFixed(bal > 1 ? 2 : 6)}</span>
+                            <span className="text-[13px] text-[#0F0F10] font-medium tabular-nums">
+                              {eur > 0 ? fmtEUR(Math.round(eur)) : '—'}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Meta */}
+                <div className="pt-4 border-t border-[#E7E7E7] space-y-2.5 text-[12.5px]">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#8A8278]">Wallet ID</span>
+                    <span className="text-[#1E1E1E] font-mono text-[11.5px]">{w.id}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#8A8278]">Créé le</span>
+                    <span className="text-[#1E1E1E] tabular-nums">{fmtDate(w.dateCreated)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#8A8278]">Signature MPC</span>
+                    <span className="text-[#1E1E1E] font-semibold tabular-nums">2 / 3</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#8A8278]">Client lié</span>
+                    <span className="text-[#1E1E1E] font-mono text-[11.5px]">{w.externalId || '—'}</span>
+                  </div>
+                </div>
+
+                {/* Actions — keyboard-focusable */}
+                <div className="grid grid-cols-2 gap-2 pt-4 border-t border-[#E7E7E7]">
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={() => { setWalletDrawerId(null); setTab('wallets'); setSelectedWallet(w); }}
+                  >
+                    Voir détails complets
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={() => { setWalletDrawerId(null); setTab('transfers'); setSelectedWallet(w); setShowTransfer(true); }}
+                  >
+                    Demander un transfert
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Drawer>
+        );
+      })()}
     </div>
   );
 }
 
 /* ─── Sub-components ─── */
 
-// ActionRow — one row in the "Actions banquier" card. Peach icon badge +
-// title + subtitle + chevron that slides in from the left on hover.
-// Disabled state dims the whole row and removes the hover affordance.
+// ActionRow — one row in the "Actions banquier" card. Monochrome grey icon
+// badge (Ramify-inspired neutral) + title + subtitle + chevron that slides
+// in from the left on hover. Disabled dims the whole row.
+// Grey tokens:
+//   badge bg   #F3F2EE  (warm-neutral stone)
+//   badge fg   #1E1E1E  (ink)
+//   hover bg   #F9F8F5  (very subtle warm-neutral lift)
+//   hover bdr  #D1D5DB  (cool grey, not bronze)
 function ActionRow({ icon, title, subtitle, onClick, disabled = false }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-[6px] border transition-colors text-left group
+      className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-[6px] border transition-all duration-150 text-left group
         ${disabled
           ? 'bg-[#FAFAFA] border-[#E7E7E7] opacity-60 cursor-not-allowed'
-          : 'bg-white border-[#E7E7E7] hover:border-[#7C5E3C] hover:bg-[#FDFBF6]'}`}
+          : 'bg-white border-[#E7E7E7] hover:border-[#D1D5DB] hover:bg-[#F9F8F5] active:scale-[0.995]'}`}
     >
       <div className="flex items-center gap-3 min-w-0">
-        <span className="w-7 h-7 rounded-[6px] bg-[#F5E5CE] text-[#7C5E3C] flex items-center justify-center flex-shrink-0">
+        <span className="w-8 h-8 rounded-[7px] bg-[#F3F2EE] text-[#1E1E1E] flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-[1.04]">
           {icon}
         </span>
         <div className="min-w-0">
@@ -1237,8 +1370,8 @@ function CryptoHoldingsCard({ wallets, holdings, loading, net, onSelectWallet })
     <Card>
       <div className="px-5 pt-4 pb-4 border-b border-[#E7E7E7]">
         <div className="flex items-center gap-2.5">
-          <span className="flex-shrink-0 text-[#7C5E3C]">
-            <BrandGlyph name="briefcase" size={18} />
+          <span className="flex-shrink-0 w-8 h-8 rounded-[7px] bg-[#F3F2EE] text-[#1E1E1E] flex items-center justify-center">
+            <BrandGlyph name="briefcase" size={16} />
           </span>
           <p className="text-[13.5px] font-semibold text-[#0F0F10]">Cryptos détenues</p>
           {loading && <Spinner size="w-3 h-3" />}
@@ -1375,8 +1508,8 @@ function MandatCard({ isSigned, createdDate }) {
     <Card>
       <div className="px-5 py-4 border-b border-[#E7E7E7] flex items-center justify-between">
         <div className="flex items-center gap-2.5 min-w-0">
-          <span className="flex-shrink-0 text-[#7C5E3C]">
-            <BrandGlyph name="stamp" size={18} />
+          <span className="flex-shrink-0 w-8 h-8 rounded-[7px] bg-[#F3F2EE] text-[#1E1E1E] flex items-center justify-center">
+            <BrandGlyph name="stamp" size={16} />
           </span>
           <div className="min-w-0">
             <p className="text-[13.5px] font-semibold text-[#0F0F10]">Mandat de conservation</p>
@@ -1429,8 +1562,8 @@ function ContactHistoryCard({ clientName }) {
     <Card>
       <div className="px-5 py-4 border-b border-[#E7E7E7] flex items-center justify-between">
         <div className="flex items-center gap-2.5 min-w-0">
-          <span className="flex-shrink-0 text-[#7C5E3C]">
-            <BrandGlyph name="ledger" size={18} />
+          <span className="flex-shrink-0 w-8 h-8 rounded-[7px] bg-[#F3F2EE] text-[#1E1E1E] flex items-center justify-center">
+            <BrandGlyph name="ledger" size={16} />
           </span>
           <div>
             <p className="text-[13.5px] font-semibold text-[#0F0F10]">Historique contact</p>
