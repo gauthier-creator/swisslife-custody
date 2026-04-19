@@ -17,6 +17,7 @@ import {
   Avatar, Metric, MetricRow, Delta, inputCls, selectCls, labelCls,
 } from './shared';
 import { VerifiedBadge } from './brand';
+import { BrandGlyph } from './BrandGlyphs';
 import { API_BASE } from '../config/constants';
 
 /* ─────────────────────────────────────────────────────────
@@ -512,34 +513,19 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
               )}
             </SectionCard>
 
-            {/* Actions */}
-            <SectionCard title="Actions rapides">
-              <div className="space-y-2">
-                <Button
-                  variant="primary"
-                  size="md"
-                  className="w-full"
-                  onClick={() => { setTab('wallets'); setShowCreate(true); }}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                  </svg>
-                  Créer un wallet DFNS
-                </Button>
-                {client.website && (
-                  <a
-                    href={client.website.startsWith('http') ? client.website : `https://${client.website}`}
-                    target="_blank" rel="noopener noreferrer"
-                    className="w-full h-10 inline-flex items-center justify-center gap-2 px-5 text-[13.5px] font-medium rounded-full bg-white text-[#0A0A0A] border border-[rgba(10,10,10,0.12)] hover:bg-white transition-colors tracking-[-0.01em]"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
-                    Ouvrir le site
-                  </a>
-                )}
-              </div>
-            </SectionCard>
+            {/* Mandat de conservation — contract state & renewal countdown.
+               Real banker need: know if the signed mandate is still valid
+               (not expired, not pending renewal). Signals urgency visually. */}
+            <MandatCard
+              isSigned={!!parsed.kyc?.toLowerCase().includes('valid')}
+              createdDate={client.createdDate}
+            />
+
+            {/* Historique contact — last 3 interactions (emails, calls, meetings).
+               Bankers relationship-manage; they need to see when they last
+               touched the client without opening SFDC. Data is placeholder
+               until we wire SFDC Activities/Tasks. */}
+            <ContactHistoryCard clientName={client.name} />
 
             <SectionCard title="Métadonnées">
               <dl className="space-y-4">
@@ -1150,5 +1136,117 @@ function WealthRow({ label, sub, value, pct, last }) {
         />
       </div>
     </li>
+  );
+}
+
+// ═══ MandatCard — contract state + renewal countdown ═══════════
+// Matches Ramify's card DNA: header with eyebrow + headline, hairline
+// divider, body with label/value rows, footer with a single semantic CTA.
+// Uses BrandGlyph 'stamp' for the header mark. Days-til-renewal computed
+// from createdDate + 365 days (mandate de conservation = annual by default).
+function MandatCard({ isSigned, createdDate }) {
+  const signedAt = createdDate ? new Date(createdDate) : null;
+  const renewAt = signedAt ? new Date(signedAt.getTime() + 365 * 24 * 60 * 60 * 1000) : null;
+  const daysLeft = renewAt ? Math.ceil((renewAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+  const status = !isSigned ? 'pending' : daysLeft != null && daysLeft < 30 ? 'expiring' : 'active';
+  const statusTone = {
+    pending:  { bg: '#FEF5E7', fg: '#92400E', label: 'À signer' },
+    expiring: { bg: '#FEF5E7', fg: '#92400E', label: `Expire dans ${daysLeft} j` },
+    active:   { bg: '#ECFAF0', fg: '#0F9868', label: 'En vigueur' },
+  }[status];
+
+  return (
+    <Card>
+      <div className="px-5 py-4 border-b border-[#E7E7E7] flex items-center justify-between">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="flex-shrink-0 text-[#7C5E3C]">
+            <BrandGlyph name="stamp" size={18} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[13.5px] font-semibold text-[#0F0F10]">Mandat de conservation</p>
+            <p className="text-[11.5px] text-[#8A8278]">MiCA Art. 75 · annuel tacite</p>
+          </div>
+        </div>
+        <span className="inline-flex items-center h-[22px] px-2 rounded-[4px] text-[10.5px] font-semibold uppercase tracking-[0.04em] flex-shrink-0" style={{ backgroundColor: statusTone.bg, color: statusTone.fg }}>
+          {statusTone.label}
+        </span>
+      </div>
+      <div className="px-5 py-4 space-y-2.5 text-[12.5px]">
+        <div className="flex items-center justify-between">
+          <span className="text-[#5D5D5D]">Signature initiale</span>
+          <span className="text-[#0F0F10] font-medium tabular-nums">
+            {signedAt ? signedAt.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[#5D5D5D]">Prochain renouvellement</span>
+          <span className="text-[#0F0F10] font-medium tabular-nums">
+            {renewAt ? renewAt.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-[#5D5D5D]">Référence contractuelle</span>
+          <span className="text-[#0F0F10] font-mono text-[11.5px]">Sℓ-{(createdDate || '').slice(2, 10).replace(/-/g, '')}</span>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+// ═══ ContactHistoryCard — last 3 interactions ══════════════════
+// Placeholder data until we wire SFDC Activities/Tasks. Mimics a banker's
+// relationship log (email, call, meeting) with type icon + date + note.
+// The "Ajouter une note" footer is a CTA for the banker to log an
+// interaction without switching to SFDC.
+function ContactHistoryCard({ clientName }) {
+  // Stub: in production these come from SFDC Activity history
+  const interactions = [
+    { type: 'meeting', label: 'Rendez-vous patrimonial', days: 12 },
+    { type: 'email',   label: 'Envoi relevé trimestriel', days: 24 },
+    { type: 'call',    label: 'Appel de courtoisie',      days: 47 },
+  ];
+  const typeGlyph = { meeting: 'handshake', email: 'envelope', call: 'timestamp' };
+  const typeLabel = { meeting: 'RDV', email: 'Email', call: 'Appel' };
+  const fmtRelative = (d) => d === 1 ? 'hier' : d < 7 ? `il y a ${d} j` : d < 30 ? `il y a ${Math.round(d / 7)} sem` : `il y a ${Math.round(d / 30)} mois`;
+
+  return (
+    <Card>
+      <div className="px-5 py-4 border-b border-[#E7E7E7] flex items-center justify-between">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="flex-shrink-0 text-[#7C5E3C]">
+            <BrandGlyph name="ledger" size={18} />
+          </span>
+          <div>
+            <p className="text-[13.5px] font-semibold text-[#0F0F10]">Historique contact</p>
+            <p className="text-[11.5px] text-[#8A8278]">3 dernières interactions</p>
+          </div>
+        </div>
+      </div>
+      <ul className="divide-y divide-[#E7E7E7]">
+        {interactions.map((it, i) => (
+          <li key={i} className="px-5 py-3 flex items-center gap-3">
+            <span className="w-8 h-8 rounded-[6px] bg-[#F5F2EB] text-[#5D5D5D] flex items-center justify-center flex-shrink-0">
+              <BrandGlyph name={typeGlyph[it.type]} size={15} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[12.5px] font-medium text-[#0F0F10] truncate">{it.label}</p>
+              <p className="text-[11.5px] text-[#8A8278]">{typeLabel[it.type]} · {fmtRelative(it.days)}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <div className="px-4 py-3 border-t border-[#E7E7E7]">
+        <button
+          type="button"
+          className="w-full flex items-center justify-center gap-2 h-9 rounded-[6px] text-[12.5px] font-semibold text-[#5D5D5D] hover:text-[#1E1E1E] hover:bg-[#FDFBF6] transition-colors"
+          onClick={() => { /* TODO: open add-note modal */ }}
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          Ajouter une note
+        </button>
+      </div>
+    </Card>
   );
 }

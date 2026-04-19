@@ -261,6 +261,144 @@ const paths = {
       <circle cx="12" cy="12" r="4" />
     </g>
   ),
+
+  /* ══════════════════════════════════════════════════════
+     SwissLife signature set — each icon features the
+     "Swiss precision" motif: a tiny centre dot or a set of
+     tick marks (like watch dial indicators). Consistent
+     visual DNA makes them instantly recognisable as ours.
+     ══════════════════════════════════════════════════════ */
+
+  /* timestamp — clock face with 4 tick marks + center dot */
+  timestamp: (
+    <g fill="currentColor">
+      <circle cx="12" cy="12" r="9" />
+      <g fill="#FFFFFF">
+        <rect x="11.3" y="3.5" width="1.4" height="2.2" rx="0.5" />
+        <rect x="11.3" y="18.3" width="1.4" height="2.2" rx="0.5" />
+        <rect x="3.5" y="11.3" width="2.2" height="1.4" rx="0.5" />
+        <rect x="18.3" y="11.3" width="2.2" height="1.4" rx="0.5" />
+      </g>
+      <path d="M12 7 L12 12 L16 14" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+      <circle cx="12" cy="12" r="1" fill="#FFFFFF" />
+    </g>
+  ),
+
+  /* signature — quill pen gliding over a signature line + dot */
+  signature: (
+    <g fill="currentColor">
+      <path d="M3 21 L 12 12 L 19 5 C 20.2 3.8, 21.5 4, 21 5.5 L 14 13 L 5 22 Z" />
+      <path d="M4 18.5 L 18 18.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <circle cx="20" cy="18.5" r="0.9" />
+    </g>
+  ),
+
+  /* stamp — wax-sealed document stamp with 8 radial ticks */
+  stamp: (
+    <g fill="currentColor">
+      <circle cx="12" cy="12" r="6" />
+      <circle cx="12" cy="12" r="2.2" fill="#FFFFFF" />
+      {Array.from({ length: 8 }).map((_, i) => {
+        const a = (i * 45 * Math.PI) / 180;
+        const x1 = 12 + Math.cos(a) * 7;
+        const y1 = 12 + Math.sin(a) * 7;
+        const x2 = 12 + Math.cos(a) * 9;
+        const y2 = 12 + Math.sin(a) * 9;
+        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />;
+      })}
+    </g>
+  ),
+
+  /* envelope — sealed envelope with corner stamp + top flap */
+  envelope: (
+    <g fill="currentColor">
+      <rect x="3" y="6" width="18" height="13" rx="1.4" />
+      <path d="M3 7 L 12 13 L 21 7" stroke="#FFFFFF" strokeWidth="1.4" fill="none" />
+      <circle cx="18" cy="16" r="1.6" fill="#FFFFFF" />
+    </g>
+  ),
+
+  /* ledger — ledger book with 3 entries + closing dot */
+  ledger: (
+    <g fill="currentColor">
+      <rect x="4" y="3" width="16" height="18" rx="1.5" />
+      <g fill="#FFFFFF">
+        <rect x="7" y="7" width="10" height="1.3" rx="0.5" />
+        <rect x="7" y="10.5" width="8" height="1.3" rx="0.5" />
+        <rect x="7" y="14" width="10" height="1.3" rx="0.5" />
+        <circle cx="17" cy="17.5" r="0.9" />
+      </g>
+    </g>
+  ),
+
+  /* calendar — calendar with 6-dot grid + top hinge */
+  calendar: (
+    <g fill="currentColor">
+      <rect x="3" y="5" width="18" height="16" rx="1.5" />
+      <rect x="7" y="2" width="2" height="5" rx="0.8" />
+      <rect x="15" y="2" width="2" height="5" rx="0.8" />
+      <rect x="3" y="5" width="18" height="3.5" fill="#FFFFFF" opacity="0.35" />
+      <g fill="#FFFFFF">
+        <circle cx="8" cy="13" r="0.9" />
+        <circle cx="12" cy="13" r="0.9" />
+        <circle cx="16" cy="13" r="0.9" />
+        <circle cx="8" cy="17" r="0.9" />
+        <circle cx="12" cy="17" r="1.1" />
+        <circle cx="16" cy="17" r="0.9" />
+      </g>
+    </g>
+  ),
+
+  /* handshake — two meeting hands + center dot (delegation / approval) */
+  handshake: (
+    <g fill="currentColor">
+      <path d="M3 9 L 7 7 L 10 10 L 10 14 L 6 16 L 3 14 Z" />
+      <path d="M21 9 L 17 7 L 14 10 L 14 14 L 18 16 L 21 14 Z" />
+      <rect x="9" y="10" width="6" height="3" rx="0.8" />
+      <circle cx="12" cy="11.5" r="0.7" fill="#FFFFFF" />
+    </g>
+  ),
+
+  /* briefcase — banker's briefcase with clasp dot */
+  briefcase: (
+    <g fill="currentColor">
+      <path d="M9 5 L 9 3.5 C 9 3, 9.3 2.5, 9.8 2.5 L 14.2 2.5 C 14.7 2.5, 15 3, 15 3.5 L 15 5" stroke="currentColor" strokeWidth="1.6" fill="none" />
+      <rect x="3" y="5.5" width="18" height="14" rx="1.6" />
+      <rect x="3" y="10.5" width="18" height="2" fill="#FFFFFF" opacity="0.35" />
+      <circle cx="12" cy="11.5" r="0.9" fill="#FFFFFF" />
+    </g>
+  ),
+
+  /* swiss — Swiss cross seal (heritage mark) */
+  swiss: (
+    <g fill="currentColor">
+      <circle cx="12" cy="12" r="9" />
+      <g fill="#FFFFFF">
+        <rect x="10.5" y="7" width="3" height="10" rx="0.5" />
+        <rect x="7" y="10.5" width="10" height="3" rx="0.5" />
+      </g>
+    </g>
+  ),
+
+  /* expiry — clock face with an X overlay */
+  expiry: (
+    <g fill="currentColor">
+      <circle cx="12" cy="12" r="8.5" />
+      <g stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round">
+        <line x1="8.5" y1="8.5" x2="15.5" y2="15.5" />
+        <line x1="15.5" y1="8.5" x2="8.5" y2="15.5" />
+      </g>
+    </g>
+  ),
+
+  /* pen — fountain pen nib + center dot, Swiss precision */
+  pen: (
+    <g fill="currentColor">
+      <path d="M12 3 L 15 10 L 15 18 C 15 19, 14 20, 12 20 C 10 20, 9 19, 9 18 L 9 10 Z" />
+      <circle cx="12" cy="16" r="0.9" fill="#FFFFFF" />
+      <rect x="11" y="10" width="2" height="4" fill="#FFFFFF" opacity="0.5" />
+    </g>
+  ),
 };
 
 /* ─── BrandGlyph — single mark renderer ──────────────── */
