@@ -348,6 +348,80 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
           </div>
 
           <aside className="lg:col-span-4 space-y-6">
+            {/* Banker quick actions — the core workflow entry points */}
+            <Card>
+              <div className="px-5 py-4 border-b border-[#E7E7E7]">
+                <p className="text-[11px] font-semibold text-[#8A8278] uppercase tracking-[0.1em]">
+                  Actions banquier
+                </p>
+                <p className="text-[13px] text-[#5D5D5D] mt-1">
+                  Workflow custody pour ce client
+                </p>
+              </div>
+              <div className="p-4 space-y-2">
+                <button
+                  onClick={() => setTab('kyc')}
+                  className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-[6px] bg-white border border-[#E7E7E7] hover:border-[#7C5E3C] hover:bg-[#FDFBF6] transition-colors text-left group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="w-7 h-7 rounded-[6px] bg-[#F5E5CE] text-[#7C5E3C] flex items-center justify-center flex-shrink-0">
+                      <svg className="w-[14px] h-[14px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.306a11.95 11.95 0 015.814-5.518l2.74-1.22" />
+                      </svg>
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold text-[#0F0F10]">Lancer screening</p>
+                      <p className="text-[11.5px] text-[#8A8278]">Chainalysis · sanctions OFAC</p>
+                    </div>
+                  </div>
+                  <svg className="w-3.5 h-3.5 text-[#8A8278] group-hover:text-[#1E1E1E] group-hover:translate-x-0.5 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+
+                <button
+                  onClick={() => { setTab('wallets'); setShowCreate(true); }}
+                  className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-[6px] bg-white border border-[#E7E7E7] hover:border-[#7C5E3C] hover:bg-[#FDFBF6] transition-colors text-left group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="w-7 h-7 rounded-[6px] bg-[#F5E5CE] text-[#7C5E3C] flex items-center justify-center flex-shrink-0">
+                      <svg className="w-[14px] h-[14px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <circle cx="12" cy="12" r="4" />
+                      </svg>
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold text-[#0F0F10]">Créer un wallet</p>
+                      <p className="text-[11.5px] text-[#8A8278]">DFNS · MPC 2 / 3</p>
+                    </div>
+                  </div>
+                  <svg className="w-3.5 h-3.5 text-[#8A8278] group-hover:text-[#1E1E1E] group-hover:translate-x-0.5 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+
+                <button
+                  onClick={() => setTab('transfers')}
+                  className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-[6px] bg-white border border-[#E7E7E7] hover:border-[#7C5E3C] hover:bg-[#FDFBF6] transition-colors text-left group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="w-7 h-7 rounded-[6px] bg-[#F5E5CE] text-[#7C5E3C] flex items-center justify-center flex-shrink-0">
+                      <svg className="w-[14px] h-[14px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4m14-2v2a4 4 0 01-4 4H3" />
+                      </svg>
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold text-[#0F0F10]">Transferts</p>
+                      <p className="text-[11.5px] text-[#8A8278]">Quatre-yeux · Travel Rule</p>
+                    </div>
+                  </div>
+                  <svg className="w-3.5 h-3.5 text-[#8A8278] group-hover:text-[#1E1E1E] group-hover:translate-x-0.5 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            </Card>
+
             {/* Wealth breakdown */}
             <Card>
               <div className="px-6 pt-5 pb-4 border-b border-[#E7E7E7]">

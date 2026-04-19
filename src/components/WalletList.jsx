@@ -81,13 +81,87 @@ export default function WalletList() {
         }
       />
 
-      {/* Network chips — Ramify filter pattern. Unique to WalletList: crypto
-         networks are the natural grouping, not arbitrary KPIs. */}
+      {/* 2-column asymmetric block — unique to WalletList:
+           LEFT 8/12: Network distribution with horizontal stacked bar
+           RIGHT 4/12: Infrastructure MPC status (Live + threshold + last signature) */}
+      {!loading && wallets.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* LEFT — Distribution réseau */}
+          <div className="lg:col-span-8 bg-white border border-[#E7E7E7] rounded-[10px] p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-[15px] font-semibold text-[#0F0F10]" style={{ letterSpacing: '-0.012em' }}>
+                Distribution par réseau
+              </h2>
+              <span className="text-[11.5px] text-[#8A8278] tabular-nums">
+                {wallets.length} wallet{wallets.length > 1 ? 's' : ''} · {activeCount} actif{activeCount > 1 ? 's' : ''}
+              </span>
+            </div>
+            {/* Horizontal stacked bar */}
+            <div className="flex rounded-[6px] overflow-hidden h-8 bg-[#F3F2EE]">
+              {Object.entries(byNetwork).map(([networkId, nws]) => {
+                const n = net(networkId);
+                const pct = (nws.length / wallets.length) * 100;
+                return (
+                  <div
+                    key={networkId}
+                    className="flex items-center justify-center text-[10.5px] font-semibold text-white transition-all"
+                    style={{ width: `${pct}%`, backgroundColor: n.color, minWidth: pct > 0 ? '36px' : 0 }}
+                    title={`${n.name}: ${nws.length}`}
+                  >
+                    {pct > 8 ? `${nws.length}` : ''}
+                  </div>
+                );
+              })}
+            </div>
+            {/* Legend row */}
+            <div className="flex items-center gap-5 mt-4 flex-wrap">
+              {Object.entries(byNetwork).map(([networkId, nws]) => {
+                const n = net(networkId);
+                return (
+                  <div key={networkId} className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-[3px]" style={{ backgroundColor: n.color }} />
+                    <span className="text-[12.5px] text-[#1E1E1E]">{n.name}</span>
+                    <span className="text-[12.5px] text-[#8A8278] tabular-nums">{nws.length}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* RIGHT — Infrastructure status */}
+          <aside className="lg:col-span-4 bg-white border border-[#E7E7E7] rounded-[10px] p-6 flex flex-col">
+            <p className="text-[11px] font-semibold text-[#8A8278] uppercase tracking-[0.1em] mb-3">
+              Infrastructure DFNS
+            </p>
+            <div className="space-y-3 flex-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] text-[#5D5D5D]">Signature MPC</span>
+                <span className="text-[13px] text-[#0F0F10] font-semibold tabular-nums">2 / 3</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] text-[#5D5D5D]">Clients liés</span>
+                <span className="text-[13px] text-[#0F0F10] font-semibold tabular-nums">{clientCount}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] text-[#5D5D5D]">Réseaux actifs</span>
+                <span className="text-[13px] text-[#0F0F10] font-semibold tabular-nums">{networkCount}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 pt-4 mt-auto border-t border-[#E7E7E7]">
+              <span className="relative flex w-2 h-2">
+                <span className="absolute inset-0 rounded-full bg-[#0F9868] opacity-60 animate-ping" />
+                <span className="relative inline-flex w-2 h-2 rounded-full bg-[#0F9868]" />
+              </span>
+              <span className="text-[12px] text-[#0F9868] font-semibold">Chambre forte en ligne</span>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* Network filter chips — keep for quick filtering */}
       {!loading && wallets.length > 0 && (
         <div className="flex items-center gap-1.5 flex-wrap">
-          <button
-            className="inline-flex items-center gap-2 h-8 px-3 rounded-[6px] bg-[#1E1E1E] text-white text-[12.5px] font-semibold"
-          >
+          <button className="inline-flex items-center gap-2 h-8 px-3 rounded-[6px] bg-[#1E1E1E] text-white text-[12.5px] font-semibold">
             Tous
             <span className="tabular-nums text-[#C8BEA4]">{wallets.length}</span>
           </button>
@@ -104,9 +178,6 @@ export default function WalletList() {
               </button>
             );
           })}
-          <span className="ml-auto text-[11.5px] text-[#8A8278] tabular-nums">
-            Threshold MPC 2 / 3 · {clientCount} client{clientCount > 1 ? 's' : ''} lié{clientCount > 1 ? 's' : ''}
-          </span>
         </div>
       )}
 
