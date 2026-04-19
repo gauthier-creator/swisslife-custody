@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { inputCls, labelCls, Button, Spinner } from './shared';
+import { BrandGlyph } from './BrandGlyphs';
 
 /* ─────────────────────────────────────────────────────────
    LoginPage — Sober private-banking tech entry
@@ -59,10 +60,13 @@ export default function LoginPage() {
 
         {/* Left — institutional statement + compliance strip */}
         <section className="relative hidden lg:flex flex-col justify-center px-12 py-16 border-r border-[#E9E4D9]">
-          <div className="animate-fade space-y-8 max-w-[440px]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#8A8278]">
-              SwissLife Banque Privée · Custody
-            </p>
+          <div className="animate-fade space-y-7 max-w-[440px]">
+            <div className="flex items-center gap-2.5 text-[#8A8278]">
+              <BrandGlyph name="compass" size={14} />
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em]">
+                SwissLife Banque Privée · Custody
+              </p>
+            </div>
 
             <h1 className="font-display text-[34px] leading-[1.15] text-[#1E1E1E]"
                 style={{ letterSpacing: '-0.01em', fontWeight: 400, fontVariationSettings: '"opsz" 36' }}>

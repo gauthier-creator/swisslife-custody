@@ -1,9 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
+import { BrandGlyph, BrandGlyphRule } from './BrandGlyphs';
 
 /* ═══════════════════════════════════════════════════════
    Shared primitives — Apple-grade private banking
    Monochrome · hairline borders · editorial typography
    ═══════════════════════════════════════════════════════ */
+
+// Re-export brand glyphs so call-sites can import from './shared'
+export { BrandGlyph, BrandGlyphRule };
 
 // ─── Toasts ───────────────────────────────────────────
 export function useToast() {
@@ -498,21 +502,20 @@ export function StatCard({
 }
 
 // ─── Fleuron / FleuronRule ────────────────────────────
-// Retired — editorial four-point star and decorative break don't match the
-// Ramify "tech sober" identity. Kept as pass-through stubs so call-sites
-// don't crash. Fleuron renders a tiny dot. FleuronRule renders a plain hairline.
-export function Fleuron({ size = 4, className = '', tone = 'bronze' }) {
-  const color = tone === 'bronze' ? '#C8BEA4' : '#8A8278';
+// Now powered by the monochrome BrandGlyph set — the Fleuron renders the
+// "fleur" mark (4-lobed star), FleuronRule draws the hairline with it centred.
+// The components stay compatible with existing call-sites.
+export function Fleuron({ size = 10, className = '', tone = 'bronze' }) {
+  const color = tone === 'ink' ? '#1E1E1E' : tone === 'muted' ? '#8A8278' : '#7C5E3C';
   return (
-    <span
-      aria-hidden="true"
-      className={`inline-block rounded-full ${className}`}
-      style={{ width: Math.max(3, Math.min(size, 5)), height: Math.max(3, Math.min(size, 5)), background: color }}
-    />
+    <span className={`inline-flex ${className}`} style={{ color }}>
+      <BrandGlyph name="fleur" size={size} />
+    </span>
   );
 }
-export function FleuronRule({ className = '' }) {
-  return <div className={`h-px bg-[#E9E4D9] ${className}`} aria-hidden="true" />;
+export function FleuronRule({ className = '', tone = 'bronze' }) {
+  const glyphColor = tone === 'ink' ? 'text-[#1E1E1E]' : tone === 'muted' ? 'text-[#8A8278]' : 'text-[#7C5E3C]';
+  return <BrandGlyphRule name="fleur" size={11} className={className} glyphClassName={glyphColor} />;
 }
 
 // ─── Avatar ───────────────────────────────────────────
@@ -1043,8 +1046,13 @@ export function EmptyState({ title, description, action, icon, illustration }) {
         <div className="mx-auto text-[#8A8278] opacity-75 flex items-center justify-center">
           {icon}
         </div>
-      ) : null}
-      <p className="font-display text-[20px] text-[#1E1E1E] mt-5"
+      ) : (
+        /* Default: the SwissLife compass brand glyph — monochrome, quiet */
+        <div className="mx-auto flex items-center justify-center text-[#C8BEA4]">
+          <BrandGlyph name="compass" size={28} />
+        </div>
+      )}
+      <p className="font-display text-[20px] text-[#1E1E1E] mt-4"
          style={{ letterSpacing: '-0.01em', fontWeight: 400 }}>
         {title}
       </p>
@@ -1391,11 +1399,15 @@ export function SectionCard({ title, caption, action, children, className = '', 
 }
 
 // ─── FooterDisclosure ─────────────────────────────────
-// Sober regulatory strip — reused across pages
+// Sober regulatory strip — reused across pages. Small brand glyph sits
+// centred between the two halves as a quiet watermark.
 export function FooterDisclosure({ left = "SwissLife Banque Privée · Paris", right = "AMF · ACPR · Tracfin · MiCA Art. 60" }) {
   return (
     <footer className="pt-6 mt-12 border-t border-[#E9E4D9] flex items-center justify-between text-[11px] text-[#8A8278] flex-wrap gap-4">
       <span>{left}</span>
+      <span className="hidden md:inline-flex items-center text-[#C8BEA4]">
+        <BrandGlyph name="fleur" size={11} />
+      </span>
       <span>{right}</span>
     </footer>
   );
