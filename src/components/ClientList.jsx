@@ -94,6 +94,73 @@ export default function ClientList({ onSelectClient, onNavigate }) {
         }
       />
 
+      {/* ── Ramify Accueil pattern — 2-column grid, different sizes:
+           LEFT wide (8/12) = counter module (the "nombre de clients" block)
+           RIGHT narrow (4/12) = "Accompagnement compliance" officer card
+       */}
+      {!loading && clients.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          {/* LEFT — Activité du livre */}
+          <div className="lg:col-span-8 bg-white border border-[#E7E7E7] rounded-[10px] p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-[16px] font-semibold text-[#0F0F10]" style={{ letterSpacing: '-0.012em' }}>
+                Activité du livre
+              </h2>
+              <StatusDot tone="success" label="Salesforce sync" />
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-5">
+              {[
+                { k: 'Actifs sous gestion', v: <CountUpNumber value={totalAum} format={fmtCompactEUR} />, c: 'Mandats actifs', p: Math.min(100, (totalAum / 100_000_000) * 100), delta: '+2.4%' },
+                { k: 'Clients',             v: <CountUpNumber value={clients.length} />,                 c: `${clients.length > 1 ? 'actifs' : 'actif'} · Salesforce`, p: Math.min(100, clients.length * 8) },
+                { k: 'UHNWI',               v: <CountUpNumber value={uhnwiCount} />,                     c: clients.length ? `${Math.round((uhnwiCount / clients.length) * 100)}% du livre` : '—', p: clients.length ? (uhnwiCount / clients.length) * 100 : 0 },
+                { k: 'Ticket moyen',        v: <CountUpNumber value={avgAum} format={fmtCompactEUR} />,  c: 'Par mandat', p: Math.min(100, (avgAum / 20_000_000) * 100) },
+              ].map(({ k, v, c, p, delta }) => (
+                <div key={k}>
+                  <p className="text-[11px] font-medium text-[#8A8278]">{k}</p>
+                  <p className="mt-1.5 text-[22px] font-semibold text-[#0F0F10] tabular-nums leading-[1.1]" style={{ letterSpacing: '-0.02em' }}>
+                    {v}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {delta && <span className="text-[11.5px] font-semibold text-[#0F9868] tabular-nums">{delta}</span>}
+                    <span className="text-[11.5px] text-[#8A8278]">{c}</span>
+                  </div>
+                  <div className="progress-bronze mt-2 w-full" style={{ '--value': `${Math.max(6, Math.min(100, p))}%` }} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* RIGHT — Accompagnement compliance (Ramify pattern: officer photo + CTA) */}
+          <aside className="lg:col-span-4 bg-white border border-[#E7E7E7] rounded-[10px] p-6 flex flex-col">
+            <p className="text-[11px] font-semibold text-[#8A8278] uppercase tracking-[0.1em] mb-3">
+              Accompagnement compliance
+            </p>
+            <div className="flex-1 relative rounded-[8px] overflow-hidden bg-gradient-to-br from-[#F4F2ED] to-[#E8E4DA] min-h-[180px] flex items-end p-5">
+              {/* Subtle marble veining for identity */}
+              <svg viewBox="0 0 300 200" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                <path d="M -10 60 Q 100 40, 200 80 T 320 60" stroke="rgba(124,94,60,0.06)" strokeWidth="1" fill="none" />
+                <path d="M -10 140 Q 80 115, 220 150 T 320 120" stroke="rgba(124,94,60,0.04)" strokeWidth="1" fill="none" />
+              </svg>
+              <div className="relative">
+                <h3 className="text-[18px] font-semibold text-[#0F0F10] leading-[1.2]" style={{ letterSpacing: '-0.014em' }}>
+                  Cellule RCSI
+                </h3>
+                <p className="text-[12.5px] text-[#5D5D5D] mt-1">
+                  Support compliance 24 / 7 · Tracfin · ACPR
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="cta-secondary w-full mt-4"
+              onClick={() => onNavigate?.('compliance')}
+            >
+              Contacter le RCSI
+            </button>
+          </aside>
+        </div>
+      )}
+
       {/* ── Services Custody — the identity block ──────────
          Ramify-inspired ProductCards showing SwissLife's 5 custody rails.
          Every card is clickable and jumps to the relevant module, so it's
@@ -180,10 +247,10 @@ export default function ClientList({ onSelectClient, onNavigate }) {
               Registre clients
             </h2>
             <p className="text-[12.5px] text-[#8A8278] mt-0.5 tabular-nums">
-              {clients.length} actif{clients.length > 1 ? 's' : ''} · {fmtCompactEUR(totalAum)} sous gestion · {uhnwiCount} UHNWI · {institutionalCount} institutionnel{institutionalCount > 1 ? 's' : ''}
+              {clients.length} actif{clients.length > 1 ? 's' : ''} · {uhnwiCount} UHNWI · {institutionalCount} institutionnel{institutionalCount > 1 ? 's' : ''}
             </p>
           </div>
-          <StatusDot tone="success" label="Salesforce sync" />
+          <Timestamp label="Mis à jour" />
         </div>
       )}
 
