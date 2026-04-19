@@ -428,20 +428,56 @@ export default function ComplianceDashboard() {
         }
       />
 
-      {/* Compact 4-metric strip — hairline-separated, no loud decorations */}
-      <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-[#E7E7E7] bg-white border border-[#E7E7E7] rounded-[10px]">
-        {[
-          { k: 'Approbations', v: stats.pendingApprovals, c: 'En attente · quatre yeux', tone: stats.pendingApprovals > 0 ? '#CA8A04' : '#8A8278' },
-          { k: 'Alertes',      v: stats.openAlerts,       c: 'Ouvertes · AML',           tone: stats.openAlerts > 0 ? '#DC2626' : '#8A8278' },
-          { k: 'Clients',      v: stats.activeClients,    c: 'Actifs sous mandat',       tone: '#8A8278' },
-          { k: 'Wallets',      v: stats.totalWallets,     c: 'Provisionnés DFNS',        tone: '#8A8278' },
-        ].map(({ k, v, c, tone }) => (
-          <div key={k} className="px-5 py-3.5">
-            <p className="text-[11px] font-medium" style={{ color: tone }}>{k}</p>
-            <p className="mt-1 text-[20px] font-semibold text-[#0F0F10] tabular-nums leading-[1.15]" style={{ letterSpacing: '-0.015em' }}>{v}</p>
-            <p className="text-[11.5px] text-[#8A8278] mt-0.5">{c}</p>
+      {/* Asymmetric cockpit — Ramify "different-sized blocks" pattern:
+           LEFT 8/12 = primary KPIs with visual emphasis on alerts
+           RIGHT 4/12 = live flux status (Chainalysis / DFNS / Tracfin) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* LEFT — 4 main metrics, the first two tinted by severity */}
+        <div className="lg:col-span-8 grid grid-cols-2 md:grid-cols-4 divide-x divide-[#E7E7E7] bg-white border border-[#E7E7E7] rounded-[10px]">
+          {[
+            { k: 'Approbations', v: stats.pendingApprovals, c: 'En attente · 4-yeux',  tone: stats.pendingApprovals > 0 ? '#CA8A04' : '#8A8278' },
+            { k: 'Alertes',      v: stats.openAlerts,       c: 'Ouvertes · AML',        tone: stats.openAlerts > 0 ? '#DC2626' : '#8A8278' },
+            { k: 'Clients',      v: stats.activeClients,    c: 'Actifs sous mandat',    tone: '#8A8278' },
+            { k: 'Wallets',      v: stats.totalWallets,     c: 'Provisionnés DFNS',     tone: '#8A8278' },
+          ].map(({ k, v, c, tone }) => (
+            <div key={k} className="px-5 py-4">
+              <p className="text-[11px] font-medium" style={{ color: tone }}>{k}</p>
+              <p className="mt-1 text-[22px] font-semibold text-[#0F0F10] tabular-nums leading-[1.15]" style={{ letterSpacing: '-0.02em' }}>{v}</p>
+              <p className="text-[11.5px] text-[#8A8278] mt-0.5">{c}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* RIGHT — Live flux surveillance (institutional reassurance) */}
+        <aside className="lg:col-span-4 bg-white border border-[#E7E7E7] rounded-[10px] p-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[11px] font-semibold text-[#8A8278] uppercase tracking-[0.1em]">
+              Flux de surveillance
+            </p>
+            <span className="flex items-center gap-1.5 text-[11px] text-[#0F9868] font-semibold">
+              <span className="relative flex w-1.5 h-1.5">
+                <span className="absolute inset-0 rounded-full bg-[#0F9868] opacity-60 animate-ping" />
+                <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-[#0F9868]" />
+              </span>
+              Temps réel
+            </span>
           </div>
-        ))}
+          <div className="space-y-2">
+            {[
+              { name: 'Chainalysis KYT',  status: 'OFAC · UE · HMT', ok: true },
+              { name: 'DFNS custody',     status: 'Threshold 2 / 3', ok: true },
+              { name: 'Tracfin reporting', status: 'ERMES ready',    ok: true },
+            ].map(({ name, status, ok }) => (
+              <div key={name} className="flex items-center justify-between text-[12.5px]">
+                <div className="flex items-center gap-2">
+                  <span className={`w-1.5 h-1.5 rounded-full ${ok ? 'bg-[#0F9868]' : 'bg-[#CA8A04]'}`} />
+                  <span className="text-[#1E1E1E] font-medium">{name}</span>
+                </div>
+                <span className="text-[#8A8278] tabular-nums">{status}</span>
+              </div>
+            ))}
+          </div>
+        </aside>
       </div>
 
       {/* ── Tabs ─────────────────────────────────────── */}

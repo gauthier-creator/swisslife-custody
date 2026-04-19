@@ -103,7 +103,7 @@ export default function PolicyList() {
         </div>
       )}
 
-      {/* ── List ──────────────────────────────────────── */}
+      {/* ── List ── 2-col asymmetric: policies grid 8/12 + activity sidebar 4/12 */}
       {loading ? (
         <div className="flex items-center justify-center py-24"><Spinner size="w-6 h-6" /></div>
       ) : policies.length === 0 ? (
@@ -116,10 +116,72 @@ export default function PolicyList() {
           />
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-slide-up stagger-3">
-          {policies.map((pol, i) => (
-            <PolicyCard key={pol.id} pol={pol} index={i} />
-          ))}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-up stagger-3">
+            {policies.map((pol, i) => (
+              <PolicyCard key={pol.id} pol={pol} index={i} />
+            ))}
+          </div>
+
+          {/* Sidebar — Quatre-yeux governance at a glance */}
+          <aside className="lg:col-span-4 space-y-4">
+            <div className="bg-white border border-[#E7E7E7] rounded-[10px] p-5">
+              <p className="text-[11px] font-semibold text-[#8A8278] uppercase tracking-[0.1em] mb-3">
+                Règle quatre-yeux
+              </p>
+              <p className="text-[13px] text-[#5D5D5D] leading-[1.55] mb-4">
+                Chaque opération sensible (transfert, whitelisting, rotation de clé)
+                requiert <span className="text-[#0F0F10] font-semibold">deux approbateurs distincts</span>.
+                Conforme ACPR LCB-FT article 14.
+              </p>
+              <div className="space-y-2.5 pt-3 border-t border-[#E7E7E7]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12.5px] text-[#5D5D5D]">Approbateurs enregistrés</span>
+                  <span className="text-[12.5px] text-[#0F0F10] font-semibold tabular-nums">3</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[12.5px] text-[#5D5D5D]">Délai moyen d'approbation</span>
+                  <span className="text-[12.5px] text-[#0F0F10] font-semibold tabular-nums">4 min</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[12.5px] text-[#5D5D5D]">Taux d'approbation 30j</span>
+                  <span className="text-[12.5px] text-[#0F9868] font-semibold tabular-nums">98%</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white border border-[#E7E7E7] rounded-[10px] p-5">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[11px] font-semibold text-[#8A8278] uppercase tracking-[0.1em]">
+                  Conformité
+                </p>
+                <span className="inline-flex items-center gap-1.5 text-[11px] text-[#0F9868] font-semibold">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  Conforme
+                </span>
+              </div>
+              <ul className="space-y-2 text-[12.5px]">
+                <li className="flex items-center gap-2 text-[#5D5D5D]">
+                  <span className="w-1 h-1 rounded-full bg-[#0F9868]" />
+                  ACPR · LCB-FT Art. 14
+                </li>
+                <li className="flex items-center gap-2 text-[#5D5D5D]">
+                  <span className="w-1 h-1 rounded-full bg-[#0F9868]" />
+                  MiCA Art. 66 · gouvernance
+                </li>
+                <li className="flex items-center gap-2 text-[#5D5D5D]">
+                  <span className="w-1 h-1 rounded-full bg-[#0F9868]" />
+                  Tracfin · journal d'audit
+                </li>
+                <li className="flex items-center gap-2 text-[#5D5D5D]">
+                  <span className="w-1 h-1 rounded-full bg-[#0F9868]" />
+                  DFNS · quorum MPC 2 / 3
+                </li>
+              </ul>
+            </div>
+          </aside>
         </div>
       )}
 
