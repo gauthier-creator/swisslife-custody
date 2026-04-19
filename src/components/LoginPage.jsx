@@ -116,12 +116,15 @@ export default function LoginPage() {
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
               {mode === 'register' && (
                 <div>
-                  <label className={labelCls}>Nom complet</label>
+                  <label htmlFor="sl-login-fullname" className={labelCls}>Nom complet</label>
                   <input
+                    id="sl-login-fullname"
+                    name="fullName"
                     type="text"
+                    autoComplete="name"
                     value={fullName}
                     onChange={e => setFullName(e.target.value)}
                     placeholder="Jean Dupont"
@@ -132,9 +135,13 @@ export default function LoginPage() {
               )}
 
               <div>
-                <label className={labelCls}>Email professionnel</label>
+                <label htmlFor="sl-login-email" className={labelCls}>Email professionnel</label>
                 <input
+                  id="sl-login-email"
+                  name="email"
                   type="email"
+                  autoComplete="username"
+                  inputMode="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="vous@swisslife.fr"
@@ -144,9 +151,12 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label className={labelCls}>Mot de passe</label>
+                <label htmlFor="sl-login-password" className={labelCls}>Mot de passe</label>
                 <input
+                  id="sl-login-password"
+                  name="password"
                   type="password"
+                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
@@ -185,12 +195,12 @@ export default function LoginPage() {
               )}
 
               {error && (
-                <div className="px-3.5 py-2.5 bg-[#FEF2F2] border border-[rgba(220,38,38,0.18)] rounded-[6px]">
+                <div role="alert" className="px-3.5 py-2.5 bg-[#FEF2F2] border border-[rgba(220,38,38,0.18)] rounded-[6px]">
                   <p className="text-[12.5px] font-medium text-[#991B1B]">{error}</p>
                 </div>
               )}
               {success && (
-                <div className="px-3.5 py-2.5 bg-[#ECFAF0] border border-[rgba(22,163,74,0.18)] rounded-[6px]">
+                <div role="status" aria-live="polite" className="px-3.5 py-2.5 bg-[#ECFAF0] border border-[rgba(22,163,74,0.18)] rounded-[6px]">
                   <p className="text-[12.5px] font-medium text-[#166534]">{success}</p>
                 </div>
               )}

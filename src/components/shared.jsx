@@ -22,7 +22,12 @@ export function useToast() {
 
 export function ToastContainer({ toasts }) {
   return (
-    <div className="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-2">
+    <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="false"
+      className="fixed bottom-8 right-8 z-50 flex flex-col items-end gap-2"
+    >
       {toasts.map(t => (
         <div
           key={t.id}
@@ -36,15 +41,17 @@ export function ToastContainer({ toasts }) {
 }
 
 // ─── Form primitives ──────────────────────────────────
-// Ramify inputs: 6px radius, hairline #E9E4D9, subtle bronze focus
+// Ramify inputs: 6px radius, hairline #E9E4D9, subtle bronze focus.
+// Focus-visible adds a 2px bronze ring (only on keyboard focus, not click)
+// for WCAG 2.2 AA compliance (non-text contrast 3:1).
 export const inputCls =
-  "w-full h-10 px-3.5 text-[14px] text-[#1E1E1E] bg-white border border-[#E9E4D9] rounded-[6px] outline-none transition-[border-color] duration-150 focus:border-[#7C5E3C] placeholder:text-[#8A8278]";
+  "w-full h-10 px-3.5 text-[14px] text-[#1E1E1E] bg-white border border-[#E9E4D9] rounded-[6px] outline-none transition-[border-color,box-shadow] duration-150 focus-visible:border-[#7C5E3C] focus-visible:ring-[3px] focus-visible:ring-[rgba(124,94,60,0.18)] placeholder:text-[#8A8278]";
 
 export const selectCls =
-  "w-full h-10 px-3.5 pr-9 text-[14px] text-[#1E1E1E] bg-white border border-[#E9E4D9] rounded-[6px] outline-none transition-[border-color] duration-150 focus:border-[#7C5E3C] appearance-none cursor-pointer";
+  "w-full h-10 px-3.5 pr-9 text-[14px] text-[#1E1E1E] bg-white border border-[#E9E4D9] rounded-[6px] outline-none transition-[border-color,box-shadow] duration-150 focus-visible:border-[#7C5E3C] focus-visible:ring-[3px] focus-visible:ring-[rgba(124,94,60,0.18)] appearance-none cursor-pointer";
 
 export const textareaCls =
-  "w-full px-3.5 py-2.5 text-[14px] text-[#1E1E1E] bg-white border border-[#E9E4D9] rounded-[6px] outline-none transition-[border-color] duration-150 focus:border-[#7C5E3C] placeholder:text-[#8A8278] resize-none";
+  "w-full px-3.5 py-2.5 text-[14px] text-[#1E1E1E] bg-white border border-[#E9E4D9] rounded-[6px] outline-none transition-[border-color,box-shadow] duration-150 focus-visible:border-[#7C5E3C] focus-visible:ring-[3px] focus-visible:ring-[rgba(124,94,60,0.18)] placeholder:text-[#8A8278] resize-none";
 
 export const labelCls =
   "block text-[12px] font-medium text-[#5D5D5D] mb-1.5";

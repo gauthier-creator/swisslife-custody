@@ -178,8 +178,16 @@ export default function Layout({ children, section, onNavigate }) {
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] text-[#1E1E1E] flex">
+      {/* Skip link — hidden by default, visible on keyboard focus */}
+      <a
+        href="#sl-main"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-3 focus:py-2 focus:bg-[#1E1E1E] focus:text-white focus:rounded-[6px] focus:text-[13px] focus:font-semibold"
+      >
+        Aller au contenu principal
+      </a>
       {/* ── Sidebar ─────────────────────────────────────── */}
       <aside
+        aria-label="Navigation principale"
         className={`flex-shrink-0 border-r border-[#E9E4D9] bg-white flex flex-col h-screen sticky top-0 transition-[width] duration-[280ms] ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
           collapsed ? 'w-[72px]' : 'w-[256px]'
         }`}
@@ -329,7 +337,7 @@ export default function Layout({ children, section, onNavigate }) {
           </button>
         </header>
 
-        <main className="flex-1 px-10 lg:px-12 pt-2 pb-12 animate-fade">
+        <main id="sl-main" role="main" className="flex-1 px-10 lg:px-12 pt-2 pb-12 animate-fade">
           <div className="max-w-[1240px] mx-auto">
             {children}
           </div>

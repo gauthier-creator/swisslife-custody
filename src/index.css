@@ -624,10 +624,12 @@ html, body {
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 180ms, transform 120ms;
+  outline: none;
+  transition: background 180ms, transform 120ms, box-shadow 120ms;
 }
 .cta-primary:hover { background: #000000; }
 .cta-primary:active { transform: scale(0.98); }
+.cta-primary:focus-visible { box-shadow: 0 0 0 3px rgba(124, 94, 60, 0.35); }
 .cta-primary:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* Ramify secondary CTA — white outlined */
@@ -644,9 +646,11 @@ html, body {
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: border-color 180ms, background 180ms;
+  outline: none;
+  transition: border-color 180ms, background 180ms, box-shadow 120ms;
 }
 .cta-secondary:hover { border-color: #C8BEA4; background: #FDFBF6; }
+.cta-secondary:focus-visible { box-shadow: 0 0 0 3px rgba(124, 94, 60, 0.25); border-color: #7C5E3C; }
 
 /* Ramify gold CTA — for the big hero "Simulez" buttons */
 .cta-gold {
@@ -662,10 +666,12 @@ html, body {
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 180ms, transform 120ms;
+  outline: none;
+  transition: background 180ms, transform 120ms, box-shadow 120ms;
 }
 .cta-gold:hover { background: #B47F38; }
 .cta-gold:active { transform: scale(0.98); }
+.cta-gold:focus-visible { box-shadow: 0 0 0 3px rgba(200, 146, 75, 0.4); }
 
 /* Marble card surface — stone-grey Ramify tone. Neutral, institutional.
    All variants share the same DNA now: pale grey → slightly warm grey,

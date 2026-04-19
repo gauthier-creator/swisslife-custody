@@ -55,8 +55,13 @@ export function ProductCard({
   cta = 'Détails',
   className = '',
 }) {
+  // The whole card is conceptually clickable (primary CTA target). Use a
+  // semantic <article> and expose a single clickable anchor via the inner
+  // primary button. Hovering lifts the border. Keyboard focus lands on the
+  // two inner buttons individually (they retain focus-visible rings).
   return (
     <article
+      aria-label={title}
       className={`
         group relative flex-shrink-0 w-[304px] snap-start
         rounded-[12px] overflow-hidden flex flex-col
