@@ -14,7 +14,7 @@ import { getKycStatus } from '../services/kycService';
 import { useAuth } from '../context/AuthContext';
 import {
   fmtEUR, fmtCompactEUR, Badge, Card, Modal, Spinner, EmptyState, Button,
-  Avatar, Metric, MetricRow, Delta, inputCls, selectCls, labelCls,
+  Avatar, Metric, MetricRow, Delta, inputCls, selectCls, labelCls, useCountUp,
 } from './shared';
 import { VerifiedBadge } from './brand';
 import { BrandGlyph } from './BrandGlyphs';
@@ -523,6 +523,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
               holdings={holdings}
               loading={holdingsLoading}
               net={(id) => SUPPORTED_NETWORKS.find(n => n.id === id) || { icon: '?', color: '#8A8278', name: id }}
+              onSelectWallet={(w) => { setTab('wallets'); setSelectedWallet(w); }}
             />
 
             {/* KYC summary */}
@@ -1215,7 +1216,19 @@ const ASSET_COLORS = {
 };
 const colorForAsset = (symbol) => ASSET_COLORS[symbol] || '#7C5E3C';
 
-function CryptoHoldingsCard({ wallets, holdings, loading, net }) {
+function CryptoHoldingsCard({ wallets, holdings, loading, net, onSelectWallet }) {
+  // Always call hooks unconditionally — React rules. We gate rendering below.
+  const animatedTotal = useCountUp(holdings?.totalValueEur || 0, { duration: 900 });
+  const [barMounted, setBarMounted] = useState(false);
+  useEffect(() => {
+    // Next frame so the browser paints 0% first, then animates to target width.
+    if (holdings?.assets?.length) {
+      const raf = requestAnimationFrame(() => setBarMounted(true));
+      return () => cancelAnimationFrame(raf);
+    }
+    setBarMounted(false);
+  }, [holdings]);
+
   if (!wallets || wallets.length === 0) return null;
   const networkCount = new Set(wallets.map(w => w.network)).size;
   const walletsWithAssets = holdings?.walletsBreakdown || wallets.map(w => ({ wallet: w, assets: [] }));
@@ -1232,7 +1245,7 @@ function CryptoHoldingsCard({ wallets, holdings, loading, net }) {
         </div>
         <p className="text-[24px] font-semibold text-[#0F0F10] tabular-nums mt-2 leading-[1.1]"
            style={{ letterSpacing: '-0.02em' }}>
-          {holdings ? fmtEUR(Math.round(holdings.totalValueEur)) : '—'}
+          {holdings ? fmtEUR(Math.round(animatedTotal)) : '—'}
         </p>
         <p className="text-[11.5px] text-[#8A8278] mt-1">
           {wallets.length} wallet{wallets.length > 1 ? 's' : ''} · {networkCount} réseau{networkCount > 1 ? 'x' : ''}
@@ -1247,16 +1260,24 @@ function CryptoHoldingsCard({ wallets, holdings, loading, net }) {
             {holdings.assets.map((a, i) => (
               <div
                 key={i}
-                className="h-full transition-all"
-                style={{ width: `${Math.max(2, a.percentage)}%`, background: colorForAsset(a.symbol) }}
+                className="h-full"
+                style={{
+                  width: barMounted ? `${Math.max(2, a.percentage)}%` : '0%',
+                  background: colorForAsset(a.symbol),
+                  transition: `width 700ms cubic-bezier(0.2, 0.8, 0.2, 1) ${i * 60}ms`,
+                }}
                 title={`${a.symbol}: ${a.percentage.toFixed(1)}%`}
               />
             ))}
           </div>
           <ul className="mt-3 space-y-1.5">
             {holdings.assets.map((a, i) => (
-              <li key={i} className="flex items-center gap-2.5 text-[12.5px]">
-                <span className="w-2 h-2 rounded-[2px] flex-shrink-0" style={{ background: colorForAsset(a.symbol) }} />
+              <li
+                key={i}
+                className="flex items-center gap-2.5 text-[12.5px] row-stagger"
+                style={{ '--i': i }}
+              >
+                <span className="w-2 h-2 rounded-[2px] flex-shrink-0 transition-transform group-hover:scale-110" style={{ background: colorForAsset(a.symbol) }} />
                 <span className="text-[#0F0F10] font-semibold w-14 flex-shrink-0">{a.symbol}</span>
                 <span className="text-[#5D5D5D] tabular-nums flex-1 truncate">{a.balance.toFixed(a.balance > 1 ? 2 : 6)}</span>
                 <span className="text-[#0F0F10] font-medium tabular-nums">
@@ -1277,7 +1298,8 @@ function CryptoHoldingsCard({ wallets, holdings, loading, net }) {
         </p>
       )}
 
-      {/* Per-wallet breakdown */}
+      {/* Per-wallet breakdown — each row is clickable → jumps to Wallets tab
+         and selects the wallet (triggers the detail view). */}
       <div className="border-t border-[#E7E7E7] mt-3">
         <p className="px-5 pt-3 pb-1 text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.1em]">
           Détail par wallet
@@ -1297,21 +1319,33 @@ function CryptoHoldingsCard({ wallets, holdings, loading, net }) {
                 }).join(' · ')
               : 'Wallet vide';
             return (
-              <li key={wallet.id} className="px-5 py-2.5">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="w-5 h-5 rounded-[4px] flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0" style={{ backgroundColor: n.color }}>
-                      {n.icon}
-                    </span>
-                    <span className="text-[12.5px] font-medium text-[#1E1E1E] truncate">{wallet.name || n.name}</span>
+              <li key={wallet.id}>
+                <button
+                  type="button"
+                  onClick={() => onSelectWallet?.(wallet)}
+                  className="w-full px-5 py-2.5 text-left group hover:bg-[#FDFBF6] active:bg-[#F5EEE0] transition-colors focus-visible:outline-none focus-visible:bg-[#FDFBF6] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[rgba(124,94,60,0.2)]"
+                  aria-label={`Ouvrir le wallet ${wallet.name || n.name}`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-5 h-5 rounded-[4px] flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0 transition-transform group-hover:scale-[1.08]" style={{ backgroundColor: n.color }}>
+                        {n.icon}
+                      </span>
+                      <span className="text-[12.5px] font-medium text-[#1E1E1E] truncate">{wallet.name || n.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-[12.5px] font-semibold text-[#0F0F10] tabular-nums">
+                        {walletEur > 0 ? fmtEUR(Math.round(walletEur)) : '€0'}
+                      </span>
+                      <svg className="w-3 h-3 text-[#8A8278] opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
                   </div>
-                  <span className="text-[12.5px] font-semibold text-[#0F0F10] tabular-nums flex-shrink-0">
-                    {walletEur > 0 ? fmtEUR(Math.round(walletEur)) : '€0'}
-                  </span>
-                </div>
-                <p className="text-[11px] text-[#8A8278] mt-0.5 truncate">
-                  {summary}
-                </p>
+                  <p className="text-[11px] text-[#8A8278] mt-0.5 truncate">
+                    {summary}
+                  </p>
+                </button>
               </li>
             );
           })}
