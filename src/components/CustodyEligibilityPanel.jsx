@@ -401,6 +401,11 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
         </ul>
       </Card>
 
+      {/* ── Documents signés (PDF retrievable depuis SFDC) ──── */}
+      {(client.Custody_Contract_Signed__c || client.Custody_Adequacy_Done__c) && (
+        <SignedDocumentsCard accountId={client.id} client={client} />
+      )}
+
       {/* ── Signing link — contract ─────────────────────── */}
       {signingLink && (
         <SigningLinkCard
@@ -604,5 +609,165 @@ function AdequacyQuestion({ n, question, value, onChange }) {
         })}
       </div>
     </div>
+  );
+}
+
+/* ─── Sub · SignedDocumentsCard ───────────────────────────
+   Liste les PDFs Custody attachés à l'Account Salesforce
+   (contrat de conservation + questionnaire d'adéquation).
+   Fetch via /api/sf-files, filtre par préfixe de nom.
+
+   UX : une ligne par doc avec nom, date, taille, actions
+   [Prévisualiser] [Télécharger] [Ouvrir dans Salesforce].
+*/
+function SignedDocumentsCard({ accountId, client }) {
+  const [files, setFiles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/sf-files/${accountId}`);
+        if (!res.ok) throw new Error('Impossible de charger les documents');
+        const list = await res.json();
+        if (!alive) return;
+        // Garde uniquement les PDFs Custody (contrat + adéquation)
+        const custodyFiles = (list || []).filter(f => {
+          const title = String(f.title || '').toLowerCase();
+          return title.startsWith('contrat_custody_')
+              || title.startsWith('adequation_custody_')    // ancien format
+              || title.startsWith('adequation_mifid_');
+        });
+        setFiles(custodyFiles);
+      } catch (err) {
+        if (alive) setError(err.message);
+      }
+      if (alive) setLoading(false);
+    })();
+    return () => { alive = false; };
+  }, [accountId, client?.Custody_Contract_Signed__c, client?.Custody_Adequacy_Done__c]);
+
+  const docType = (title) => {
+    const t = String(title || '').toLowerCase();
+    if (t.includes('contrat')) return { label: 'Contrat de conservation', icon: 'scroll', tone: 'ink' };
+    if (t.includes('adequation') || t.includes('adequation_mifid')) return { label: "Questionnaire d'adéquation MiFID II", icon: 'clipboard', tone: 'bronze' };
+    return { label: title, icon: 'file', tone: 'ink' };
+  };
+
+  const fmtSize = (bytes) => {
+    if (!bytes) return '—';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  };
+
+  const fmtDate = (iso) => iso
+    ? new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
+    : '—';
+
+  const openInSfdc = (contentDocumentId) => {
+    // URL pattern Lightning : /lightning/r/ContentDocument/<id>/view
+    // Fonctionne uniquement si l'utilisateur est aussi loggué dans SFDC.
+    window.open(`https://orgfarm-1ab2feb35a-dev-ed.develop.lightning.force.com/lightning/r/ContentDocument/${contentDocumentId}/view`, '_blank');
+  };
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="px-7 py-5 border-b border-[#E7E7E7] flex items-center justify-between gap-4 flex-wrap">
+        <div className="min-w-0">
+          <p className="text-eyebrow">Documents signés</p>
+          <h3 className="text-[15px] font-medium text-[#0A0A0A] tracking-[-0.015em] mt-1.5">
+            Pièces <span className="font-display italic text-[#7C5E3C]">conformité</span>
+          </h3>
+          <p className="text-[12.5px] text-[#5D5D5D] mt-1 tracking-[-0.003em]">
+            Versés automatiquement dans le dossier Salesforce du client · archivage 5 ans
+          </p>
+        </div>
+        <span className="text-[11px] text-[#8A8278] font-medium uppercase tracking-[0.08em] tabular-nums">
+          {files.length} document{files.length > 1 ? 's' : ''}
+        </span>
+      </div>
+
+      {loading ? (
+        <div className="px-7 py-8 flex items-center gap-2 text-[13px] text-[#5D5D5D]">
+          <Spinner /> Chargement des documents…
+        </div>
+      ) : error ? (
+        <div className="px-7 py-5 text-[13px] text-[#991B1B]">{error}</div>
+      ) : files.length === 0 ? (
+        <div className="px-7 py-6 text-[13px] text-[#5D5D5D]">
+          Aucun document trouvé. Les PDFs apparaissent ici dès qu'un contrat ou un questionnaire est signé.
+        </div>
+      ) : (
+        <ul className="divide-y divide-[#E7E7E7]">
+          {files.map(f => {
+            const info = docType(f.title);
+            const downloadUrl = `${API_BASE}/api/sf-files/download/${f.versionId}`;
+            return (
+              <li key={f.id} className="px-7 py-5 flex items-center gap-5 flex-wrap">
+                <div
+                  className={`flex-shrink-0 w-11 h-11 rounded-[10px] flex items-center justify-center border ${
+                    info.tone === 'bronze'
+                      ? 'bg-[#F5EEE0] border-[rgba(124,94,60,0.22)] text-[#7C5E3C]'
+                      : 'bg-[#F5F3EE] border-[rgba(10,10,10,0.06)] text-[#0A0A0A]'
+                  }`}
+                >
+                  <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em] truncate">{info.label}</p>
+                  <p className="text-[12px] text-[#8A8278] mt-0.5 tracking-[-0.003em]">
+                    <span className="font-mono">{f.title}</span>
+                    <span className="mx-2">·</span>
+                    <span>{fmtDate(f.createdDate)}</span>
+                    <span className="mx-2">·</span>
+                    <span className="tabular-nums">{fmtSize(f.size)}</span>
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <a
+                    href={downloadUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center h-8 px-3 rounded-[6px] text-[12.5px] font-semibold text-[#5D5D5D] hover:text-[#1E1E1E] hover:bg-[#FDFBF6] transition-colors"
+                    title="Prévisualiser le PDF"
+                  >
+                    <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    Prévisualiser
+                  </a>
+                  <a
+                    href={downloadUrl}
+                    download={f.title}
+                    className="inline-flex items-center h-8 px-3 rounded-[6px] bg-[#1E1E1E] text-white text-[12.5px] font-semibold hover:bg-[#000] transition-colors"
+                    title="Télécharger le PDF"
+                  >
+                    <svg className="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+                    </svg>
+                    Télécharger
+                  </a>
+                  <button
+                    onClick={() => openInSfdc(f.id)}
+                    className="inline-flex items-center h-8 w-8 justify-center rounded-[6px] text-[#5D5D5D] hover:text-[#1E1E1E] hover:bg-[#FDFBF6] transition-colors"
+                    title="Ouvrir dans Salesforce"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Card>
   );
 }

@@ -493,6 +493,96 @@ async function uploadPDFToSalesforce(pdfBuffer, fileName, accountId) {
 // CONTRACT SIGNING — Public endpoints (no auth required)
 // ============================================================
 
+// POST /api/signing/contract/in-app-sign — banker signs the contract
+// directly with the client in front of them (pas de lien email).
+// Génère le PDF + l'upload dans SFDC + flag Custody_Contract_Signed__c.
+// Symétrique au flow "remote link" mais sans signing_tokens row —
+// c'est la signature physique/présentielle.
+app.post('/api/signing/contract/in-app-sign', requireAuth, async (req, res) => {
+  try {
+    const {
+      salesforceAccountId, clientName,
+      clientStreet, clientCity, clientPostalCode, clientCountry, clientPhone,
+      signerName,
+    } = req.body;
+
+    if (!salesforceAccountId || !clientName) {
+      return res.status(400).json({ error: 'salesforceAccountId et clientName requis' });
+    }
+
+    const signedAt = new Date().toISOString();
+    const signerIp = req.ip || req.headers['x-forwarded-for'] || 'in-app';
+    const clientAddress = [clientStreet, clientPostalCode, clientCity, clientCountry].filter(Boolean).join(', ') || 'Non renseigne';
+
+    // 1. Generate PDF
+    const pdfBuffer = await generateContractPDF({
+      clientName,
+      clientAddress,
+      clientPhone: clientPhone || 'Non renseigne',
+      signerName: signerName || clientName,
+      signerIp,
+      signedAt,
+    });
+
+    // 2. Upload to Salesforce Files (Account attachment)
+    const dateSlug = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const safeName = clientName.replace(/[^a-zA-Z0-9]/g, '_');
+    const fileName = `Contrat_Custody_${safeName}_${dateSlug}.pdf`;
+    const uploadResult = await uploadPDFToSalesforce(pdfBuffer, fileName, salesforceAccountId);
+
+    // 3. Flag Custody_Contract_Signed__c on Account
+    let sfWriteback = { attempted: false, ok: false };
+    if (SF_CONFIGURED) {
+      sfWriteback.attempted = true;
+      try {
+        const { accessToken, instanceUrl } = await getSalesforceToken();
+        const sfRes = await fetch(`${instanceUrl}/services/data/v59.0/sobjects/Account/${salesforceAccountId}`, {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ Custody_Contract_Signed__c: true }),
+        });
+        sfWriteback.ok = sfRes.ok || sfRes.status === 204;
+      } catch (sfErr) {
+        sfWriteback.error = sfErr.message;
+      }
+    }
+
+    // 4. Audit log
+    await logAudit({
+      userEmail: req.user?.email,
+      action: 'custody_contract_signed_in_app',
+      category: 'custody',
+      entityType: 'Account',
+      entityId: salesforceAccountId,
+      clientName,
+      salesforceAccountId,
+      details: {
+        signedBy: req.user?.email,
+        signerName: signerName || clientName,
+        signedAt,
+        signerIp,
+        fileName,
+        uploadedToSfdc: !!uploadResult,
+        sfWriteback,
+      },
+      severity: 'info',
+      req,
+    });
+
+    res.json({
+      success: true,
+      signedAt,
+      fileName,
+      uploadedToSfdc: !!uploadResult,
+      contentDocumentId: uploadResult?.contentDocumentId || null,
+      sfWriteback,
+    });
+  } catch (err) {
+    console.error('In-app contract signing error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Generate signing link
 app.post('/api/signing/generate', requireAuth, async (req, res) => {
   try {

@@ -28,34 +28,34 @@ export default function CustodyContractModal({ isOpen, onClose, client, onSigned
   const handleSign = async () => {
     setSigning(true);
     try {
-      // 1. Update Salesforce
-      await updateAccountFields(client.id, { Custody_Contract_Signed__c: true });
-
-      // 2. Store in audit_log
+      // Appelle le nouveau endpoint in-app-sign qui gère en une transaction :
+      //   · génération du PDF contract côté serveur
+      //   · upload dans SFDC Files (attaché à l'Account)
+      //   · flag Custody_Contract_Signed__c = true
+      //   · audit log
       const { data: { session } } = await supabase.auth.getSession();
       const authHeaders = session?.access_token
         ? { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` }
         : { 'Content-Type': 'application/json' };
 
-      await fetch(`${API_BASE}/api/audit-log`, {
+      const res = await fetch(`${API_BASE}/api/signing/contract/in-app-sign`, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify({
-          action: 'custody_contract_signed',
-          category: 'custody',
-          entityType: 'Account',
-          entityId: client.id,
-          clientName: client.name,
           salesforceAccountId: client.id,
-          details: {
-            signedBy: user?.email,
-            signedAt: new Date().toISOString(),
-            clientName,
-            clientAddress,
-            contractType: 'Conservation Actifs Numeriques',
-          },
+          clientName: client.name,
+          clientStreet: client.street || null,
+          clientCity: client.city || null,
+          clientPostalCode: client.postalCode || null,
+          clientCountry: client.country || null,
+          clientPhone: client.phone || null,
+          signerName: user?.full_name || user?.email || client.name,
         }),
-      }).catch(() => {});
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Erreur lors de la signature');
+      }
 
       if (onSigned) await onSigned();
       onClose();
