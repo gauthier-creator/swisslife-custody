@@ -734,7 +734,7 @@ export default function ComplianceDashboard() {
                 const entry = auditEntries.find(e => e.id === expandedAudit);
                 if (!entry?.details) return null;
                 return (
-                  <div className="mt-2 bg-[rgba(10,10,10,0.02)] border border-[#E7E7E7] rounded-xl p-4">
+                  <div className="mt-2 bg-[rgba(10,10,10,0.02)] border border-[#E7E7E7] rounded-[10px] p-4">
                     <pre className="text-[12px] text-[#0A0A0A] whitespace-pre-wrap font-mono leading-relaxed">
                       {typeof entry.details === 'string' ? entry.details : JSON.stringify(entry.details, null, 2)}
                     </pre>
@@ -1020,7 +1020,7 @@ export default function ComplianceDashboard() {
                 <div
                   key={opt.value}
                   onClick={() => setSarFilingAuthority(opt.value)}
-                  className={`flex-1 flex items-center gap-2 p-3 rounded-xl border cursor-pointer transition-all text-[13px] ${
+                  className={`flex-1 flex items-center gap-2 p-3 rounded-[10px] border cursor-pointer transition-all text-[13px] ${
                     sarFilingAuthority === opt.value
                       ? 'border-[#0A0A0A] bg-[#F5F3EE] font-medium'
                       : 'border-[#E7E7E7]'

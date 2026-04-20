@@ -97,7 +97,7 @@ export default function CustodyContractModal({ isOpen, onClose, client, onSigned
         {/* Contract document */}
         <div
           ref={contractRef}
-          className="bg-white border border-[rgba(0,0,29,0.1)] rounded-xl p-8 mb-6 max-h-[55vh] overflow-y-auto"
+          className="bg-white border border-[rgba(0,0,29,0.1)] rounded-[6px] p-8 mb-6 max-h-[55vh] overflow-y-auto"
           style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
         >
           <h1 style={{ fontSize: '17px', textAlign: 'center', marginBottom: '28px', letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 700, color: '#0F0F10' }}>
@@ -210,13 +210,13 @@ export default function CustodyContractModal({ isOpen, onClose, client, onSigned
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 text-[14px] font-medium text-[#787881] bg-[rgba(0,0,23,0.04)] rounded-xl hover:bg-[rgba(0,0,23,0.08)] transition-colors"
+            className="px-5 py-2.5 text-[14px] font-medium text-[#787881] bg-[rgba(0,0,23,0.04)] rounded-[6px] hover:bg-[rgba(0,0,23,0.08)] transition-colors"
           >
             Annuler
           </button>
           <button
             onClick={handlePrint}
-            className="px-5 py-2.5 text-[14px] font-medium text-[#0F0F10] bg-white border border-[rgba(0,0,29,0.12)] rounded-xl hover:bg-[rgba(0,0,23,0.04)] transition-colors flex items-center gap-2"
+            className="px-5 py-2.5 text-[14px] font-medium text-[#0F0F10] bg-white border border-[#D1D5DB] rounded-[6px] hover:bg-[rgba(0,0,23,0.04)] transition-colors flex items-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -226,7 +226,7 @@ export default function CustodyContractModal({ isOpen, onClose, client, onSigned
           <button
             onClick={handleSign}
             disabled={signing}
-            className="flex-1 py-2.5 text-[14px] font-medium text-white bg-[#059669] rounded-xl hover:bg-[#047857] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex-1 py-2.5 text-[14px] font-medium text-white bg-[#059669] rounded-[6px] hover:bg-[#047857] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {signing ? (
               'Signature en cours...'

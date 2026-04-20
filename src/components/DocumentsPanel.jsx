@@ -88,7 +88,7 @@ export default function DocumentsPanel({ client }) {
       </div>
 
       {/* Info banner */}
-      <div className="bg-[#FBF6EC] border border-[rgba(99,102,241,0.15)] rounded-xl px-4 py-3 flex items-center gap-3">
+      <div className="bg-[#FBF6EC] border border-[rgba(99,102,241,0.15)] rounded-[6px] px-4 py-3 flex items-center gap-3">
         <svg className="w-5 h-5 text-[#7C5E3C] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
@@ -109,7 +109,7 @@ export default function DocumentsPanel({ client }) {
           })}
         </div>
         <button onClick={() => setShowUpload(true)}
-          className="px-4 py-2 bg-[#0F0F10] text-white text-[13px] font-medium rounded-xl hover:bg-[#1a1a1a] transition-colors flex items-center gap-2">
+          className="px-4 py-2 bg-[#0F0F10] text-white text-[13px] font-medium rounded-[6px] hover:bg-[#1a1a1a] transition-colors flex items-center gap-2">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6v12m6-6H6" /></svg>
           Ajouter un document
         </button>
@@ -125,7 +125,7 @@ export default function DocumentsPanel({ client }) {
           icon={<svg className="w-6 h-6 text-[#A8A29E]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
         />
       ) : (
-        <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl overflow-hidden">
+        <div className="bg-white border border-[#E7E7E7] rounded-[10px] overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[rgba(0,0,29,0.06)] bg-[rgba(0,0,23,0.02)]">
@@ -149,7 +149,7 @@ export default function DocumentsPanel({ client }) {
                   <tr key={doc.id} className="border-b border-[rgba(0,0,29,0.04)] hover:bg-[rgba(0,0,23,0.015)] transition-colors">
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 bg-[rgba(0,0,23,0.03)] rounded-lg flex items-center justify-center">
+                        <div className="w-9 h-9 bg-[#FDFBF6] rounded-lg flex items-center justify-center">
                           {isPdf ? (
                             <svg className="w-5 h-5 text-[#DC2626]" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/><path d="M8 12h1.5c.83 0 1.5.67 1.5 1.5S10.33 15 9.5 15H9v1.5H8V12zm1 2h.5c.28 0 .5-.22.5-.5s-.22-.5-.5-.5H9v1zm3-2h1.5c.83 0 1.5.67 1.5 1.5v1c0 .83-.67 1.5-1.5 1.5H12V12zm1 3h.5c.28 0 .5-.22.5-.5v-1c0-.28-.22-.5-.5-.5H13v2zm3-3h2v1h-1v.5h1v1h-1V16h-1v-4z"/></svg>
                           ) : isImage ? (
@@ -223,7 +223,7 @@ export default function DocumentsPanel({ client }) {
       {/* Preview Modal */}
       <Modal isOpen={!!previewUrl} onClose={() => { setPreviewUrl(null); setPreviewName(''); }} title={previewName} maxWidth="max-w-4xl">
         <div className="w-full" style={{ height: '75vh' }}>
-          <iframe src={previewUrl} className="w-full h-full rounded-lg border border-[rgba(0,0,29,0.08)]" title={previewName} />
+          <iframe src={previewUrl} className="w-full h-full rounded-lg border border-[#E7E7E7]" title={previewName} />
         </div>
       </Modal>
     </div>
@@ -279,7 +279,7 @@ function UploadModal({ isOpen, onClose, clientId, clientName, onUploaded }) {
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Ajouter un document dans Salesforce" maxWidth="max-w-lg">
       <div className="space-y-4">
-        <div className="bg-[rgba(0,0,23,0.02)] rounded-xl px-4 py-3 text-[12px] text-[#787881]">
+        <div className="bg-[rgba(0,0,23,0.02)] rounded-[6px] px-4 py-3 text-[12px] text-[#787881]">
           Client: <strong className="text-[#0F0F10]">{clientName}</strong> — Le fichier sera stocke dans Salesforce Files
         </div>
 
@@ -303,10 +303,10 @@ function UploadModal({ isOpen, onClose, clientId, clientName, onUploaded }) {
         <div>
           <label className={labelCls}>Fichier</label>
           <div
-            className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
+            className={`border-2 border-dashed rounded-[6px] p-6 text-center cursor-pointer transition-all ${
               dragActive ? 'border-[#7C5E3C] bg-[#FBF6EC]' :
               file ? 'border-[#059669] bg-[#ECFDF5]' :
-              'border-[rgba(0,0,29,0.12)] hover:border-[rgba(0,0,29,0.25)] bg-[rgba(0,0,23,0.015)]'
+              'border-[#D1D5DB] hover:border-[rgba(0,0,29,0.25)] bg-[rgba(0,0,23,0.015)]'
             }`}
             onClick={() => fileRef.current?.click()}
             onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
@@ -350,7 +350,7 @@ function UploadModal({ isOpen, onClose, clientId, clientName, onUploaded }) {
         </div>
 
         <button onClick={handleUpload} disabled={uploading || !file}
-          className="w-full py-2.5 bg-[#0F0F10] text-white text-[14px] font-medium rounded-xl hover:bg-[#1a1a1a] transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
+          className="w-full py-2.5 bg-[#0F0F10] text-white text-[14px] font-medium rounded-[6px] hover:bg-[#1a1a1a] transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
           {uploading ? <><Spinner size="w-4 h-4" /> Upload vers Salesforce...</> : 'Ajouter le document'}
         </button>
       </div>
@@ -388,7 +388,7 @@ function RequiredDocsChecklist({ documents, clientType }) {
   const uploaded = required.filter(r => getDocStatus(r) !== 'missing').length;
 
   return (
-    <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-6">
+    <div className="bg-white border border-[#E7E7E7] rounded-[10px] p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[14px] font-semibold text-[#0F0F10]">Checklist documentaire</h3>
         <div className="flex items-center gap-3">
@@ -445,7 +445,7 @@ function RequiredDocsChecklist({ documents, clientType }) {
 // ==========================================
 function StatCard({ label, value, color }) {
   return (
-    <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-xl px-4 py-3 text-center">
+    <div className="bg-white border border-[#E7E7E7] rounded-[6px] px-4 py-3 text-center">
       <p className="text-[22px] font-bold tabular-nums" style={{ color }}>{value}</p>
       <p className="text-[11px] text-[#A8A29E] font-medium mt-0.5">{label}</p>
     </div>

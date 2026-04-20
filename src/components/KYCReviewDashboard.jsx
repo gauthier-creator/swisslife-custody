@@ -100,7 +100,7 @@ export default function KYCReviewDashboard() {
 
       {/* Error */}
       {error && (
-        <div className="bg-[#FEF2F2] border border-[rgba(220,38,38,0.15)] rounded-xl px-4 py-3 flex items-center gap-3">
+        <div className="bg-[#FEF2F2] border border-[rgba(220,38,38,0.15)] rounded-[6px] px-4 py-3 flex items-center gap-3">
           <p className="text-[12px] text-[#991B1B] flex-1">{error}</p>
           <button onClick={() => setError(null)} className="text-[#DC2626] text-[12px]">Fermer</button>
         </div>
@@ -110,11 +110,11 @@ export default function KYCReviewDashboard() {
       {loading ? (
         <div className="flex justify-center py-12"><Spinner /></div>
       ) : schedule.length === 0 ? (
-        <div className="text-center py-12 bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl">
+        <div className="text-center py-12 bg-white border border-[#E7E7E7] rounded-[10px]">
           <p className="text-[13px] text-[#A8A29E]">Aucun client avec verification KYC</p>
         </div>
       ) : (
-        <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl overflow-hidden">
+        <div className="bg-white border border-[#E7E7E7] rounded-[10px] overflow-hidden">
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-[rgba(0,0,29,0.06)] bg-[rgba(0,0,23,0.02)]">
@@ -182,7 +182,7 @@ export default function KYCReviewDashboard() {
 
 function StatCard({ label, value, color, bg }) {
   return (
-    <div className="rounded-xl p-4 border border-[rgba(0,0,29,0.08)]" style={{ backgroundColor: bg }}>
+    <div className="rounded-[6px] p-4 border border-[#E7E7E7]" style={{ backgroundColor: bg }}>
       <p className="text-[28px] font-bold tabular-nums" style={{ color }}>{value}</p>
       <p className="text-[12px] text-[#787881] mt-0.5">{label}</p>
     </div>

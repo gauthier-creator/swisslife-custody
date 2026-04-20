@@ -86,7 +86,7 @@ export default function WhitelistPanel({ client }) {
   const net = (id) => SUPPORTED_NETWORKS.find(n => n.id === id) || { icon: '?', color: '#999', name: id };
 
   return (
-    <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-6">
+    <div className="bg-white border border-[#E7E7E7] rounded-[10px] p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[14px] font-semibold text-[#0F0F10]">Adresses whitelist</h3>
         <button
@@ -101,7 +101,7 @@ export default function WhitelistPanel({ client }) {
         <div className="flex justify-center py-8"><Spinner /></div>
       ) : addresses.length === 0 ? (
         <div className="text-center py-8">
-          <div className="w-10 h-10 bg-[rgba(0,0,23,0.03)] rounded-xl flex items-center justify-center mx-auto mb-3">
+          <div className="w-10 h-10 bg-[#FDFBF6] rounded-[6px] flex items-center justify-center mx-auto mb-3">
             <svg className="w-5 h-5 text-[#A8A29E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
@@ -235,14 +235,14 @@ export default function WhitelistPanel({ client }) {
           <div className="flex gap-3 pt-2">
             <button
               onClick={() => setShowAdd(false)}
-              className="flex-1 py-2.5 text-[14px] font-medium text-[#787881] bg-[rgba(0,0,23,0.04)] rounded-xl hover:bg-[rgba(0,0,23,0.07)] transition-colors"
+              className="flex-1 py-2.5 text-[14px] font-medium text-[#787881] bg-[rgba(0,0,23,0.04)] rounded-[6px] hover:bg-[rgba(0,0,23,0.07)] transition-colors"
             >
               Annuler
             </button>
             <button
               onClick={handleAdd}
               disabled={saving || !form.address.trim() || !form.label.trim()}
-              className="flex-1 py-2.5 bg-[#7C5E3C] text-white text-[14px] font-medium rounded-xl hover:bg-[#6A4F30] transition-colors disabled:opacity-40"
+              className="flex-1 py-2.5 bg-[#7C5E3C] text-white text-[14px] font-medium rounded-[6px] hover:bg-[#6A4F30] transition-colors disabled:opacity-40"
             >
               {saving ? 'Ajout...' : 'Ajouter'}
             </button>

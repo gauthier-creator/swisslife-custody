@@ -23,8 +23,8 @@ function StatCard({ label, value, sub, color, icon }) {
     green: 'bg-[#ECFDF5] text-[#059669]',
   };
   return (
-    <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-5 flex items-center gap-4">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-[18px] ${colors[color] || colors.blue}`}>
+    <div className="bg-white border border-[#E7E7E7] rounded-[10px] p-5 flex items-center gap-4">
+      <div className={`w-10 h-10 rounded-[6px] flex items-center justify-center text-[18px] ${colors[color] || colors.blue}`}>
         {icon}
       </div>
       <div>
@@ -174,18 +174,18 @@ export default function ComplianceReports() {
           type="date"
           value={startDate}
           onChange={e => setStartDate(e.target.value)}
-          className="px-3 py-1.5 text-[13px] border border-[rgba(0,0,29,0.12)] rounded-lg bg-white text-[#0F0F10] focus:outline-none focus:ring-2 focus:ring-[#7C5E3C]/20 focus:border-[#7C5E3C]"
+          className="px-3 py-1.5 text-[13px] border border-[#D1D5DB] rounded-lg bg-white text-[#0F0F10] focus:outline-none focus:ring-2 focus:ring-[#7C5E3C]/20 focus:border-[#7C5E3C]"
         />
         <span className="text-[12px] text-[#A8A29E]">au</span>
         <input
           type="date"
           value={endDate}
           onChange={e => setEndDate(e.target.value)}
-          className="px-3 py-1.5 text-[13px] border border-[rgba(0,0,29,0.12)] rounded-lg bg-white text-[#0F0F10] focus:outline-none focus:ring-2 focus:ring-[#7C5E3C]/20 focus:border-[#7C5E3C]"
+          className="px-3 py-1.5 text-[13px] border border-[#D1D5DB] rounded-lg bg-white text-[#0F0F10] focus:outline-none focus:ring-2 focus:ring-[#7C5E3C]/20 focus:border-[#7C5E3C]"
         />
         <button
           onClick={loadSummary}
-          className="px-3 py-1.5 text-[12px] font-medium text-white bg-[#7C5E3C] hover:bg-[#4F46E5] rounded-lg transition-colors"
+          className="px-3 py-1.5 text-[12px] font-medium text-white bg-[#7C5E3C] hover:bg-[#6A4F30] rounded-lg transition-colors"
         >
           Actualiser
         </button>
@@ -226,7 +226,7 @@ export default function ComplianceReports() {
       {/* Charts Section */}
       <div className="grid grid-cols-2 gap-4">
         {/* Approval status distribution */}
-        <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-5">
+        <div className="bg-white border border-[#E7E7E7] rounded-[10px] p-5">
           <h3 className="text-[14px] font-semibold text-[#0F0F10] mb-4">Distribution des approbations</h3>
           <HorizontalBar
             labels
@@ -240,7 +240,7 @@ export default function ComplianceReports() {
         </div>
 
         {/* Risk distribution */}
-        <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-5">
+        <div className="bg-white border border-[#E7E7E7] rounded-[10px] p-5">
           <h3 className="text-[14px] font-semibold text-[#0F0F10] mb-4">Niveaux de risque</h3>
           <HorizontalBar
             labels
@@ -254,7 +254,7 @@ export default function ComplianceReports() {
         </div>
 
         {/* Volume per day */}
-        <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-5 col-span-2">
+        <div className="bg-white border border-[#E7E7E7] rounded-[10px] p-5 col-span-2">
           <h3 className="text-[14px] font-semibold text-[#0F0F10] mb-1">Volume des transferts (30 derniers jours)</h3>
           <p className="text-[11px] text-[#A8A29E] mb-4">Montant total: {fmtNum(summary.totalVolume)} | Moyenne: {fmtNum(summary.averageTransferAmount)} par transfert</p>
           <VerticalBarChart data={dailyVolumes} barColor="#7C5E3C" />
@@ -263,7 +263,7 @@ export default function ComplianceReports() {
 
       {/* Top clients */}
       {summary.topClientsByVolume && summary.topClientsByVolume.length > 0 && (
-        <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-5">
+        <div className="bg-white border border-[#E7E7E7] rounded-[10px] p-5">
           <h3 className="text-[14px] font-semibold text-[#0F0F10] mb-4">Top clients par volume</h3>
           <div className="space-y-2">
             {summary.topClientsByVolume.map((c, i) => {
@@ -272,7 +272,7 @@ export default function ComplianceReports() {
                 <div key={i} className="flex items-center gap-3">
                   <span className="text-[12px] text-[#A8A29E] w-5 text-right">{i + 1}.</span>
                   <span className="text-[13px] text-[#0F0F10] w-40 truncate">{c.clientName}</span>
-                  <div className="flex-1 h-5 bg-[rgba(0,0,23,0.03)] rounded overflow-hidden">
+                  <div className="flex-1 h-5 bg-[#FDFBF6] rounded overflow-hidden">
                     <div
                       className="h-full bg-[#7C5E3C]/20 rounded"
                       style={{ width: `${(c.volume / maxVol) * 100}%` }}
@@ -288,7 +288,7 @@ export default function ComplianceReports() {
       )}
 
       {/* Export Section */}
-      <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-5">
+      <div className="bg-white border border-[#E7E7E7] rounded-[10px] p-5">
         <h3 className="text-[14px] font-semibold text-[#0F0F10] mb-1">Exports reglementaires</h3>
         <p className="text-[11px] text-[#A8A29E] mb-4">Conformite FINMA / LBA -- Exportez les donnees pour vos rapports reglementaires</p>
 
@@ -296,7 +296,7 @@ export default function ComplianceReports() {
           <button
             onClick={() => handleExport('audit')}
             disabled={exporting === 'audit'}
-            className="flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium text-[#0F0F10] bg-[rgba(0,0,23,0.03)] hover:bg-[rgba(0,0,23,0.06)] border border-[rgba(0,0,29,0.08)] rounded-xl transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium text-[#0F0F10] bg-[#FDFBF6] hover:bg-[#F9F8F5] border border-[#E7E7E7] rounded-[6px] transition-all disabled:opacity-50"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             {exporting === 'audit' ? 'Export...' : "Exporter le journal d'audit (CSV)"}
@@ -305,7 +305,7 @@ export default function ComplianceReports() {
           <button
             onClick={() => handleExport('transfers')}
             disabled={exporting === 'transfers'}
-            className="flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium text-[#0F0F10] bg-[rgba(0,0,23,0.03)] hover:bg-[rgba(0,0,23,0.06)] border border-[rgba(0,0,29,0.08)] rounded-xl transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium text-[#0F0F10] bg-[#FDFBF6] hover:bg-[#F9F8F5] border border-[#E7E7E7] rounded-[6px] transition-all disabled:opacity-50"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" /></svg>
             {exporting === 'transfers' ? 'Export...' : 'Exporter les transferts (CSV)'}
@@ -314,7 +314,7 @@ export default function ComplianceReports() {
           <button
             onClick={() => handleExport('kyc')}
             disabled={exporting === 'kyc'}
-            className="flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium text-[#0F0F10] bg-[rgba(0,0,23,0.03)] hover:bg-[rgba(0,0,23,0.06)] border border-[rgba(0,0,29,0.08)] rounded-xl transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium text-[#0F0F10] bg-[#FDFBF6] hover:bg-[#F9F8F5] border border-[#E7E7E7] rounded-[6px] transition-all disabled:opacity-50"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
             {exporting === 'kyc' ? 'Export...' : 'Exporter le statut KYC (CSV)'}

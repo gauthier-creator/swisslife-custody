@@ -28,7 +28,7 @@ function KPICard({ title, value, subtitle, color = 'indigo', children }) {
   const c = colorMap[color] || colorMap.indigo;
 
   return (
-    <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-6 flex flex-col gap-3">
+    <div className="bg-white border border-[#E7E7E7] rounded-[10px] p-6 flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <p className="text-[13px] font-medium text-[#787881]">{title}</p>
         <div className={`w-8 h-8 rounded-lg ${c.bg} ${c.text} flex items-center justify-center ring-1 ${c.ring}`}>
@@ -91,7 +91,7 @@ function HBar({ items, total }) {
 // ── Badge ────────────────────────────────────────────────────────────
 function RiskBadge({ label, count, color }) {
   return (
-    <div className="flex items-center justify-between py-2 px-3 rounded-xl" style={{ backgroundColor: `${color}10` }}>
+    <div className="flex items-center justify-between py-2 px-3 rounded-[6px]" style={{ backgroundColor: `${color}10` }}>
       <div className="flex items-center gap-2">
         <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
         <span className="text-[13px] font-medium text-[#0F0F10]">{label}</span>
@@ -104,7 +104,7 @@ function RiskBadge({ label, count, color }) {
 // ── Section Card ─────────────────────────────────────────────────────
 function Section({ title, icon, children }) {
   return (
-    <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-6">
+    <div className="bg-white border border-[#E7E7E7] rounded-[10px] p-6">
       <div className="flex items-center gap-2 mb-5">
         <span className="text-[16px]">{icon}</span>
         <h3 className="text-[15px] font-semibold text-[#0F0F10]">{title}</h3>
@@ -156,7 +156,7 @@ export default function ACPRReportingDashboard() {
 
   if (!isAdmin) {
     return (
-      <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-12 text-center">
+      <div className="bg-white border border-[#E7E7E7] rounded-[10px] p-12 text-center">
         <p className="text-[15px] text-[#787881]">Acces reserve aux administrateurs compliance.</p>
       </div>
     );
@@ -176,7 +176,7 @@ export default function ACPRReportingDashboard() {
       `}</style>
 
       {/* ── Header ──────────────────────────────────────────────── */}
-      <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-6">
+      <div className="bg-white border border-[#E7E7E7] rounded-[10px] p-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div>
             <h2 className="text-[22px] font-bold text-[#0F0F10]">Reporting ACPR</h2>
@@ -187,7 +187,7 @@ export default function ACPRReportingDashboard() {
 
           <div className="flex flex-wrap items-center gap-3 no-print">
             {/* Period selector */}
-            <div className="flex bg-[rgba(0,0,23,0.03)] rounded-xl p-1">
+            <div className="flex bg-[#FDFBF6] rounded-[6px] p-1">
               {PERIODS.map(p => (
                 <button
                   key={p.id}
@@ -208,13 +208,13 @@ export default function ACPRReportingDashboard() {
               type="month"
               value={date.slice(0, 7)}
               onChange={(e) => setDate(e.target.value + '-01')}
-              className="border border-[rgba(0,0,29,0.08)] rounded-xl px-3 py-1.5 text-[12px] text-[#0F0F10] bg-white focus:outline-none focus:ring-2 focus:ring-[#7C5E3C]/20"
+              className="border border-[#E7E7E7] rounded-[6px] px-3 py-1.5 text-[12px] text-[#0F0F10] bg-white focus:outline-none focus:ring-2 focus:ring-[#7C5E3C]/20"
             />
 
             {/* Actions */}
             <button
               onClick={handleExportCSV}
-              className="flex items-center gap-1.5 px-4 py-2 border border-[rgba(0,0,29,0.08)] rounded-xl text-[12px] font-medium text-[#0F0F10] hover:bg-[rgba(0,0,23,0.03)] transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 border border-[#E7E7E7] rounded-[6px] text-[12px] font-medium text-[#0F0F10] hover:bg-[#FDFBF6] transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -224,7 +224,7 @@ export default function ACPRReportingDashboard() {
 
             <button
               onClick={handlePrint}
-              className="flex items-center gap-1.5 px-4 py-2 bg-[#7C5E3C] text-white rounded-xl text-[12px] font-medium hover:bg-[#6A4F30] transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 bg-[#7C5E3C] text-white rounded-[6px] text-[12px] font-medium hover:bg-[#6A4F30] transition-colors"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2z" />
@@ -243,7 +243,7 @@ export default function ACPRReportingDashboard() {
 
       {/* ── Loading State ────────────────────────────────────────── */}
       {loading && (
-        <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-16 flex flex-col items-center justify-center gap-3">
+        <div className="bg-white border border-[#E7E7E7] rounded-[10px] p-16 flex flex-col items-center justify-center gap-3">
           <div className="w-8 h-8 border-2 border-[#7C5E3C] border-t-transparent rounded-full animate-spin" />
           <p className="text-[13px] text-[#787881]">Chargement du rapport...</p>
         </div>
@@ -251,11 +251,11 @@ export default function ACPRReportingDashboard() {
 
       {/* ── Error State ──────────────────────────────────────────── */}
       {error && !loading && (
-        <div className="bg-white border border-[#EF4444]/20 rounded-2xl p-8 text-center">
+        <div className="bg-white border border-[#EF4444]/20 rounded-[10px] p-8 text-center">
           <p className="text-[14px] text-[#EF4444] font-medium">Erreur: {error}</p>
           <button
             onClick={loadReport}
-            className="mt-3 px-4 py-2 bg-[#7C5E3C] text-white rounded-xl text-[12px] font-medium hover:bg-[#6A4F30] transition-colors"
+            className="mt-3 px-4 py-2 bg-[#7C5E3C] text-white rounded-[6px] text-[12px] font-medium hover:bg-[#6A4F30] transition-colors"
           >
             Reessayer
           </button>
@@ -336,11 +336,11 @@ export default function ACPRReportingDashboard() {
                 <div>
                   <p className="text-[11px] text-[#787881] mb-2 font-medium uppercase tracking-wider">Declarations par autorite</p>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-[#FEF2F2] rounded-xl p-4 text-center">
+                    <div className="bg-[#FEF2F2] rounded-[6px] p-4 text-center">
                       <p className="text-[24px] font-bold text-[#EF4444] tabular-nums">{fmtNum(report.compliance.sarByAuthority.tracfin)}</p>
                       <p className="text-[11px] text-[#EF4444]/70 font-medium mt-1">Tracfin</p>
                     </div>
-                    <div className="bg-[#FEF2F2] rounded-xl p-4 text-center">
+                    <div className="bg-[#FEF2F2] rounded-[6px] p-4 text-center">
                       <p className="text-[24px] font-bold text-[#EF4444] tabular-nums">{fmtNum(report.compliance.sarByAuthority.mros)}</p>
                       <p className="text-[11px] text-[#EF4444]/70 font-medium mt-1">MROS</p>
                     </div>
@@ -376,15 +376,15 @@ export default function ACPRReportingDashboard() {
                 <div className="pt-3 border-t border-[rgba(0,0,29,0.06)]">
                   <p className="text-[11px] text-[#787881] mb-3 font-medium uppercase tracking-wider">Registre UBO</p>
                   <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-[#FBF6EC] rounded-xl p-3 text-center">
+                    <div className="bg-[#FBF6EC] rounded-[6px] p-3 text-center">
                       <p className="text-[18px] font-bold text-[#7C5E3C] tabular-nums">{fmtNum(report.ubos.totalRegistered)}</p>
                       <p className="text-[10px] text-[#7C5E3C]/70 mt-0.5">Total</p>
                     </div>
-                    <div className="bg-[#ECFDF5] rounded-xl p-3 text-center">
+                    <div className="bg-[#ECFDF5] rounded-[6px] p-3 text-center">
                       <p className="text-[18px] font-bold text-[#059669] tabular-nums">{fmtNum(report.ubos.verified)}</p>
                       <p className="text-[10px] text-[#059669]/70 mt-0.5">Verifies</p>
                     </div>
-                    <div className="bg-[#FFFBEB] rounded-xl p-3 text-center">
+                    <div className="bg-[#FFFBEB] rounded-[6px] p-3 text-center">
                       <p className="text-[18px] font-bold text-[#D97706] tabular-nums">{fmtNum(report.ubos.unverified)}</p>
                       <p className="text-[10px] text-[#D97706]/70 mt-0.5">Non verifies</p>
                     </div>
@@ -419,15 +419,15 @@ export default function ACPRReportingDashboard() {
           {/* Section 5 - Journal d'audit (full width) */}
           <Section title="Journal d'audit" icon="">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-              <div className="bg-[#FBF6EC] rounded-xl p-4 text-center">
+              <div className="bg-[#FBF6EC] rounded-[6px] p-4 text-center">
                 <p className="text-[28px] font-bold text-[#7C5E3C] tabular-nums">{fmtNum(report.audit.totalActions)}</p>
                 <p className="text-[11px] text-[#7C5E3C]/70 font-medium mt-1">Actions totales</p>
               </div>
-              <div className="bg-[#FEF2F2] rounded-xl p-4 text-center">
+              <div className="bg-[#FEF2F2] rounded-[6px] p-4 text-center">
                 <p className="text-[28px] font-bold text-[#EF4444] tabular-nums">{fmtNum(report.audit.highSeverity)}</p>
                 <p className="text-[11px] text-[#EF4444]/70 font-medium mt-1">Severite haute/critique</p>
               </div>
-              <div className="bg-[rgba(0,0,23,0.02)] rounded-xl p-4 text-center">
+              <div className="bg-[rgba(0,0,23,0.02)] rounded-[6px] p-4 text-center">
                 <p className="text-[28px] font-bold text-[#0F0F10] tabular-nums">
                   {Object.keys(report.audit.byCategory).length}
                 </p>
@@ -444,7 +444,7 @@ export default function ACPRReportingDashboard() {
                     .map(([cat, count]) => (
                       <div
                         key={cat}
-                        className="flex items-center justify-between bg-[rgba(0,0,23,0.02)] border border-[rgba(0,0,29,0.06)] rounded-xl px-3 py-2"
+                        className="flex items-center justify-between bg-[rgba(0,0,23,0.02)] border border-[rgba(0,0,29,0.06)] rounded-[6px] px-3 py-2"
                       >
                         <span className="text-[11px] text-[#787881] capitalize">{cat}</span>
                         <span className="text-[13px] font-semibold text-[#0F0F10] tabular-nums">{fmtNum(count)}</span>
@@ -456,7 +456,7 @@ export default function ACPRReportingDashboard() {
           </Section>
 
           {/* ── Footer ──────────────────────────────────────────── */}
-          <div className="bg-white border border-[rgba(0,0,29,0.08)] rounded-2xl p-5">
+          <div className="bg-white border border-[#E7E7E7] rounded-[10px] p-5">
             <p className="text-[11px] text-[#787881] leading-relaxed">
               Ce rapport est etabli conformement aux obligations de reporting reglementaire prevues par le Code Monetaire et Financier (art. L.561-32 et suivants) et le reglement MiCA (UE) 2023/1114.
             </p>
