@@ -2743,6 +2743,39 @@ app.put('/api/compliance/risk/:accountId', async (req, res) => {
 
     if (error) throw error;
 
+    // ─── Write-back Salesforce : Custody_Risk_Level__c ───
+    // Le banquier doit retrouver le niveau de risque dans la fiche SFDC.
+    // Mapping interne → valeurs picklist SFDC (sans accents, convention org).
+    const SFDC_RISK_MAP = {
+      low:      'Faible',
+      standard: 'Moyen',
+      high:     'Eleve',
+      critical: 'Tres eleve',
+    };
+    let sfWriteback = { attempted: false, ok: false };
+    if (SF_CONFIGURED && payload.risk_level) {
+      sfWriteback.attempted = true;
+      try {
+        const { accessToken, instanceUrl } = await getSalesforceToken();
+        const sfPayload = {
+          Custody_Risk_Level__c: SFDC_RISK_MAP[payload.risk_level] || 'Moyen',
+        };
+        const sfRes = await fetch(`${instanceUrl}/services/data/v59.0/sobjects/Account/${req.params.accountId}`, {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(sfPayload),
+        });
+        sfWriteback.ok = sfRes.ok || sfRes.status === 204;
+        if (!sfWriteback.ok) {
+          sfWriteback.error = `${sfRes.status}: ${(await sfRes.text().catch(() => '')).slice(0, 300)}`;
+          console.error('[Risk] SFDC writeback failed:', sfWriteback.error);
+        }
+      } catch (sfErr) {
+        sfWriteback.error = sfErr.message;
+        console.error('[Risk] SFDC writeback exception:', sfErr.message);
+      }
+    }
+
     await logAudit({
       userEmail: req.user?.email,
       action: 'risk.config_updated',
@@ -2750,12 +2783,12 @@ app.put('/api/compliance/risk/:accountId', async (req, res) => {
       entityType: 'risk_config',
       entityId: data.id,
       salesforceAccountId: req.params.accountId,
-      details: payload,
+      details: { ...payload, sfWriteback },
       severity: 'info',
       req,
     });
 
-    res.json(data);
+    res.json({ ...data, sfWriteback });
   } catch (err) {
     console.error('risk config update error:', err.message);
     res.status(500).json({ error: err.message });
