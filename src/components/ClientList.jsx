@@ -143,10 +143,14 @@ export default function ClientList({ onSelectClient, onNavigate }) {
               const corpAum  = clients.filter(c => c.type === 'Other' || c.type === 'Institutional').reduce((s, c) => s + (Number(c.aum) || 0), 0);
               const hnwiAum  = Math.max(0, totalAum - uhnwiAum - corpAum);
               const tot = totalAum || 1;
+              // Palette alignée avec les ProductCards cream/parchment :
+              // bronze profond → champagne gold → taupe chaleureux.
+              // Abandon du charcoal #1E1E1E qui faisait dissonance avec le
+              // reste du livre (trop dur visuellement).
               const segs = [
-                { k: 'UHNWI',         aum: uhnwiAum, color: '#7C5E3C' }, // bronze (primary segment)
-                { k: 'HNWI',          aum: hnwiAum,  color: '#C8924B' }, // gold
-                { k: 'Corporate',     aum: corpAum,  color: '#1E1E1E' }, // charcoal
+                { k: 'UHNWI',     aum: uhnwiAum, color: '#8A6A3E' }, // bronze profond, refined
+                { k: 'HNWI',      aum: hnwiAum,  color: '#D4B58A' }, // champagne gold, lumineux
+                { k: 'Corporate', aum: corpAum,  color: '#7A7163' }, // warm graphite / taupe
               ];
               return (
                 <div className="mt-6 pt-5 border-t border-[#E7E7E7]">

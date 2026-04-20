@@ -761,12 +761,16 @@ html, body {
     linear-gradient(140deg, #F3F0E8 0%, #E6E0D0 100%);
 }
 
-/* Ramify bronze progress bar — sits at bottom of metric cards */
+/* Progress bar — parchment/champagne gold tone, inspired by the cream
+   palette of the ProductCards. Remplace l'ancien gradient "boueux"
+   bronze-sombre par un dégradé luminueux cream → bronze chaleureux.
+   Pas de glow bronze (qui faisait daté) — juste une subtile inner
+   shadow pour donner de la profondeur sans appuyer. */
 .progress-bronze {
   position: relative;
   height: 4px;
   border-radius: 999px;
-  background: rgba(10, 10, 10, 0.06);
+  background: rgba(124, 94, 60, 0.08);
   overflow: hidden;
 }
 .progress-bronze::after {
@@ -775,8 +779,7 @@ html, body {
   inset: 0;
   width: var(--value, 50%);
   border-radius: inherit;
-  background: linear-gradient(90deg, #D4A574 0%, #9A7A51 60%, #7C5E3C 100%);
-  box-shadow: 0 0 10px -2px rgba(124, 94, 60, 0.35);
+  background: linear-gradient(90deg, #E8D4A8 0%, #C8A06B 55%, #A87B45 100%);
 }
 
 /* Ramify notification banner strip */
