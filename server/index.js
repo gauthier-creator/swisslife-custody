@@ -1368,6 +1368,11 @@ app.get('/api/dfns/wallets/:walletId/transfers/:transferId', async (req, res) =>
 app.post('/api/dfns/wallets/:walletId/transfers', requireAuth, async (req, res) => {
   const walletId = req.params.walletId;
   const destination = (req.body?.to || '').trim();
+  // Hoist cross-gate state so the screening gate can pass it to
+  // screenGate() without tripping on the TDZ (resolvedAccountId is
+  // filled inside the whitelist gate further down).
+  let resolvedAccountId = null;
+  let riskCfgRow = null;
   try {
     // Audit log: transfer attempt
     await logAudit({
@@ -1414,45 +1419,28 @@ app.post('/api/dfns/wallets/:walletId/transfers', requireAuth, async (req, res) 
     }
 
     // ─── Compliance Gate 2: CHAINALYSIS SANCTIONS SCREENING ───
-    // Every destination address is screened against OFAC/EU/UN/UK
-    // sanction lists BEFORE DFNS signs. Defense-in-depth: the UI
-    // already screens but a malicious client could bypass. Server
-    // is the authoritative gate. Reference: Règlement 2015/847.
+    // Defense-in-depth : screenGate() centralise le contrôle OFAC/EU/UN/UK,
+    // fait fail-closed sur erreur API en mode LIVE, dédupe les alertes.
+    // Référence : Règlement UE 2015/847 · MiCA Art. 68.
     if (destination) {
-      try {
-        const screenRes = await chainalysisScreen(destination);
-        if (screenRes.flagged) {
-          // Auto-open a compliance alert
-          await supabaseAdmin.from('compliance_alerts').insert({
-            type: 'sanctions_match',
-            severity: 'critical',
-            salesforce_account_id: null,
-            client_name: null,
-            message: `Tentative de transfert vers adresse sanctionnée — ${destination} · ${screenRes.identifications.map(i => i.name).join(', ')}. Transfert bloqué automatiquement.`,
-            details: { ...screenRes, walletId, context: 'pre_transfer_server_gate', body: req.body },
-            status: 'open',
-          });
-          await logAudit({
-            action: 'transfer.blocked_sanctions_match',
-            category: 'compliance',
-            entityType: 'wallet',
-            entityId: walletId,
-            details: { walletId, destination, hits: screenRes.identifications, ...req.body },
-            severity: 'critical',
-            req,
-          });
-          return res.status(403).json({
-            error: 'Adresse sanctionnée — transfert refusé',
-            code: 'SANCTIONS_HIT',
-            hits: screenRes.identifications,
-            lists: ['OFAC SDN', 'EU Consolidated', 'UK HMT', 'UN Security Council'],
-            regulation: 'Règlement UE 2015/847 · MiCA Art. 68',
-          });
-        }
-      } catch (e) {
-        // Fail-closed on screening errors in production? Here we fail-open
-        // with warning — but in prod you'd want to block on error too.
-        console.warn('[Transfer Gate] sanctions screen failed:', e.message);
+      const gate = await screenGate({
+        address: destination,
+        walletId,
+        context: 'dfns_transfer_direct',
+        salesforceAccountId: resolvedAccountId,
+        clientName: null,
+        req,
+      });
+      if (gate.blocked) {
+        return res.status(403).json({
+          error: gate.reason === 'screening_unavailable'
+            ? 'Screening Chainalysis indisponible — transfert refusé (fail-closed)'
+            : 'Adresse sanctionnée — transfert refusé',
+          code: gate.reason === 'screening_unavailable' ? 'SCREENING_UNAVAILABLE' : 'SANCTIONS_HIT',
+          hits: gate.hits,
+          lists: ['OFAC SDN', 'EU Consolidated', 'UK HMT', 'UN Security Council'],
+          regulation: 'Règlement UE 2015/847 · MiCA Art. 68',
+        });
       }
     }
 
@@ -1460,8 +1448,7 @@ app.post('/api/dfns/wallets/:walletId/transfers', requireAuth, async (req, res) 
     // If the wallet is in "whitelist-only" mode (configured via
     // RiskConfigPanel), the destination MUST be on the approved list.
     // Otherwise the transfer is blocked.
-    let resolvedAccountId = null;
-    let riskCfgRow = null;
+    // resolvedAccountId + riskCfgRow hoisted to the top of the handler.
     try {
       // Read whitelist mode from the wallet's risk config. We look up
       // the client via wallet.external_id → risk_configs.whitelist_only.
@@ -1739,16 +1726,34 @@ const DEMO_SANCTIONED_ADDRESSES = new Map([
   ['bc1qm3htjtpqabe3hjh97z5nn5tkxdcxfz9h79cw4x', { category: 'sanctions', name: 'OFAC SDN — Hydra Market',     description: 'Darknet marketplace — designated April 2022.',     url: 'https://ofac.treasury.gov/recent-actions/20220405' }],
 ]);
 
+// Small in-process cache — Chainalysis free tier has a soft rate limit
+// and results rarely change minute-to-minute. Cache for 60s per address.
+const CHAINALYSIS_CACHE = new Map(); // lowerAddr → { at, result }
+const CHAINALYSIS_CACHE_TTL_MS = 60_000;
+const CHAINALYSIS_TIMEOUT_MS = 15_000;
+
 async function chainalysisScreen(address) {
   const addr = (address || '').trim();
   if (!addr) return { address: addr, flagged: false, identifications: [] };
 
+  // Cache hit ?
+  const key = addr.toLowerCase();
+  const cached = CHAINALYSIS_CACHE.get(key);
+  if (cached && Date.now() - cached.at < CHAINALYSIS_CACHE_TTL_MS) {
+    return cached.result;
+  }
+
   if (!CHAINALYSIS_DEMO_MODE) {
-    // LIVE — Chainalysis Public Sanctions Screening API
+    // LIVE — Chainalysis Public Sanctions Screening API.
+    // Timeout strict pour éviter qu'un ralentissement de l'API stalle
+    // un transfert pendant plusieurs minutes.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), CHAINALYSIS_TIMEOUT_MS);
     try {
       const r = await fetch(`https://public.chainalysis.com/api/v1/address/${encodeURIComponent(addr)}`, {
         method: 'GET',
         headers: { 'X-API-Key': CHAINALYSIS_API_KEY, 'Accept': 'application/json' },
+        signal: controller.signal,
       });
       if (!r.ok) {
         const body = await r.text().catch(() => '');
@@ -1756,26 +1761,113 @@ async function chainalysisScreen(address) {
       }
       const data = await r.json();
       const identifications = Array.isArray(data.identifications) ? data.identifications : [];
-      return {
+      const result = {
         address: addr,
         flagged: identifications.length > 0,
         identifications,
         provider: 'Chainalysis Public Sanctions API',
+        mode: 'live',
       };
+      CHAINALYSIS_CACHE.set(key, { at: Date.now(), result });
+      return result;
     } catch (err) {
       console.error('[Chainalysis] live API error:', err.message);
       throw err;
+    } finally {
+      clearTimeout(timer);
     }
   }
 
   // DEMO — match against the curated OFAC list
-  const hit = DEMO_SANCTIONED_ADDRESSES.get(addr.toLowerCase());
-  return {
+  const hit = DEMO_SANCTIONED_ADDRESSES.get(key);
+  const result = {
     address: addr,
     flagged: !!hit,
     identifications: hit ? [hit] : [],
     provider: 'Chainalysis Public Sanctions API · mode sandbox',
+    mode: 'sandbox',
   };
+  CHAINALYSIS_CACHE.set(key, { at: Date.now(), result });
+  return result;
+}
+
+// ─── screenGate ──────────────────────────────────────────────
+// Shared compliance gate used by EVERY endpoint that handles a
+// destination address : approvals creation / approve / execute,
+// direct DFNS transfer, whitelist insertion.
+//
+// Behaviour :
+//   · Calls chainalysisScreen() with 15s timeout
+//   · On FLAGGED : opens (or re-uses) a compliance_alerts row and
+//     returns { blocked: true, reason, hits } — caller must 403
+//   · On API ERROR in LIVE mode : fail-closed → returns { blocked: true,
+//     reason: 'screening_unavailable' }. The alternative (fail-open)
+//     would let sanctioned addresses through if the API is down, which
+//     is unacceptable under Règlement UE 2015/847.
+//   · On API ERROR in DEMO mode : fail-open (DEMO is for local dev only)
+//   · Dedup : if a sanction alert exists for this (address, status=open),
+//     we log the event but don't create a duplicate row
+//
+// Returns : { blocked: boolean, reason?, screen?, hits? }
+async function screenGate({ address, walletId, context, salesforceAccountId, clientName, req }) {
+  if (!address) return { blocked: false };
+  let screen;
+  try {
+    screen = await chainalysisScreen(address);
+  } catch (err) {
+    const failClosed = !CHAINALYSIS_DEMO_MODE;
+    await logAudit({
+      action: 'compliance.screen_unavailable',
+      category: 'compliance',
+      entityType: 'address_screening',
+      entityId: walletId || address,
+      details: { address, walletId, context, error: err.message, failClosed },
+      severity: 'critical',
+      req,
+    });
+    return failClosed
+      ? { blocked: true, reason: 'screening_unavailable', error: err.message }
+      : { blocked: false, warning: err.message };
+  }
+
+  if (!screen.flagged) return { blocked: false, screen };
+
+  // Dedup — re-use an open alert for the same address so the RCSI
+  // inbox shows one thread, not a row per gate that triggered.
+  try {
+    const { data: existing } = await supabaseAdmin
+      .from('compliance_alerts')
+      .select('id')
+      .eq('type', 'sanctions_match')
+      .eq('status', 'open')
+      .contains('details', { address })
+      .limit(1);
+    if (!existing || existing.length === 0) {
+      await supabaseAdmin.from('compliance_alerts').insert({
+        type: 'sanctions_match',
+        severity: 'critical',
+        salesforce_account_id: salesforceAccountId || null,
+        client_name: clientName || null,
+        message: `Adresse sanctionnée — ${address} · ${screen.identifications.map(i => i.name).join(', ')}. Blocage automatique (MiCA Art. 68 · Règlement UE 2015/847).`,
+        details: { ...screen, walletId, context },
+        status: 'open',
+      });
+    }
+  } catch (e) {
+    console.error('[screenGate] compliance_alerts error:', e.message);
+  }
+
+  await logAudit({
+    action: 'compliance.sanctions_hit_blocked',
+    category: 'compliance',
+    entityType: 'address_screening',
+    entityId: walletId || address,
+    details: { address, walletId, context, hits: screen.identifications, provider: screen.provider, mode: screen.mode },
+    severity: 'critical',
+    req,
+  });
+
+  return { blocked: true, reason: 'sanctions_hit', screen, hits: screen.identifications };
 }
 
 // POST /api/compliance/address-screen — Screen one or more addresses
@@ -1788,19 +1880,20 @@ app.post('/api/compliance/address-screen', async (req, res) => {
       return res.status(400).json({ error: 'address or addresses[] is required' });
     }
 
-    // Small simulated latency so the UI feels instant but not jarring
-    await new Promise(r => setTimeout(r, 650));
-
-    const results = [];
-    for (const a of list) {
+    // Parallel screening — in LIVE mode each call hits the Chainalysis
+    // Public API (cached 60s server-side). In DEMO mode it's instant.
+    const results = await Promise.all(list.map(async (a) => {
       try {
-        results.push(await chainalysisScreen(a));
+        return await chainalysisScreen(a);
       } catch (err) {
-        results.push({ address: a, flagged: false, identifications: [], error: err.message });
+        // In LIVE mode we return a flagged=undefined signal with error so
+        // the UI can distinguish "clean" from "screening unavailable".
+        return { address: a, flagged: false, identifications: [], error: err.message };
       }
-    }
+    }));
 
     const anyFlagged = results.some(r => r.flagged);
+    const anyError = results.some(r => r.error);
     const screenedAt = new Date().toISOString();
 
     // Audit — Tracfin / MiCA Art. 68
@@ -1815,25 +1908,38 @@ app.post('/api/compliance/address-screen', async (req, res) => {
         chain,
         context,
         addresses: list,
-        results: results.map(r => ({ address: r.address, flagged: r.flagged, hits: r.identifications?.length || 0 })),
+        results: results.map(r => ({ address: r.address, flagged: r.flagged, hits: r.identifications?.length || 0, error: r.error })),
       },
-      severity: anyFlagged ? 'critical' : 'info',
+      severity: anyFlagged ? 'critical' : anyError ? 'warning' : 'info',
       req,
     });
 
-    // On any hit, create a compliance alert
+    // Dedup — for each hit, create a compliance_alerts row UNLESS one is
+    // already open for the same address. Prevents spamming the RCSI inbox
+    // when an address is screened from multiple gates within a short window.
     if (anyFlagged) {
       for (const r of results.filter(x => x.flagged)) {
-        const { error: alertErr } = await supabaseAdmin.from('compliance_alerts').insert({
-          type: 'sanctions_match',
-          severity: 'critical',
-          salesforce_account_id: null,
-          client_name: null,
-          message: `Adresse sanctionnée — ${r.address} · ${r.identifications.map(i => i.name).join(', ')}. Tout transfert vers cette adresse doit être bloqué (MiCA Art. 68 · Règlement 2015/847).`,
-          details: { ...r, chain, walletId, context },
-          status: 'open',
-        });
-        if (alertErr) console.error('[AddressScreen] compliance_alerts insert error:', alertErr.message);
+        try {
+          const { data: existing } = await supabaseAdmin
+            .from('compliance_alerts')
+            .select('id')
+            .eq('type', 'sanctions_match')
+            .eq('status', 'open')
+            .contains('details', { address: r.address })
+            .limit(1);
+          if (existing && existing.length > 0) continue;
+          await supabaseAdmin.from('compliance_alerts').insert({
+            type: 'sanctions_match',
+            severity: 'critical',
+            salesforce_account_id: null,
+            client_name: null,
+            message: `Adresse sanctionnée — ${r.address} · ${r.identifications.map(i => i.name).join(', ')}. Tout transfert vers cette adresse doit être bloqué (MiCA Art. 68 · Règlement 2015/847).`,
+            details: { ...r, chain, walletId, context },
+            status: 'open',
+          });
+        } catch (e) {
+          console.error('[AddressScreen] compliance_alerts error:', e.message);
+        }
       }
     }
 
@@ -1966,6 +2072,31 @@ app.post('/api/compliance/approvals', requireAuth, async (req, res) => {
       });
     }
 
+    // ─── Compliance Gate · Chainalysis au moment de la demande ──
+    // Premier des 3 checkpoints Chainalysis (demande → approbation →
+    // exécution). Fail fast au plus tôt pour que le banquier voie
+    // l'alerte immédiatement, plutôt qu'à l'exécution.
+    {
+      const gate = await screenGate({
+        address: to,
+        walletId,
+        context: 'approval_request',
+        salesforceAccountId,
+        clientName,
+        req,
+      });
+      if (gate.blocked) {
+        return res.status(403).json({
+          error: gate.reason === 'screening_unavailable'
+            ? 'Screening Chainalysis indisponible — demande de transfert refusée'
+            : 'Adresse sanctionnée — demande de transfert refusée',
+          code: gate.reason === 'screening_unavailable' ? 'SCREENING_UNAVAILABLE' : 'SANCTIONS_HIT',
+          hits: gate.hits,
+          regulation: 'Règlement UE 2015/847 · MiCA Art. 68',
+        });
+      }
+    }
+
     // ─── Compliance Gate · wallet freeze (per-wallet) ─────────
     // If this specific wallet is frozen, refuse the approval request
     // up-front. Defense-in-depth : the DFNS transfer endpoint gates
@@ -2056,6 +2187,44 @@ app.patch('/api/compliance/approvals/:id/approve', requireAdmin, async (req, res
     // Must be different user than requester
     if (approvedBy && approvedBy === approval.requested_by) {
       return res.status(403).json({ error: 'Approver must be a different user than the requester' });
+    }
+
+    // ─── Chainalysis re-screening at approval time ──
+    // Checkpoint #2 des 3 : l'adresse peut avoir été ajoutée à une liste
+    // de sanctions entre le moment de la demande et celui de l'approbation.
+    // Re-screener ici est peu coûteux (cache 60s) et ferme la fenêtre.
+    {
+      const gate = await screenGate({
+        address: approval.to_address,
+        walletId: approval.wallet_id,
+        context: 'approval_approve',
+        salesforceAccountId: approval.salesforce_account_id,
+        clientName: approval.client_name,
+        req,
+      });
+      if (gate.blocked) {
+        // Marquer l'approval comme bloqué par compliance — ne pas le laisser
+        // "pending" sinon un autre admin pourrait retenter.
+        await supabaseAdmin
+          .from('transfer_approvals')
+          .update({
+            status: 'rejected',
+            rejection_reason: gate.reason === 'screening_unavailable'
+              ? 'Screening Chainalysis indisponible au moment de l\'approbation (fail-closed)'
+              : `Adresse sanctionnée détectée à l'approbation : ${(gate.hits || []).map(h => h.name).join(', ')}`,
+            reviewed_by: approvedBy || null,
+            reviewed_by_email: emailToUse || null,
+            reviewed_at: new Date().toISOString(),
+          })
+          .eq('id', req.params.id);
+        return res.status(403).json({
+          error: gate.reason === 'screening_unavailable'
+            ? 'Screening Chainalysis indisponible — approbation refusée'
+            : 'Adresse sanctionnée — approbation refusée',
+          code: gate.reason === 'screening_unavailable' ? 'SCREENING_UNAVAILABLE' : 'SANCTIONS_HIT',
+          hits: gate.hits,
+        });
+      }
     }
 
     const { data, error } = await supabaseAdmin
@@ -2171,6 +2340,39 @@ app.post('/api/compliance/approvals/:id/execute', requireAdmin, async (req, res)
       return res.status(400).json({ error: `Cannot execute: status is '${approval.status}', must be 'approved'` });
     }
 
+    // ─── Chainalysis re-screening au moment de l'exécution ──
+    // Checkpoint #3 : dernière ligne avant que DFNS signe + broadcast.
+    // Belt & suspenders — si une sanction a été ajoutée entre l'approbation
+    // et l'exécution, on bloque ici même si le 4-eye est passé.
+    {
+      const gate = await screenGate({
+        address: approval.to_address,
+        walletId: approval.wallet_id,
+        context: 'approval_execute',
+        salesforceAccountId: approval.salesforce_account_id,
+        clientName: approval.client_name,
+        req,
+      });
+      if (gate.blocked) {
+        await supabaseAdmin
+          .from('transfer_approvals')
+          .update({
+            status: 'rejected',
+            rejection_reason: gate.reason === 'screening_unavailable'
+              ? 'Screening Chainalysis indisponible au moment de l\'exécution (fail-closed)'
+              : `Adresse sanctionnée détectée à l'exécution : ${(gate.hits || []).map(h => h.name).join(', ')}`,
+          })
+          .eq('id', req.params.id);
+        return res.status(403).json({
+          error: gate.reason === 'screening_unavailable'
+            ? 'Screening Chainalysis indisponible — exécution refusée'
+            : 'Adresse sanctionnée — exécution refusée',
+          code: gate.reason === 'screening_unavailable' ? 'SCREENING_UNAVAILABLE' : 'SANCTIONS_HIT',
+          hits: gate.hits,
+        });
+      }
+    }
+
     // 2. Build the DFNS TransferAsset body from the stored approval.
     //    DFNS is strict :
     //      · `kind` is required ('Native', 'Erc20', 'Spl', …)
@@ -2277,6 +2479,30 @@ app.post('/api/compliance/whitelist', async (req, res) => {
 
     if (!address || !network || !salesforceAccountId) {
       return res.status(400).json({ error: 'address, network, and salesforceAccountId are required' });
+    }
+
+    // ─── Pre-insertion Chainalysis check ──
+    // Empêche un banquier d'ajouter par erreur une adresse sanctionnée
+    // à la whitelist d'un client (ça reviendrait à bypasser le gate
+    // de transfert en amont). Fail-closed en LIVE.
+    {
+      const gate = await screenGate({
+        address,
+        walletId: null,
+        context: 'whitelist_add',
+        salesforceAccountId,
+        clientName,
+        req,
+      });
+      if (gate.blocked) {
+        return res.status(403).json({
+          error: gate.reason === 'screening_unavailable'
+            ? 'Screening Chainalysis indisponible — impossible d\'ajouter l\'adresse à la whitelist'
+            : 'Adresse sanctionnée — ajout à la whitelist refusé',
+          code: gate.reason === 'screening_unavailable' ? 'SCREENING_UNAVAILABLE' : 'SANCTIONS_HIT',
+          hits: gate.hits,
+        });
+      }
     }
 
     const { data, error } = await supabaseAdmin.from('address_whitelist').insert({
