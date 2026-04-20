@@ -4169,6 +4169,168 @@ app.delete('/api/compliance/ubos/:id', requireAdmin, async (req, res) => {
   }
 });
 
+// GET /api/compliance/ubos/:accountId/declaration-pdf — AMLD5 declaration PDF
+// ───────────────────────────────────────────────────────────────
+// Produit un PDF signable "Déclaration des Bénéficiaires Effectifs"
+// conforme à la 5e directive anti-blanchiment (AMLD5, transposée en
+// droit français par l'ordonnance 2020-115 du 12 février 2020).
+// Référence légale : Art. L.561-2-2 CMF, Art. L.123-31 Code de commerce,
+// Art. R.561-1 à R.561-3-0 CMF (seuil 25% ou contrôle effectif).
+// Le PDF reprend tous les UBOs ≥ 25% ownership OU control_type non
+// nul, avec leur statut de vérification et la base légale.
+app.get('/api/compliance/ubos/:accountId/declaration-pdf', requireAuth, async (req, res) => {
+  try {
+    // 1. Fetch UBOs for the account (all, we filter in memory for clarity)
+    const { data: ubos, error: uboErr } = await supabaseAdmin
+      .from('ubos')
+      .select('*')
+      .eq('salesforce_account_id', req.params.accountId)
+      .order('ownership_percentage', { ascending: false });
+    if (uboErr) return res.status(500).json({ error: uboErr.message });
+
+    // 2. AMLD5 filter : ≥25% ownership OR non-null control_type
+    //    (Art. R.561-1 CMF — bénéficiaire effectif)
+    const declarableUbos = (ubos || []).filter(u =>
+      Number(u.ownership_percentage || 0) >= 25 || !!u.control_type
+    );
+
+    const doc = new PDFDocument({ size: 'A4', margin: 60 });
+    const chunks = [];
+    doc.on('data', c => chunks.push(c));
+    doc.on('end', () => {
+      const pdf = Buffer.concat(chunks);
+      const filename = `declaration-ubo-amld5-${req.params.accountId}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(pdf);
+    });
+    doc.on('error', (err) => {
+      console.error('[UBO PDF] PDFKit error:', err.message);
+      if (!res.headersSent) res.status(500).json({ error: err.message });
+    });
+
+    const today = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    // Title + subtitle
+    doc.font('Helvetica-Bold').fontSize(16).text('DECLARATION DES BENEFICIAIRES EFFECTIFS', { align: 'center' });
+    doc.moveDown(0.3);
+    doc.font('Helvetica').fontSize(10).fillColor('#555555')
+       .text('Conformement a la 5e directive anti-blanchiment (AMLD5)', { align: 'center' });
+    doc.moveDown(1.2);
+
+    // Client header
+    doc.font('Helvetica-Bold').fontSize(11).fillColor('#000000').text('Identification du client :');
+    doc.moveDown(0.2);
+    doc.font('Helvetica').fontSize(10).fillColor('#000000');
+    doc.text(`Identifiant Salesforce : ${req.params.accountId}`);
+    doc.text(`Date de la declaration  : ${today}`);
+    doc.text(`Etablissement declarant : SwissLife Banque Privee (SIREN ${process.env.TRACFIN_DECLARANT_SIREN || '322215021'})`);
+    doc.moveDown(0.8);
+
+    doc.moveTo(60, doc.y).lineTo(535, doc.y).stroke('#cccccc');
+    doc.moveDown(0.5);
+
+    // Base légale
+    doc.font('Helvetica-Bold').fontSize(11).text('Base legale :');
+    doc.moveDown(0.2);
+    doc.font('Helvetica').fontSize(9).fillColor('#333333');
+    const baseLegale = [
+      '- Code monetaire et financier, art. L.561-2-2 et R.561-1 a R.561-3-0',
+      '- Code de commerce, art. L.123-31 (registre RBE)',
+      '- Directive (UE) 2018/843 (AMLD5), transposee par ordonnance 2020-115',
+      '- Reglement (UE) 2023/1114 (MiCA), art. 68',
+    ];
+    for (const l of baseLegale) { doc.text(l, { indent: 8 }); }
+    doc.moveDown(0.8);
+
+    doc.moveTo(60, doc.y).lineTo(535, doc.y).stroke('#cccccc');
+    doc.moveDown(0.5);
+
+    // UBOs table
+    doc.font('Helvetica-Bold').fontSize(11).fillColor('#000000')
+       .text(`Beneficiaires effectifs declares (${declarableUbos.length}) :`);
+    doc.moveDown(0.4);
+
+    if (declarableUbos.length === 0) {
+      doc.font('Helvetica-Oblique').fontSize(10).fillColor('#999999')
+         .text('Aucun beneficiaire effectif depassant le seuil de 25% ou exerçant un controle n\'a ete declare. Le client est dans l\'obligation de signaler toute evolution conformement a l\'art. R.561-3 CMF.');
+      doc.moveDown(0.6);
+    } else {
+      for (let i = 0; i < declarableUbos.length; i++) {
+        const u = declarableUbos[i];
+        if (doc.y > 680) doc.addPage();
+
+        doc.font('Helvetica-Bold').fontSize(10.5).fillColor('#000000')
+           .text(`${i + 1}. ${u.full_name || 'N/A'}`);
+        doc.moveDown(0.1);
+
+        const rows = [
+          ['Date de naissance',      u.birth_date ? new Date(u.birth_date).toLocaleDateString('fr-FR') : 'Non renseigne'],
+          ['Nationalite',            u.nationality || 'Non renseignee'],
+          ['Part de detention',      u.ownership_percentage ? `${Number(u.ownership_percentage).toFixed(2)} %` : 'Non chiffree'],
+          ['Type de controle',       u.control_type || 'Ownership direct'],
+          ['Adresse',                u.address || 'Non renseignee'],
+          ['Document d\'identite',   u.document_type ? `${u.document_type} · ${u.document_reference || ''}`.trim() : 'Non renseigne'],
+          ['Statut verification',    u.verified ? `Verifie le ${new Date(u.verified_at).toLocaleDateString('fr-FR')} par ${u.verified_by_email || ''}` : 'EN ATTENTE DE VERIFICATION'],
+        ];
+        doc.font('Helvetica').fontSize(9.5).fillColor('#333333');
+        for (const [k, v] of rows) {
+          doc.text(`    ${k.padEnd(24, ' ')} : ${v}`);
+        }
+        if (u.notes) {
+          doc.moveDown(0.15);
+          doc.font('Helvetica-Oblique').fontSize(9).fillColor('#666666')
+             .text(`    Notes : ${u.notes}`, { width: 475 });
+        }
+        doc.moveDown(0.6);
+      }
+    }
+
+    // Signatures section
+    if (doc.y > 620) doc.addPage();
+    doc.moveDown(0.5);
+    doc.moveTo(60, doc.y).lineTo(535, doc.y).stroke('#cccccc');
+    doc.moveDown(0.8);
+    doc.font('Helvetica').fontSize(10).fillColor('#333333')
+       .text(`Genere le ${new Date().toLocaleString('fr-FR')} par ${req.user?.email || 'utilisateur non identifie'}.`, { align: 'left' });
+    doc.moveDown(0.3);
+    doc.font('Helvetica-Oblique').fontSize(9).fillColor('#666666')
+       .text('Le present document engage la responsabilite du declarant au titre de l\'article L.561-15 CMF. Toute omission ou fausse declaration est passible des sanctions prevues au L.561-36.', { align: 'justify' });
+    doc.moveDown(1.5);
+
+    const leftX = 60, rightX = 310, sigY = doc.y;
+    doc.font('Helvetica').fontSize(9).fillColor('#666666').text('Le client (ou representant legal) :', leftX, sigY);
+    doc.font('Helvetica').fontSize(9).fillColor('#666666').text('Le responsable conformite (RCSI) :', rightX, sigY);
+    doc.moveDown(3);
+    const lineY = doc.y;
+    doc.moveTo(leftX, lineY).lineTo(230, lineY).stroke('#333333');
+    doc.moveTo(rightX, lineY).lineTo(480, lineY).stroke('#333333');
+    doc.font('Helvetica').fontSize(8).fillColor('#999999').text('Date et signature', leftX, lineY + 6);
+    doc.text('Date et signature', rightX, lineY + 6);
+
+    doc.end();
+
+    // Audit — PDF generated (before response is sent; fire and forget)
+    logAudit({
+      userEmail: req.user?.email,
+      action: 'ubo.declaration_pdf_generated',
+      category: 'compliance',
+      entityType: 'ubo_declaration',
+      entityId: req.params.accountId,
+      details: {
+        accountId: req.params.accountId,
+        declarableCount: declarableUbos.length,
+        totalCount: (ubos || []).length,
+      },
+      severity: 'high',
+      req,
+    }).catch(() => { /* non-blocking */ });
+  } catch (err) {
+    console.error('UBO declaration PDF error:', err.message);
+    if (!res.headersSent) res.status(500).json({ error: err.message });
+  }
+});
+
 // ============================================================
 // ACPR REGULATORY REPORTING
 // ============================================================

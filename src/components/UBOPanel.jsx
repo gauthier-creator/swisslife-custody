@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchUBOs, addUBO, verifyUBO, deleteUBO } from '../services/complianceApi';
+import { fetchUBOs, addUBO, verifyUBO, deleteUBO, downloadUboDeclarationPdf } from '../services/complianceApi';
 import { useAuth } from '../context/AuthContext';
 import { useToast, ToastContainer, Badge, Modal, Spinner, EmptyState, inputCls, selectCls, labelCls } from './shared';
 
@@ -110,12 +110,32 @@ export default function UBOPanel({ salesforceAccountId, clientName }) {
             <h3 className="text-[15px] font-semibold text-[#0F0F10]">Beneficiaires effectifs (UBO)</h3>
             <p className="text-[12px] text-[#787881] mt-0.5">{clientName}</p>
           </div>
-          <button
-            onClick={() => setShowAdd(true)}
-            className="px-4 py-2 bg-[#4F46E5] text-white text-[13px] font-medium rounded-lg hover:bg-[#4338CA] transition-colors"
-          >
-            + Ajouter un beneficiaire
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                try {
+                  await downloadUboDeclarationPdf(salesforceAccountId);
+                  toast('Declaration AMLD5 telechargee', 'success');
+                } catch (e) {
+                  toast('Erreur : ' + e.message, 'error');
+                }
+              }}
+              disabled={ubos.length === 0}
+              className="px-3 py-2 bg-white border border-[#E7E7E7] text-[#1E1E1E] text-[12.5px] font-semibold rounded-lg hover:border-[#D1D5DB] hover:bg-[#F9F8F5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+              title="Telecharge le PDF signable — CMF L.561-2-2 + AMLD5"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m-3-7H5a2 2 0 00-2 2v13a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6" />
+              </svg>
+              PDF AMLD5
+            </button>
+            <button
+              onClick={() => setShowAdd(true)}
+              className="px-4 py-2 bg-[#4F46E5] text-white text-[13px] font-medium rounded-lg hover:bg-[#4338CA] transition-colors"
+            >
+              + Ajouter un beneficiaire
+            </button>
+          </div>
         </div>
 
         {/* Total ownership bar */}

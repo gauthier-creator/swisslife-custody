@@ -445,6 +445,26 @@ export async function deleteUBO(id) {
   return res.json();
 }
 
+// Download the AMLD5 "Declaration des beneficiaires effectifs" PDF.
+// Filters UBOs >= 25% ownership or with non-null control_type. Uses
+// server-side PDFKit to produce a signable document with legal basis
+// citations (CMF L.561-2-2, AMLD5, MiCA Art. 68).
+export async function downloadUboDeclarationPdf(accountId) {
+  const authHeaders = await getHeaders();
+  const res = await fetch(`${API_BASE}/api/compliance/ubos/${accountId}/declaration-pdf`, { headers: authHeaders });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Echec generation PDF UBO'); }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `declaration-ubo-amld5-${accountId}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  return true;
+}
+
 // ============ ADDRESS SCREENING (DFNS × Chainalysis) ============
 // Calls the public Chainalysis Sanctions API via our server proxy.
 // Used to gate every outbound transfer before it's submitted to DFNS.
