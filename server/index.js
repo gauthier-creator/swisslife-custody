@@ -1591,8 +1591,9 @@ app.post('/api/dfns/wallets/:walletId/transfers', requireAuth, async (req, res) 
             code: 'FOUR_EYES_MISMATCH',
           });
         }
-        // Double signature: approver ≠ requester
-        if (approval.approved_by && approval.requested_by && approval.approved_by === approval.requested_by) {
+        // Double signature: approver ≠ requester (reviewed_by is the
+        // approver UUID; requested_by is the initial requester UUID).
+        if (approval.reviewed_by && approval.requested_by && approval.reviewed_by === approval.requested_by) {
           return res.status(403).json({
             error: 'Approbateur identique au demandeur — règle quatre-yeux violée',
             code: 'FOUR_EYES_SAME_USER',
@@ -2023,9 +2024,12 @@ app.patch('/api/compliance/approvals/:id/approve', requireAdmin, async (req, res
       .from('transfer_approvals')
       .update({
         status: 'approved',
-        approved_by: approvedBy || null,
-        approved_by_email: emailToUse || null,
-        approved_at: new Date().toISOString(),
+        // transfer_approvals uses a single `reviewed_*` tuple for both
+        // approve and reject paths. The `status` column is the source of
+        // truth for approved vs rejected.
+        reviewed_by: approvedBy || null,
+        reviewed_by_email: emailToUse || null,
+        reviewed_at: new Date().toISOString(),
       })
       .eq('id', req.params.id)
       .select()
@@ -2079,10 +2083,10 @@ app.patch('/api/compliance/approvals/:id/reject', requireAdmin, async (req, res)
       .from('transfer_approvals')
       .update({
         status: 'rejected',
-        rejected_by: rejectedBy || null,
-        rejected_by_email: emailToUse || null,
+        reviewed_by: rejectedBy || null,
+        reviewed_by_email: emailToUse || null,
+        reviewed_at: new Date().toISOString(),
         rejection_reason: reasonToUse || null,
-        rejected_at: new Date().toISOString(),
       })
       .eq('id', req.params.id)
       .select()
@@ -3981,11 +3985,11 @@ app.get('/api/compliance/reports/transfers-export', async (req, res) => {
       t.asset_symbol || '',
       t.network || '',
       t.status || '',
-      (t.approved_by_email || '').replace(/"/g, '""'),
+      (t.reviewed_by_email || '').replace(/"/g, '""'),
       t.executed_at ? new Date(t.executed_at).toISOString() : '',
     ]);
 
-    const header = 'Date,Client,Wallet,Destination,Amount,Asset,Network,Status,Approved By,Executed At';
+    const header = 'Date,Client,Wallet,Destination,Amount,Asset,Network,Status,Reviewed By,Executed At';
     const csv = [header, ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
 
     res.setHeader('Content-Type', 'text/csv');
