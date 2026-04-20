@@ -53,6 +53,15 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
   const [history, setHistory] = useState([]);
   const [showTransfer, setShowTransfer] = useState(false);
   const [transfer, setTransfer] = useState({ to: '', amount: '', kind: 'Native' });
+  // Transfer request flow — 3 stages inside the modal :
+  //   'form'    → user fills destination / montant / type
+  //   'review'  → compliance risk check + Chainalysis screening + recap
+  //   'success' → approval ID shown + next step hint
+  // Pas de window.confirm() natif, tout est en-modal.
+  const [transferStage, setTransferStage] = useState('form');
+  const [transferRisk, setTransferRisk] = useState(null);
+  const [transferScreening, setTransferScreening] = useState(null);
+  const [transferResult, setTransferResult] = useState(null);
   const [sending, setSending] = useState(false);
   const [contacts, setContacts] = useState([]);
   const [loadingContacts, setLoadingContacts] = useState(true);
@@ -293,49 +302,73 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
     } catch (err) { console.error(err); }
   };
 
-  const handleTransfer = async () => {
+  // Close the transfer modal and reset everything (stage, risk, result, form)
+  const resetTransfer = () => {
+    setShowTransfer(false);
+    setTransferStage('form');
+    setTransferRisk(null);
+    setTransferScreening(null);
+    setTransferResult(null);
+    setTransfer({ to: '', amount: '', kind: 'Native' });
+  };
+
+  // Stage 1 → 2 : user clicks "Continuer" in the form
+  // Fetches compliance risk check + Chainalysis screening in parallel,
+  // moves to review stage. Blocks displayed there with a clear stop message.
+  const handleTransferReview = async () => {
+    if (!selectedWallet || !transfer.to || !transfer.amount) return;
+    setSending(true); setError(null);
+    try {
+      const [riskCheck, screen] = await Promise.all([
+        checkTransferRisk({
+          salesforceAccountId: client.id,
+          amount: transfer.amount,
+          network: selectedWallet.network,
+          destinationAddress: transfer.to,
+        }).catch(() => ({ allowed: true, warnings: [], blocks: [] })),
+        screenAddress({
+          address: transfer.to,
+          chain: selectedWallet.network,
+          walletId: selectedWallet.id,
+          context: 'pre_transfer_request',
+        }).catch(() => ({ results: [], flagged: false })),
+      ]);
+      setTransferRisk(riskCheck);
+      setTransferScreening(screen);
+      setTransferStage('review');
+    } catch (err) {
+      console.error(err);
+      setError(err.message);
+    }
+    setSending(false);
+  };
+
+  // Stage 2 → 3 : user confirmed in review, actually create the approval.
+  // Fix : server expects `to` / `amount` / `walletId` as body keys (not
+  // destinationAddress). Le 400 "walletId, to, and amount are required"
+  // venait du nommage incohérent.
+  const handleTransferConfirm = async () => {
     if (!selectedWallet) return;
     setSending(true); setError(null);
     try {
-      const riskCheck = await checkTransferRisk({
-        salesforceAccountId: client.id,
-        amount: transfer.amount,
-        network: selectedWallet.network,
-        destinationAddress: transfer.to,
-      }).catch(() => ({ allowed: true, warnings: [], blocks: [] }));
-
-      if (riskCheck.blocks && riskCheck.blocks.length > 0) {
-        alert('Transfert bloqué par la compliance :\n\n' + riskCheck.blocks.join('\n'));
-        setSending(false); return;
-      }
-
-      const warningMsg = (riskCheck.warnings && riskCheck.warnings.length > 0)
-        ? '\n\nAvertissements :\n- ' + riskCheck.warnings.join('\n- ')
-        : '';
-
       const netInfo = SUPPORTED_NETWORKS.find(n => n.id === selectedWallet.network);
-      const confirmMsg = `DEMANDE DE TRANSFERT\n\nDepuis : ${selectedWallet.name}\nVers : ${transfer.to}\nMontant : ${transfer.amount} ${netInfo?.symbol || ''}${warningMsg}\n\nLe transfert sera soumis à approbation (4-eye). Confirmer ?`;
-      if (!confirm(confirmMsg)) { setSending(false); return; }
-
-      await createApproval({
+      const approval = await createApproval({
         walletId: selectedWallet.id,
+        to: transfer.to,                          // server field name
+        amount: transfer.amount,
+        assetSymbol: netInfo?.symbol || transfer.kind,
+        network: selectedWallet.network,
+        note: `Transfert ${transfer.amount} ${netInfo?.symbol || transfer.kind} vers ${transfer.to.slice(0, 12)}…`,
         walletName: selectedWallet.name,
-        walletNetwork: selectedWallet.network,
         salesforceAccountId: client.id,
         clientName: client.name,
-        destinationAddress: transfer.to,
-        amount: transfer.amount,
-        assetType: transfer.kind,
-        contractAddress: transfer.contract || null,
         requestedByEmail: user?.email || 'unknown',
       });
-
-      alert('Demande soumise. Un administrateur doit approuver dans l\'onglet Compliance.');
-      setShowTransfer(false);
-      setTransfer({ to: '', amount: '', kind: 'Native' });
+      setTransferResult(approval);
+      setTransferStage('success');
     } catch (err) {
-      console.error(err); setError(err.message);
-      alert('Erreur : ' + err.message);
+      console.error(err);
+      setError(err.message);
     }
     setSending(false);
   };
@@ -1062,50 +1095,228 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
         </div>
       </Modal>
 
-      {/* ── Transfer Modal ──────────────────────────────── */}
+      {/* ── Transfer Modal ── 3 stages in sequence ─────── */}
       <Modal
         isOpen={showTransfer}
-        onClose={() => setShowTransfer(false)}
-        title="Envoyer des fonds"
-        subtitle="La demande sera soumise à approbation (principe 4-eye) avant exécution."
+        onClose={resetTransfer}
+        title={
+          transferStage === 'form'    ? 'Nouveau transfert'
+          : transferStage === 'review' ? 'Revue compliance'
+          :                              'Demande soumise'
+        }
+        subtitle={
+          transferStage === 'form'    ? 'Les fonds sont contrôlés par Chainalysis + 4-eye avant signature DFNS.'
+          : transferStage === 'review' ? 'Vérifiez les résultats de screening avant de confirmer.'
+          :                              'Un second approbateur doit valider dans l\'onglet Compliance.'
+        }
       >
-        <div className="space-y-5">
-          <div>
-            <label className={labelCls}>Adresse de destination</label>
-            <input
-              className={inputCls}
-              placeholder="0x…"
-              value={transfer.to}
-              onChange={e => setTransfer(p => ({ ...p, to: e.target.value }))}
-            />
+        {/* ─── Stage 1 : Form ─── */}
+        {transferStage === 'form' && (
+          <div className="space-y-5">
+            {selectedWallet && (
+              <div className="flex items-center gap-3 px-4 py-3 bg-[#F9F8F5] border border-[#E7E7E7] rounded-[8px]">
+                <span
+                  className="w-8 h-8 rounded-[7px] flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0"
+                  style={{ backgroundColor: net(selectedWallet.network).color }}
+                >
+                  {net(selectedWallet.network).icon}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12.5px] font-semibold text-[#0F0F10]">{selectedWallet.name}</p>
+                  <p className="text-[11px] text-[#8A8278] font-mono truncate">{selectedWallet.address}</p>
+                </div>
+              </div>
+            )}
+            <div>
+              <label className={labelCls}>Adresse de destination</label>
+              <input
+                className={inputCls}
+                placeholder="0x… ou addr1…"
+                value={transfer.to}
+                onChange={e => setTransfer(p => ({ ...p, to: e.target.value }))}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Montant</label>
+                <input
+                  className={inputCls}
+                  type="number" step="any" placeholder="0.0"
+                  value={transfer.amount}
+                  onChange={e => setTransfer(p => ({ ...p, amount: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Type d'actif</label>
+                <select
+                  className={selectCls}
+                  value={transfer.kind}
+                  onChange={e => setTransfer(p => ({ ...p, kind: e.target.value }))}
+                >
+                  <option value="Native">Natif ({selectedWallet ? (net(selectedWallet.network).symbol || 'ETH') : 'ETH'})</option>
+                  <option value="Erc20">ERC-20 · Token</option>
+                </select>
+              </div>
+            </div>
+            {error && (
+              <div className="px-3 py-2 bg-[#FEF2F2] border border-[rgba(220,38,38,0.2)] rounded-[6px] text-[12.5px] text-[#991B1B]">
+                {error}
+              </div>
+            )}
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#E7E7E7]">
+              <Button variant="ghost" onClick={resetTransfer}>Annuler</Button>
+              <Button
+                variant="primary"
+                onClick={handleTransferReview}
+                disabled={sending || !transfer.to || !transfer.amount}
+              >
+                {sending && <Spinner />}
+                {sending ? 'Vérification compliance…' : 'Continuer'}
+              </Button>
+            </div>
           </div>
-          <div>
-            <label className={labelCls}>Montant</label>
-            <input
-              className={inputCls}
-              type="number" step="any" placeholder="0.0"
-              value={transfer.amount}
-              onChange={e => setTransfer(p => ({ ...p, amount: e.target.value }))}
-            />
+        )}
+
+        {/* ─── Stage 2 : Review ─── */}
+        {transferStage === 'review' && selectedWallet && (
+          <div className="space-y-4">
+            {/* Recap */}
+            <div className="bg-[#F9F8F5] border border-[#E7E7E7] rounded-[8px] p-4 space-y-3">
+              <div className="flex items-center justify-between text-[12.5px]">
+                <span className="text-[#8A8278]">Depuis</span>
+                <span className="text-[#0F0F10] font-semibold">{selectedWallet.name} · {net(selectedWallet.network).name}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3 text-[12.5px]">
+                <span className="text-[#8A8278] flex-shrink-0">Vers</span>
+                <span className="text-[#0F0F10] font-mono text-[11.5px] text-right break-all">{transfer.to}</span>
+              </div>
+              <div className="flex items-center justify-between text-[12.5px] pt-3 border-t border-[#E7E7E7]">
+                <span className="text-[#8A8278]">Montant</span>
+                <span className="text-[#0F0F10] font-semibold tabular-nums text-[15px]">
+                  {transfer.amount} {net(selectedWallet.network).symbol || transfer.kind}
+                </span>
+              </div>
+            </div>
+
+            {/* Chainalysis screening result */}
+            {transferScreening && (
+              <div className={`px-4 py-3 rounded-[8px] border flex items-start gap-3 ${
+                transferScreening.flagged
+                  ? 'bg-[#FEF2F2] border-[rgba(220,38,38,0.2)]'
+                  : 'bg-[#ECFAF0] border-[rgba(15,152,104,0.2)]'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full mt-[7px] flex-shrink-0 ${
+                  transferScreening.flagged ? 'bg-[#DC2626]' : 'bg-[#0F9868]'
+                }`} />
+                <div className="flex-1 min-w-0">
+                  <p className={`text-[12.5px] font-semibold ${
+                    transferScreening.flagged ? 'text-[#991B1B]' : 'text-[#0F7548]'
+                  }`}>
+                    {transferScreening.flagged
+                      ? `⚠ Adresse sanctionnée — ${transferScreening.results?.[0]?.identifications?.[0]?.name || 'OFAC hit'}`
+                      : 'Chainalysis · clean sur OFAC · EU · UN · UK HMT'}
+                  </p>
+                  <p className="text-[11px] text-[#8A8278] mt-0.5">
+                    {transferScreening.flagged
+                      ? 'Transfert sera refusé automatiquement au niveau serveur (Règlement UE 2015/847).'
+                      : 'Aucun match dans les bases de sanctions internationales.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Risk warnings / blocks */}
+            {transferRisk?.blocks?.length > 0 && (
+              <div className="px-4 py-3 bg-[#FEF2F2] border border-[rgba(220,38,38,0.2)] rounded-[8px]">
+                <p className="text-[12.5px] font-semibold text-[#991B1B] mb-1">Blocages compliance</p>
+                <ul className="text-[11.5px] text-[#991B1B] space-y-0.5">
+                  {transferRisk.blocks.map((b, i) => <li key={i}>· {b}</li>)}
+                </ul>
+              </div>
+            )}
+            {transferRisk?.warnings?.length > 0 && (
+              <div className="px-4 py-3 bg-[#FEF9EC] border border-[rgba(202,138,4,0.2)] rounded-[8px]">
+                <p className="text-[12.5px] font-semibold text-[#B45309] mb-1">Avertissements</p>
+                <ul className="text-[11.5px] text-[#B45309] space-y-0.5">
+                  {transferRisk.warnings.map((w, i) => <li key={i}>· {w}</li>)}
+                </ul>
+              </div>
+            )}
+
+            {/* Info banner */}
+            <div className="px-4 py-3 bg-[#FDFBF6] border border-[#E7E7E7] rounded-[8px]">
+              <p className="text-[11.5px] text-[#5D5D5D] leading-[1.5]">
+                Après confirmation, la demande d'approbation sera créée dans <span className="font-semibold text-[#1E1E1E]">transfer_approvals</span>.
+                Un second banquier devra la valider (règle quatre-yeux · ACPR LCB-FT Art. 14) avant que DFNS n'exécute la signature MPC.
+              </p>
+            </div>
+
+            {error && (
+              <div className="px-3 py-2 bg-[#FEF2F2] border border-[rgba(220,38,38,0.2)] rounded-[6px] text-[12.5px] text-[#991B1B]">
+                {error}
+              </div>
+            )}
+
+            <div className="flex justify-between gap-2 pt-2 border-t border-[#E7E7E7]">
+              <Button variant="ghost" onClick={() => { setTransferStage('form'); setError(null); }}>
+                ← Retour
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleTransferConfirm}
+                disabled={sending || transferScreening?.flagged || transferRisk?.blocks?.length > 0}
+              >
+                {sending && <Spinner />}
+                {sending ? 'Création de la demande…' : 'Confirmer et soumettre'}
+              </Button>
+            </div>
           </div>
-          <div>
-            <label className={labelCls}>Type d'actif</label>
-            <select
-              className={selectCls}
-              value={transfer.kind}
-              onChange={e => setTransfer(p => ({ ...p, kind: e.target.value }))}
-            >
-              <option value="Native">Native</option>
-              <option value="Erc20">ERC-20</option>
-            </select>
+        )}
+
+        {/* ─── Stage 3 : Success ─── */}
+        {transferStage === 'success' && transferResult && (
+          <div className="space-y-5">
+            <div className="flex items-center gap-3 px-4 py-4 bg-[#ECFAF0] border border-[rgba(15,152,104,0.2)] rounded-[8px]">
+              <div className="w-10 h-10 rounded-full bg-[#0F9868] text-white flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13.5px] font-semibold text-[#0F7548]">Demande d'approbation créée</p>
+                <p className="text-[11.5px] text-[#0F7548] mt-0.5">
+                  ID · <span className="font-mono">{transferResult.id?.slice(0, 8)}…</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-[#F9F8F5] border border-[#E7E7E7] rounded-[8px] p-4 space-y-2.5 text-[12.5px]">
+              <div className="flex items-center justify-between">
+                <span className="text-[#8A8278]">Statut</span>
+                <Badge variant="warning" dot>En attente de validation</Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#8A8278]">Règle appliquée</span>
+                <span className="text-[#0F0F10] font-semibold">Quatre-yeux · ACPR Art. 14</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#8A8278]">Demandeur</span>
+                <span className="text-[#0F0F10]">{user?.email || 'banquier'}</span>
+              </div>
+            </div>
+
+            <p className="text-[11.5px] text-[#5D5D5D] leading-[1.55]">
+              <span className="font-semibold text-[#1E1E1E]">Étape suivante :</span> un second banquier (distinct du demandeur) doit approuver la demande depuis l'onglet Compliance. Dès validation, DFNS signe la transaction via MPC 2/3.
+            </p>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#E7E7E7]">
+              <Button variant="ghost" onClick={resetTransfer}>Fermer</Button>
+              <Button variant="primary" onClick={() => { resetTransfer(); setTab('transfers'); }}>
+                Voir dans Transferts →
+              </Button>
+            </div>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="ghost" onClick={() => setShowTransfer(false)}>Annuler</Button>
-            <Button variant="primary" onClick={handleTransfer} disabled={sending || !transfer.to || !transfer.amount}>
-              {sending ? 'Envoi…' : 'Soumettre pour approbation'}
-            </Button>
-          </div>
-        </div>
+        )}
       </Modal>
 
       {/* ═══ Screening Modal — Chainalysis sanctions check ═══
