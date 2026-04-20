@@ -160,23 +160,23 @@ function custodySectionXml() {
 }
 
 function addCustodySection(layoutXml) {
-  // XML Layout exige que tous les <layoutSections> soient contigus.
-  // Si la section existe déjà → on la remplace in-place. Sinon on
-  // l'insère juste APRÈS le dernier </layoutSections> existant.
-  if (layoutXml.includes('Custody · Conformité KYC')) {
-    return layoutXml.replace(
-      /\n {4}<layoutSections>[\s\S]*?Custody · Conformité KYC[\s\S]*?<\/layoutSections>\n/,
-      '\n' + custodySectionXml()
-    );
+  // Move-or-insert : on extrait chaque bloc <layoutSections>...</layoutSections>
+  // individuellement (pour éviter qu'un regex greedy ne bouffe le Name).
+  // Si Custody existe → retiré puis ré-inséré en position #2.
+  let cleaned = layoutXml;
+  // Remove existing Custody block, one layoutSections at a time
+  const blockRe = /\n\s*<layoutSections>([\s\S]*?)<\/layoutSections>/g;
+  cleaned = cleaned.replace(blockRe, (full, inner) =>
+    inner.includes('Custody · Conformité KYC') ? '' : full
+  );
+
+  // Insert after the FIRST layoutSections (= "Account Information")
+  const firstEnd = cleaned.indexOf('</layoutSections>');
+  if (firstEnd === -1) {
+    return cleaned.replace('</Layout>', custodySectionXml() + '</Layout>');
   }
-  // Find the LAST </layoutSections> and insert right after it.
-  const lastIdx = layoutXml.lastIndexOf('</layoutSections>');
-  if (lastIdx === -1) {
-    // Pas de section existante — insert avant </Layout>
-    return layoutXml.replace('</Layout>', custodySectionXml() + '</Layout>');
-  }
-  const cutAt = lastIdx + '</layoutSections>'.length;
-  return layoutXml.slice(0, cutAt) + '\n' + custodySectionXml().trimEnd() + layoutXml.slice(cutAt);
+  const cutAt = firstEnd + '</layoutSections>'.length;
+  return cleaned.slice(0, cutAt) + '\n' + custodySectionXml().trimEnd() + cleaned.slice(cutAt);
 }
 
 // --- Main ---------------------------------------------------------------
