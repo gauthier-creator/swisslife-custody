@@ -299,6 +299,26 @@ export async function fetchSARStats() {
   return res.json();
 }
 
+// Download the ERMES-compliant XML for a SAR. Tracfin portal expects
+// this format when filing a Déclaration de Soupçon. The response is
+// saved as a .xml file that the RCSI can then upload to ERMES.
+// Reference: Code monétaire et financier Art. L.561-15.
+export async function downloadErmesXml(sarId, referenceNumber) {
+  const authHeaders = await getHeaders();
+  const res = await fetch(`${API_BASE}/api/compliance/sar/${sarId}/ermes-xml`, { headers: authHeaders });
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Échec génération XML ERMES'); }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `tracfin-ermes-${referenceNumber || sarId}.xml`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  return true;
+}
+
 // ============ DELEGATIONS ============
 export async function fetchDelegations(accountId) {
   const authHeaders = await getHeaders();

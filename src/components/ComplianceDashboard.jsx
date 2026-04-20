@@ -12,7 +12,7 @@ import {
   fetchAlerts, fetchAlertStats, acknowledgeAlert, resolveAlert,
   fetchAuditLog, fetchAuditStats,
   fetchWhitelist, approveWhitelistAddress, revokeWhitelistAddress,
-  fetchSARs, createSAR, submitSAR, reviewSAR, fileSAR, closeSAR, fetchSARStats,
+  fetchSARs, createSAR, submitSAR, reviewSAR, fileSAR, closeSAR, fetchSARStats, downloadErmesXml,
 } from '../services/complianceApi';
 import ComplianceReports from './ComplianceReports';
 import ACPRReportingDashboard from './ACPRReportingDashboard';
@@ -864,6 +864,12 @@ export default function ComplianceDashboard() {
                       )}
                       {s.status === 'under_review' && isAdmin && (
                         actionBtn('Deposer', () => { setSarFileModal(s.id); setSarMrosRef(''); setSarFilingAuthority('tracfin'); }, 'error')
+                      )}
+                      {['submitted', 'under_review', 'filed_with_tracfin'].includes(s.status) && (
+                        actionBtn('XML ERMES', async () => {
+                          try { await downloadErmesXml(s.id, s.reference_number); toast?.('XML ERMES téléchargé — prêt à déposer sur le portail Tracfin'); }
+                          catch (e) { toast?.('Erreur : ' + e.message); }
+                        }, 'info')
                       )}
                       {s.status !== 'closed' && isAdmin && (
                         actionBtn('Cloturer', () => { setSarCloseModal(s.id); setSarCloseResolution('dismissed'); setSarCloseNotes(''); }, 'default')

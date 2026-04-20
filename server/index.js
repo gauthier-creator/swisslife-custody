@@ -3393,6 +3393,191 @@ app.patch('/api/compliance/sar/:id/close', requireAdmin, async (req, res) => {
   }
 });
 
+// ============================================================
+// TRACFIN ERMES XML — Déclaration de Soupçon (DS)
+// ============================================================
+// Produit le fichier XML compatible portail ERMES de Tracfin pour
+// déposer une Déclaration de Soupçon. Structure inspirée du schéma
+// officiel ds.xsd (Tracfin) — en production, remplacer les SIREN /
+// code déclarant / coordonnées RCSI par les valeurs réelles de
+// SwissLife Banque Privée, et valider l'XML contre l'XSD fournie
+// par Tracfin avant dépôt.
+// Référence légale : Code monétaire et financier Art. L.561-15
+// et Art. R.561-31 (obligation de déclaration), L.562-4 (gel des
+// avoirs), Règlement général AMF Livre III Titre III.
+// ============================================================
+
+// Simple XML escape — suffisant pour CDATA + attributes ASCII-safe
+function xmlEscape(s) {
+  if (s === null || s === undefined) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+// Build an ERMES-compatible Déclaration de Soupçon XML from a SAR row.
+// The declarant metadata (bank SIREN, RCSI contact) is pulled from
+// env vars so production deployment only needs to set them once.
+function buildErmesXml(sar) {
+  const DECLARANT_RAISON_SOCIALE = process.env.TRACFIN_DECLARANT_NAME || 'SWISSLIFE BANQUE PRIVEE';
+  const DECLARANT_SIREN = process.env.TRACFIN_DECLARANT_SIREN || '322215021';
+  const DECLARANT_CODE_PROFESSION = process.env.TRACFIN_DECLARANT_CODE || '10';  // 10 = Etablissement de crédit
+  const DECLARANT_ADRESSE = process.env.TRACFIN_DECLARANT_ADDRESS || '7 rue Belgrand';
+  const DECLARANT_CP = process.env.TRACFIN_DECLARANT_POSTAL_CODE || '92300';
+  const DECLARANT_VILLE = process.env.TRACFIN_DECLARANT_CITY || 'LEVALLOIS-PERRET';
+  const DECLARANT_PAYS = 'FR';
+  const RCSI_NOM = process.env.TRACFIN_RCSI_LAST_NAME || 'CUSSET';
+  const RCSI_PRENOM = process.env.TRACFIN_RCSI_FIRST_NAME || 'Marie';
+  const RCSI_TEL = process.env.TRACFIN_RCSI_PHONE || '+33140825020';
+  const RCSI_EMAIL = process.env.TRACFIN_RCSI_EMAIL || 'rcsi@swisslifebanque.fr';
+
+  const today = new Date().toISOString().slice(0, 10);
+  const reference = sar.reference_number || `DS-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+
+  // Typologie mapping — Tracfin DS nomenclature
+  const TYPOLOGIE_MAP = {
+    money_laundering: 'BC',          // Blanchiment de Capitaux
+    terrorism_financing: 'FT',       // Financement du Terrorisme
+    tax_fraud: 'FF',                 // Fraude Fiscale
+    sanctions_evasion: 'ES',         // Evasion Sanctions
+    other: 'AU',                     // Autre
+  };
+  const typologieCode = TYPOLOGIE_MAP[sar.suspicion_type] || 'AU';
+
+  // Person ou personne morale détection à partir du nom client
+  const isCompany = (sar.client_name || '').match(/\b(SAS|SARL|SA|SE|GmbH|Corp|Inc|Ltd|LLC|Corp of America)\b/i);
+
+  const operations = Array.isArray(sar.related_transactions) ? sar.related_transactions : [];
+  const evidence = Array.isArray(sar.evidence) ? sar.evidence : [];
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<DeclarationSoupcon xmlns="http://www.tracfin.gouv.fr/ermes/ds" version="1.0">
+  <Entete>
+    <NumeroReference>${xmlEscape(reference)}</NumeroReference>
+    <DateDeclaration>${today}</DateDeclaration>
+    <TypeDeclaration>${sar.report_type === 'STR' ? 'DST' : 'DS'}</TypeDeclaration>
+    <Priorite>${xmlEscape((sar.priority || 'medium').toUpperCase())}</Priorite>
+    <Typologie code="${typologieCode}"/>
+  </Entete>
+
+  <Declarant>
+    <Identite>
+      <RaisonSociale>${xmlEscape(DECLARANT_RAISON_SOCIALE)}</RaisonSociale>
+      <SIREN>${xmlEscape(DECLARANT_SIREN)}</SIREN>
+      <CodeProfession>${xmlEscape(DECLARANT_CODE_PROFESSION)}</CodeProfession>
+      <Adresse>
+        <Rue>${xmlEscape(DECLARANT_ADRESSE)}</Rue>
+        <CodePostal>${xmlEscape(DECLARANT_CP)}</CodePostal>
+        <Ville>${xmlEscape(DECLARANT_VILLE)}</Ville>
+        <Pays>${DECLARANT_PAYS}</Pays>
+      </Adresse>
+    </Identite>
+    <PersonneContact>
+      <Nom>${xmlEscape(RCSI_NOM)}</Nom>
+      <Prenom>${xmlEscape(RCSI_PRENOM)}</Prenom>
+      <Fonction>RCSI (Responsable Conformité Services Investissement)</Fonction>
+      <Telephone>${xmlEscape(RCSI_TEL)}</Telephone>
+      <Email>${xmlEscape(RCSI_EMAIL)}</Email>
+    </PersonneContact>
+  </Declarant>
+
+  <Suspect>
+    ${isCompany ? `<PersonneMorale>
+      <Denomination>${xmlEscape(sar.client_name || 'N/A')}</Denomination>
+      <IdentifiantExterne type="salesforce">${xmlEscape(sar.salesforce_account_id || '')}</IdentifiantExterne>
+    </PersonneMorale>` : `<PersonnePhysique>
+      <Nom>${xmlEscape((sar.client_name || 'N/A').split(' ').slice(-1)[0])}</Nom>
+      <Prenom>${xmlEscape((sar.client_name || 'N/A').split(' ').slice(0, -1).join(' '))}</Prenom>
+      <IdentifiantExterne type="salesforce">${xmlEscape(sar.salesforce_account_id || '')}</IdentifiantExterne>
+    </PersonnePhysique>`}
+  </Suspect>
+
+  <Operations>
+${operations.length === 0
+  ? `    <Operation>
+      <Date>${today}</Date>
+      <Montant>${Number(sar.total_amount_involved || 0).toFixed(2)}</Montant>
+      <Devise>${xmlEscape(sar.currency || 'EUR')}</Devise>
+      <Nature>Activité suspecte — conservation crypto-actifs</Nature>
+      <Canal>Wallet MPC DFNS · garde SwissLife</Canal>
+    </Operation>`
+  : operations.map((op, i) => `    <Operation>
+      <Identifiant>${xmlEscape(op.id || `OP-${i + 1}`)}</Identifiant>
+      <Date>${xmlEscape(op.date || today)}</Date>
+      <Montant>${Number(op.amount || 0).toFixed(2)}</Montant>
+      <Devise>${xmlEscape(op.currency || sar.currency || 'EUR')}</Devise>
+      <Nature>${xmlEscape(op.nature || 'Transfert crypto-actif')}</Nature>
+      ${op.from_address ? `<AdresseOrigine chain="${xmlEscape(op.chain || '')}">${xmlEscape(op.from_address)}</AdresseOrigine>` : ''}
+      ${op.to_address ? `<AdresseDestination chain="${xmlEscape(op.chain || '')}">${xmlEscape(op.to_address)}</AdresseDestination>` : ''}
+      ${op.tx_hash ? `<HashTransaction>${xmlEscape(op.tx_hash)}</HashTransaction>` : ''}
+    </Operation>`).join('\n')}
+  </Operations>
+
+  <Analyse>
+    <TypologieLibelle>${xmlEscape(sar.suspicion_type || 'Autre')}</TypologieLibelle>
+    <ElementsSuspicion><![CDATA[${sar.description || ''}]]></ElementsSuspicion>
+    ${evidence.length > 0 ? `<Preuves>
+${evidence.map(e => `      <Preuve type="${xmlEscape(e.type || 'document')}">${xmlEscape(e.reference || e.name || '')}</Preuve>`).join('\n')}
+    </Preuves>` : ''}
+    <BaseLegale>
+      <Article>Code monétaire et financier Art. L.561-15</Article>
+      <Article>Code monétaire et financier Art. R.561-31</Article>
+      <Article>Règlement UE 2015/847 — transferts de fonds</Article>
+      <Article>Règlement MiCA Art. 68 — obligations LCB-FT PSAN</Article>
+    </BaseLegale>
+  </Analyse>
+
+  <Signature>
+    <Horodatage>${new Date().toISOString()}</Horodatage>
+    <Auteur>${xmlEscape(sar.created_by_email || '')}</Auteur>
+    <MethodeValidation>interne_rcsi</MethodeValidation>
+  </Signature>
+</DeclarationSoupcon>
+`;
+}
+
+// GET /api/compliance/sar/:id/ermes-xml — Download ERMES XML for Tracfin
+app.get('/api/compliance/sar/:id/ermes-xml', requireAuth, async (req, res) => {
+  try {
+    const { data: sar, error } = await supabaseAdmin
+      .from('suspicious_activity_reports')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+
+    if (error || !sar) return res.status(404).json({ error: 'SAR not found' });
+
+    const xml = buildErmesXml(sar);
+    const filename = `tracfin-ermes-${sar.reference_number || sar.id}.xml`;
+
+    // Audit — génération XML (signal qu'un dépôt ERMES est imminent)
+    await logAudit({
+      userEmail: req.user?.email,
+      action: 'sar.ermes_xml_generated',
+      category: 'compliance',
+      entityType: 'sar',
+      entityId: sar.id,
+      details: {
+        referenceNumber: sar.reference_number,
+        typologie: sar.suspicion_type,
+        filename,
+      },
+      severity: 'high',
+      req,
+    });
+
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(xml);
+  } catch (err) {
+    console.error('SAR ERMES XML error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // COMPLIANCE REPORTING — Regulatory Exports
 
 // GET /api/compliance/reports/summary — Generate compliance summary
