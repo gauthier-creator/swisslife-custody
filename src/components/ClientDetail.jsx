@@ -320,13 +320,22 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
     if (!selectedWallet || !transfer.to || !transfer.amount) return;
     setSending(true); setError(null);
     try {
+      const netInfo = SUPPORTED_NETWORKS.find(n => n.id === selectedWallet.network);
+      // checkTransferRisk fait déjà le screening Chainalysis + tous les
+      // gates serveur (freeze, hard cap, daily volume, whitelist, réseau).
+      // screenAddress était redondant en duo — on le garde en parallèle
+      // uniquement pour afficher le détail Chainalysis dans l'UI (mode
+      // LIVE/DEMO, listes, provider). Si le gate renvoie flagged=true,
+      // le bouton Confirmer sera désactivé.
       const [riskCheck, screen] = await Promise.all([
         checkTransferRisk({
           salesforceAccountId: client.id,
           amount: transfer.amount,
+          assetSymbol: netInfo?.symbol || transfer.kind,
           network: selectedWallet.network,
-          destinationAddress: transfer.to,
-        }).catch(() => ({ allowed: true, warnings: [], blocks: [] })),
+          walletId: selectedWallet.id,
+          to: transfer.to,
+        }).catch(err => ({ allowed: true, warnings: [err.message || 'Check unavailable'], blocks: [] })),
         screenAddress({
           address: transfer.to,
           chain: selectedWallet.network,

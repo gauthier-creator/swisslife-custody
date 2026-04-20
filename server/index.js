@@ -3004,81 +3004,147 @@ app.put('/api/admin/settings', requireAdmin, async (req, res) => {
 });
 
 // POST /api/compliance/risk/check-transfer — Pre-flight check
+// Simule en amont tous les gates qui seront appliqués côté serveur
+// au moment du transfert DFNS. Résultat : le banquier voit dès la
+// saisie si le transfert passera ou sera bloqué.
+//
+// Gates simulés :
+//   1. Wallet freeze           (table wallet_freezes)
+//   2. Chainalysis sanctions  (Public Sanctions API — LIVE ou DEMO)
+//   3. Whitelist enforcement  (si whitelist_only)
+//   4. Hard cap EUR           (max_single_transfer)
+//   5. 4-eyes threshold       (requires_approval_above → warning)
+//   6. Daily volume           (max_daily_volume sur rolling 24h EUR)
+//   7. Réseau autorisé        (allowed_networks)
+//
+// Le scoring est fait en EUR (via Chainlink oracle) pour matcher les
+// gates DFNS exécutés au transfert réel.
 app.post('/api/compliance/risk/check-transfer', async (req, res) => {
   try {
-    const { salesforceAccountId, to, amount, network } = req.body;
+    // L'UI envoie aussi destinationAddress → on accepte les deux
+    const { salesforceAccountId, amount, network, walletId } = req.body;
+    const to = req.body.to || req.body.destinationAddress;
+    const assetSymbol = req.body.assetSymbol;
 
     if (!salesforceAccountId || !to || !amount) {
-      return res.status(400).json({ error: 'salesforceAccountId, to, and amount are required' });
+      return res.status(400).json({ error: 'salesforceAccountId, to, amount sont requis' });
     }
 
     const warnings = [];
     const blocks = [];
+    let chainalysis = null;
 
-    // 1. Load risk config
+    // 1. Wallet freeze ?
+    if (walletId) {
+      try {
+        const { data: freeze } = await supabaseAdmin
+          .from('wallet_freezes')
+          .select('id, reason, legal_reference, frozen_at')
+          .eq('wallet_id', walletId)
+          .eq('status', 'frozen')
+          .maybeSingle();
+        if (freeze) {
+          blocks.push(`Wallet gelé — ${freeze.reason || 'motif non précisé'} (${freeze.legal_reference || 'ACPR LCB-FT'})`);
+        }
+      } catch { /* ignore */ }
+    }
+
+    // 2. Chainalysis sanctions — même helper que les gates d'exécution
+    try {
+      const screen = await chainalysisScreen(to);
+      chainalysis = {
+        mode: screen.mode,
+        provider: screen.provider,
+        flagged: screen.flagged,
+        identifications: screen.identifications || [],
+      };
+      if (screen.flagged) {
+        const names = (screen.identifications || []).map(i => i.name).join(', ');
+        blocks.push(`Adresse sanctionnée — ${names || 'OFAC hit'} (Règlement UE 2015/847 · MiCA Art. 68)`);
+      }
+    } catch (err) {
+      // En LIVE on voudrait fail-closed, mais le check-transfer est du
+      // pre-flight UX — on signale en warning et le vrai blocage arrivera
+      // côté exécution via screenGate().
+      warnings.push(`Screening Chainalysis indisponible — ${err.message}`);
+    }
+
+    // 3. Load risk config (colonnes correctes DB)
     const { data: config } = await supabaseAdmin
       .from('client_risk_config')
-      .select('*')
+      .select('risk_level, max_single_transfer, max_daily_volume, requires_approval_above, whitelist_only, allowed_networks')
       .eq('salesforce_account_id', salesforceAccountId)
-      .single();
+      .maybeSingle();
 
     if (!config) {
-      warnings.push('No risk configuration found for this account — using defaults');
+      warnings.push('Aucune configuration de risque pour ce client — valeurs par défaut appliquées');
     }
 
-    const numAmount = Number(amount);
-
-    // 2. Check single transfer limit
-    if (config?.single_transfer_limit && numAmount > Number(config.single_transfer_limit)) {
-      blocks.push(`Amount ${amount} exceeds single transfer limit of ${config.single_transfer_limit}`);
+    // Convert amount → EUR via Chainlink oracle (comme les gates DFNS)
+    let amountEur = 0;
+    let priceEur = 0;
+    try {
+      if (assetSymbol) {
+        const priceData = await getCryptoPriceEur(assetSymbol);
+        priceEur = priceData?.priceEur || 0;
+        amountEur = Number(amount) * priceEur;
+      }
+    } catch {
+      // Si l'oracle est down, on garde amountEur à 0 et on signale
+      warnings.push('Oracle de prix indisponible — conversion EUR impossible, seuils non évalués');
     }
 
-    // 3. Check daily transfer limit (sum today's executed transfers)
-    if (config?.daily_transfer_limit) {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
+    // 4. Hard cap — single transfer
+    if (config?.max_single_transfer && amountEur > Number(config.max_single_transfer)) {
+      blocks.push(`Transfert de ${Math.round(amountEur)}€ dépasse le plafond unique (${Math.round(config.max_single_transfer)}€)`);
+    }
 
+    // 5. 4-eyes threshold (warning, pas block)
+    if (config?.requires_approval_above && amountEur >= Number(config.requires_approval_above)) {
+      warnings.push(`Seuil d'approbation atteint (${Math.round(amountEur)}€ ≥ ${Math.round(config.requires_approval_above)}€) — validation quatre-yeux requise`);
+    }
+
+    // 6. Daily rolling volume (transfers executed last 24h, in EUR)
+    if (config?.max_daily_volume && priceEur > 0) {
+      const yesterdayIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data: todayTransfers } = await supabaseAdmin
         .from('transfer_approvals')
-        .select('amount')
+        .select('amount, asset_symbol')
         .eq('salesforce_account_id', salesforceAccountId)
         .eq('status', 'executed')
-        .gte('executed_at', todayStart.toISOString());
-
-      const dailyTotal = (todayTransfers || []).reduce((sum, t) => sum + Number(t.amount || 0), 0);
-      if (dailyTotal + numAmount > Number(config.daily_transfer_limit)) {
-        blocks.push(`Daily total would be ${dailyTotal + numAmount}, exceeding daily limit of ${config.daily_transfer_limit}`);
+        .gte('executed_at', yesterdayIso);
+      // Approximation : applique le prix actuel aux volumes passés.
+      // En prod on stockerait un snapshot price_at_execute pour du rolling exact.
+      const dailyEur = (todayTransfers || []).reduce((sum, t) => {
+        const asset = (t.asset_symbol || '').toUpperCase();
+        const amt = Number(t.amount || 0);
+        // Cheap proxy: si même asset que l'actuel, on utilise priceEur
+        return sum + (asset === (assetSymbol || '').toUpperCase() ? amt * priceEur : 0);
+      }, 0);
+      if (dailyEur + amountEur > Number(config.max_daily_volume)) {
+        blocks.push(`Volume 24h ${Math.round(dailyEur + amountEur)}€ dépasse le plafond journalier (${Math.round(config.max_daily_volume)}€)`);
       }
     }
 
-    // 4. Check whitelist
-    if (config?.require_whitelist !== false) {
+    // 7. Whitelist stricte ?
+    if (config?.whitelist_only === true) {
       const { data: wlMatch } = await supabaseAdmin
         .from('address_whitelist')
-        .select('id')
+        .select('id, status')
         .eq('salesforce_account_id', salesforceAccountId)
-        .eq('address', to)
+        .ilike('address', to)
         .eq('status', 'approved')
         .limit(1);
-
       if (!wlMatch || wlMatch.length === 0) {
-        blocks.push(`Destination address ${to} is not on the approved whitelist`);
+        blocks.push(`Adresse ${to.slice(0, 10)}… absente de la whitelist (mode strict LCB-FT actif)`);
       }
     }
 
-    // 5. Check allowed networks
-    if (config?.allowed_networks && network) {
-      const allowed = Array.isArray(config.allowed_networks)
-        ? config.allowed_networks
-        : [];
-      if (allowed.length > 0 && !allowed.includes(network)) {
-        blocks.push(`Network '${network}' is not in allowed networks: ${allowed.join(', ')}`);
+    // 8. Réseau autorisé
+    if (config?.allowed_networks && network && Array.isArray(config.allowed_networks) && config.allowed_networks.length > 0) {
+      if (!config.allowed_networks.includes(network)) {
+        blocks.push(`Réseau "${network}" non autorisé pour ce client (autorisés : ${config.allowed_networks.join(', ')})`);
       }
-    }
-
-    // 6. Check if approval is required
-    if (config?.require_approval_above && numAmount > Number(config.require_approval_above)) {
-      warnings.push(`Amount exceeds ${config.require_approval_above} — manual approval required`);
     }
 
     const allowed = blocks.length === 0;
@@ -3089,12 +3155,30 @@ app.post('/api/compliance/risk/check-transfer', async (req, res) => {
       category: 'risk',
       entityType: 'transfer_check',
       salesforceAccountId,
-      details: { to, amount, network, allowed, warnings, blocks },
+      details: {
+        to, amount, amountEur: Math.round(amountEur), assetSymbol, network, walletId,
+        allowed, warnings, blocks,
+        chainalysisMode: chainalysis?.mode, chainalysisFlagged: chainalysis?.flagged,
+      },
       severity: allowed ? 'info' : 'warning',
       req,
     });
 
-    res.json({ allowed, warnings, blocks });
+    res.json({
+      allowed, warnings, blocks,
+      chainalysis,
+      amountEur: Math.round(amountEur),
+      priceEur,
+      config: config
+        ? {
+            risk_level: config.risk_level,
+            max_single_transfer: config.max_single_transfer,
+            max_daily_volume: config.max_daily_volume,
+            requires_approval_above: config.requires_approval_above,
+            whitelist_only: config.whitelist_only,
+          }
+        : null,
+    });
   } catch (err) {
     console.error('risk check error:', err.message);
     res.status(500).json({ error: err.message });
