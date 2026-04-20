@@ -32,9 +32,19 @@ export async function fetchAuditStats() {
 }
 
 // ============ TRANSFER APPROVALS ============
-export async function fetchApprovals(status = '') {
-  const params = status ? `?status=${status}` : '';
-  const res = await fetch(`${API_BASE}/api/compliance/approvals${params}`, { headers });
+// Accepte soit une string (status legacy) soit un objet
+// { status, salesforceAccountId, walletId, limit, offset } pour les
+// filtres serveur. La shape historique (string) reste supportée.
+export async function fetchApprovals(filters = {}) {
+  const f = typeof filters === 'string' ? { status: filters } : (filters || {});
+  const params = new URLSearchParams();
+  if (f.status)              params.set('status', f.status);
+  if (f.salesforceAccountId) params.set('salesforceAccountId', f.salesforceAccountId);
+  if (f.walletId)            params.set('walletId', f.walletId);
+  if (f.limit)               params.set('limit', f.limit);
+  if (f.offset)              params.set('offset', f.offset);
+  const qs = params.toString() ? `?${params.toString()}` : '';
+  const res = await fetch(`${API_BASE}/api/compliance/approvals${qs}`, { headers });
   if (!res.ok) throw new Error('Failed to fetch approvals');
   return res.json();
 }

@@ -2202,9 +2202,14 @@ app.post('/api/audit-log', requireAuth, async (req, res) => {
 // ---------- Transfer Approvals ----------
 
 // GET /api/compliance/approvals — List approvals
+// Query params :
+//   · status            : filtre exact (pending|approved|executed|rejected)
+//   · salesforceAccountId : filtre client
+//   · walletId          : filtre wallet
+//   · limit/offset      : pagination (défaut 50)
 app.get('/api/compliance/approvals', async (req, res) => {
   try {
-    const { status, limit = '50', offset = '0' } = req.query;
+    const { status, salesforceAccountId, walletId, limit = '50', offset = '0' } = req.query;
     let query = supabaseAdmin
       .from('transfer_approvals')
       .select('*')
@@ -2212,6 +2217,8 @@ app.get('/api/compliance/approvals', async (req, res) => {
       .range(Number(offset), Number(offset) + Number(limit) - 1);
 
     if (status) query = query.eq('status', status);
+    if (salesforceAccountId) query = query.eq('salesforce_account_id', salesforceAccountId);
+    if (walletId) query = query.eq('wallet_id', walletId);
 
     const { data, error } = await query;
     if (error) throw error;

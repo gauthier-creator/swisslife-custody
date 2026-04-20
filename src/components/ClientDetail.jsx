@@ -9,7 +9,7 @@ import UBOPanel from './UBOPanel';
 import WalletFreezePanel from './WalletFreezePanel';
 import CustodyEligibilityPanel from './CustodyEligibilityPanel';
 import { SUPPORTED_NETWORKS } from '../config/constants';
-import { createApproval, checkTransferRisk, checkWalletFreeze, screenAddress } from '../services/complianceApi';
+import { createApproval, checkTransferRisk, checkWalletFreeze, screenAddress, fetchApprovals } from '../services/complianceApi';
 import { fetchOraclePrices } from '../services/oracleApi';
 import { getKycStatus } from '../services/kycService';
 import { useAuth } from '../context/AuthContext';
@@ -51,6 +51,11 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
   const [selectedWallet, setSelectedWallet] = useState(null);
   const [assets, setAssets] = useState(null);
   const [history, setHistory] = useState([]);
+  // Liste des demandes de transfert (transfer_approvals) pour ce client.
+  // Montre toutes statuses pending/approved/executed/rejected, pas seulement
+  // celles du wallet sélectionné — le banquier veut la vue globale du client.
+  const [approvals, setApprovals] = useState([]);
+  const [loadingApprovals, setLoadingApprovals] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
   const [transfer, setTransfer] = useState({ to: '', amount: '', kind: 'Native' });
   // Transfer request flow — 3 stages inside the modal :
@@ -94,10 +99,26 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
   const kycValid = !kycModuleEnabled || kycLive?.overallStatus === 'validated' || parsed.kyc?.toLowerCase().includes('valid');
 
   useEffect(() => {
-    loadWallets(); loadContacts(); loadKycStatus();
+    loadWallets(); loadContacts(); loadKycStatus(); loadApprovals();
     fetch(`${API_BASE}/api/admin/settings`).then(r => r.json()).then(s => setKycModuleEnabled(!!s.kyc_module_enabled)).catch(() => {});
     getSalesforceStatus().then(setSfStatus).catch(() => {});
   }, []);
+
+  // Charge les demandes de transfert pour ce client — toutes statuses.
+  // Recharge après chaque createApproval + chaque fois qu'on revient
+  // sur l'onglet transferts.
+  const loadApprovals = async () => {
+    setLoadingApprovals(true);
+    try {
+      const raw = await fetchApprovals({ salesforceAccountId: client.id, limit: 100 });
+      const list = raw?.data || raw || [];
+      setApprovals(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error('loadApprovals error:', err);
+      setApprovals([]);
+    }
+    setLoadingApprovals(false);
+  };
 
   // Deep-link to the Salesforce Lightning Account record in a new tab.
   // Instance URL comes from our /api/salesforce/status endpoint; if not
@@ -378,6 +399,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
       });
       setTransferResult(approval);
       setTransferStage('success');
+      loadApprovals(); // nouvelle ligne "pending" visible sur l'onglet Transferts
     } catch (err) {
       console.error(err);
       setError(err.message);
@@ -951,70 +973,155 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
       )}
 
       {/* ══════════ TRANSFERS ══════════ */}
-      {tab === 'transfers' && selectedWallet && (
-        <div className="animate-fade space-y-6">
-          <div className="flex items-center justify-between">
+      {/* Onglet complet, visible même sans wallet sélectionné : affiche
+          (1) les demandes de transfert (transfer_approvals) du client,
+              toutes statuses : pending / approved / executed / rejected
+          (2) l'historique on-chain DFNS du wallet sélectionné si un est actif.
+          Le banquier voit ainsi le workflow compliance ET les mouvements réels. */}
+      {tab === 'transfers' && (
+        <div className="animate-fade space-y-8">
+          {/* Header + CTA */}
+          <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <h2 className="display-sm text-[#0A0A0A]">Transferts</h2>
               <p className="text-[13.5px] text-[#5D5D5D] mt-1.5 tracking-[-0.003em]">
-                {selectedWallet.name} · {history.length} opération{history.length > 1 ? 's' : ''}
+                {approvals.length} demande{approvals.length > 1 ? 's' : ''} · {history.length} mouvement{history.length > 1 ? 's' : ''} on-chain {selectedWallet ? `· ${selectedWallet.name}` : ''}
               </p>
             </div>
-            <Button variant="primary" onClick={() => setShowTransfer(true)}>
-              Nouveau transfert
-            </Button>
+            {selectedWallet && (
+              <Button variant="primary" onClick={() => setShowTransfer(true)}>
+                Nouveau transfert
+              </Button>
+            )}
           </div>
-          {history.length === 0 ? (
-            <Card className="py-4">
-              <EmptyState title="Aucun transfert" description="Les mouvements apparaîtront ici dès le premier transfert exécuté." />
-            </Card>
-          ) : (
-            <Card className="overflow-hidden">
-              <table className="w-full text-[13px]">
-                <thead>
-                  <tr className="border-b border-[#E7E7E7]">
-                    <th className="text-left px-6 h-12 text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em]">Direction</th>
-                    <th className="text-left px-6 h-12 text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em]">Adresse</th>
-                    <th className="text-right px-6 h-12 text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em]">Montant</th>
-                    <th className="text-left px-6 h-12 text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em]">Statut</th>
-                    <th className="text-left px-6 h-12 text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em]">Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.map((tx, i) => (
-                    <tr key={tx.id || i} className="border-b border-[#E7E7E7] last:border-0 hover:bg-white transition-colors">
-                      <td className="px-6 py-3.5">
-                        <Badge variant={tx.direction === 'In' ? 'success' : 'default'} size="sm" dot>{tx.direction || '—'}</Badge>
-                      </td>
-                      <td className="px-6 py-3.5 font-mono text-[12px] text-[#1E1E1E]">
-                        {truncAddr(tx.to || tx.from, 8)}
-                      </td>
-                      <td className="px-6 py-3.5 text-right font-medium text-[#0A0A0A] tabular-nums tracking-[-0.015em]">
-                        {tx.value || '—'}
-                      </td>
-                      <td className="px-6 py-3.5">
-                        <Badge variant={tx.status === 'Confirmed' ? 'success' : 'warning'} size="sm" dot>{tx.status || 'Pending'}</Badge>
-                      </td>
-                      <td className="px-6 py-3.5 text-[12.5px] text-[#5D5D5D]">
-                        {tx.timestamp ? new Date(tx.timestamp).toLocaleDateString('fr-FR') : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </Card>
-          )}
-        </div>
-      )}
 
-      {tab === 'transfers' && !selectedWallet && (
-        <div className="animate-fade">
-          <Card className="py-4">
-            <EmptyState
-              title="Sélectionnez un wallet"
-              description="Choisissez un wallet dans l'onglet Wallets pour consulter l'historique de ses transferts."
-            />
-          </Card>
+          {/* ─── (1) Demandes de transfert (compliance queue) ─── */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[15px] font-medium text-[#0A0A0A] tracking-[-0.015em]">
+                Demandes <span className="font-display italic text-[#7C5E3C]">4-yeux</span>
+              </h3>
+              <button
+                onClick={loadApprovals}
+                disabled={loadingApprovals}
+                className="text-[11.5px] font-medium text-[#5D5D5D] hover:text-[#1E1E1E] transition-colors"
+              >
+                {loadingApprovals ? 'Chargement…' : 'Rafraîchir'}
+              </button>
+            </div>
+            {approvals.length === 0 ? (
+              <Card className="py-4">
+                <EmptyState
+                  title={loadingApprovals ? 'Chargement…' : 'Aucune demande'}
+                  description="Les demandes de transfert (en attente, approuvées, exécutées, rejetées) apparaîtront ici."
+                />
+              </Card>
+            ) : (
+              <Card className="overflow-hidden">
+                <table className="w-full text-[13px]">
+                  <thead>
+                    <tr className="border-b border-[#E7E7E7] bg-[#FAFAF8]">
+                      <th className="text-left px-5 h-11 text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.08em]">Statut</th>
+                      <th className="text-left px-5 h-11 text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.08em]">Wallet</th>
+                      <th className="text-left px-5 h-11 text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.08em]">Destination</th>
+                      <th className="text-right px-5 h-11 text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.08em]">Montant</th>
+                      <th className="text-left px-5 h-11 text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.08em]">Demand\u00e9 par</th>
+                      <th className="text-left px-5 h-11 text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.08em]">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {approvals.map(a => {
+                      const status = a.status || 'pending';
+                      const badgeVariant = {
+                        pending: 'warning', approved: 'info', executed: 'success', rejected: 'error',
+                      }[status] || 'default';
+                      const badgeLabel = {
+                        pending: 'En attente', approved: 'Approuvé', executed: 'Exécuté', rejected: 'Rejeté',
+                      }[status] || status;
+                      return (
+                        <tr key={a.id} className="border-b border-[#E7E7E7] last:border-0 hover:bg-[#FDFBF6] transition-colors">
+                          <td className="px-5 py-3.5">
+                            <Badge variant={badgeVariant} size="sm" dot>{badgeLabel}</Badge>
+                          </td>
+                          <td className="px-5 py-3.5 text-[#0A0A0A] font-medium truncate max-w-[140px]" title={a.wallet_name || a.wallet_id}>
+                            {a.wallet_name || truncAddr(a.wallet_id, 6)}
+                          </td>
+                          <td className="px-5 py-3.5 font-mono text-[11.5px] text-[#1E1E1E]">
+                            {truncAddr(a.to_address, 8)}
+                          </td>
+                          <td className="px-5 py-3.5 text-right font-medium text-[#0A0A0A] tabular-nums tracking-[-0.015em]">
+                            {a.amount ? `${a.amount} ${a.asset_symbol || ''}` : '—'}
+                          </td>
+                          <td className="px-5 py-3.5 text-[12px] text-[#5D5D5D] truncate max-w-[160px]" title={a.requested_by_email}>
+                            {a.requested_by_email || '—'}
+                          </td>
+                          <td className="px-5 py-3.5 text-[12px] text-[#5D5D5D] tabular-nums">
+                            {a.requested_at ? new Date(a.requested_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </Card>
+            )}
+          </div>
+
+          {/* ─── (2) Historique on-chain DFNS du wallet sélectionné ─── */}
+          {selectedWallet && (
+            <div>
+              <h3 className="text-[15px] font-medium text-[#0A0A0A] tracking-[-0.015em] mb-3">
+                Historique <span className="font-display italic text-[#7C5E3C]">on-chain</span>
+                <span className="text-[12.5px] font-normal text-[#8A8278] ml-3">· {selectedWallet.name}</span>
+              </h3>
+              {history.length === 0 ? (
+                <Card className="py-4">
+                  <EmptyState title="Aucun mouvement on-chain" description="Les transactions signées par DFNS apparaîtront ici après broadcast et confirmation réseau." />
+                </Card>
+              ) : (
+                <Card className="overflow-hidden">
+                  <table className="w-full text-[13px]">
+                    <thead>
+                      <tr className="border-b border-[#E7E7E7] bg-[#FAFAF8]">
+                        <th className="text-left px-5 h-11 text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.08em]">Direction</th>
+                        <th className="text-left px-5 h-11 text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.08em]">Adresse</th>
+                        <th className="text-right px-5 h-11 text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.08em]">Montant</th>
+                        <th className="text-left px-5 h-11 text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.08em]">Statut</th>
+                        <th className="text-left px-5 h-11 text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.08em]">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {history.map((tx, i) => (
+                        <tr key={tx.id || i} className="border-b border-[#E7E7E7] last:border-0 hover:bg-[#FDFBF6] transition-colors">
+                          <td className="px-5 py-3.5">
+                            <Badge variant={tx.direction === 'In' ? 'success' : 'default'} size="sm" dot>{tx.direction || '—'}</Badge>
+                          </td>
+                          <td className="px-5 py-3.5 font-mono text-[11.5px] text-[#1E1E1E]">
+                            {truncAddr(tx.to || tx.from, 8)}
+                          </td>
+                          <td className="px-5 py-3.5 text-right font-medium text-[#0A0A0A] tabular-nums tracking-[-0.015em]">
+                            {tx.value || '—'}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <Badge variant={tx.status === 'Confirmed' ? 'success' : 'warning'} size="sm" dot>{tx.status || 'Pending'}</Badge>
+                          </td>
+                          <td className="px-5 py-3.5 text-[12px] text-[#5D5D5D] tabular-nums">
+                            {tx.timestamp ? new Date(tx.timestamp).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </Card>
+              )}
+            </div>
+          )}
+
+          {!selectedWallet && history.length === 0 && (
+            <p className="text-[12.5px] text-[#8A8278] text-center pt-2">
+              Astuce : sélectionne un wallet dans l'onglet Wallets pour voir son historique on-chain détaillé.
+            </p>
+          )}
         </div>
       )}
 
