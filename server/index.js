@@ -1228,6 +1228,41 @@ const dfns = new DfnsApiClient({
   signer,
 });
 
+// ─── DFNS helpers ─────────────────────────────────────────
+// Convert a human-readable amount ("0.01") into the smallest unit
+// string ("10000000000000000") that the DFNS TransferAsset endpoint
+// expects. DFNS is strict : amounts are BigInt strings in the asset's
+// base unit (wei / satoshi / lamport / lovelace / …).
+//
+// The network determines the default decimals for Native transfers.
+// ERC20 / SPL tokens will need their own contract decimals lookup —
+// for those we expect the UI to send the pre-converted amount.
+const NETWORK_NATIVE_DECIMALS = {
+  Ethereum: 18, EthereumSepolia: 18, EthereumHolesky: 18, EthereumGoerli: 18,
+  ArbitrumOne: 18, ArbitrumSepolia: 18,
+  Base: 18, BaseSepolia: 18,
+  Polygon: 18, PolygonAmoy: 18,
+  Optimism: 18, OptimismSepolia: 18,
+  Bitcoin: 8, BitcoinTestnet3: 8,
+  Solana: 9, SolanaDevnet: 9,
+  Cardano: 6, CardanoPreprod: 6,
+  Tron: 6,
+};
+
+function toSmallestUnit(amount, network, decimalsOverride) {
+  const decimals = decimalsOverride ?? NETWORK_NATIVE_DECIMALS[network] ?? 18;
+  const s = String(amount).trim();
+  // Contract UI ↔ server : amounts are ALWAYS in human units.
+  // "1" ETH → "1000000000000000000", "0.01" → "10000000000000000",
+  // never the other way around. No shortcut for integers.
+  const match = s.match(/^(\d+)(?:\.(\d+))?$/);
+  if (!match) throw new Error(`Invalid amount: ${amount}`);
+  const intPart = match[1];
+  const fracPart = (match[2] || '').padEnd(decimals, '0').slice(0, decimals);
+  const combined = (intPart + fracPart).replace(/^0+/, '') || '0';
+  return combined;
+}
+
 // Wallets
 app.get('/api/dfns/wallets', async (req, res) => {
   try {
@@ -1921,6 +1956,7 @@ app.post('/api/compliance/approvals', requireAuth, async (req, res) => {
   try {
     const {
       walletId, walletName, to, amount, assetSymbol, network, note,
+      kind, contract,
       requestedBy, requestedByEmail, clientName, salesforceAccountId,
     } = req.body;
 
@@ -1963,6 +1999,8 @@ app.post('/api/compliance/approvals', requireAuth, async (req, res) => {
       amount: String(amount),
       asset_symbol: assetSymbol,
       network: network || null,
+      kind: kind || 'Native',
+      contract_address: contract || null,
       note: note || null,
       requested_by: requestedBy || null,
       requested_by_email: requestedByEmail || req.user?.email || null,
@@ -2133,12 +2171,28 @@ app.post('/api/compliance/approvals/:id/execute', requireAdmin, async (req, res)
       return res.status(400).json({ error: `Cannot execute: status is '${approval.status}', must be 'approved'` });
     }
 
-    // 2. Call DFNS to execute the transfer
-    const transferBody = {
-      to: approval.to_address,
-      amount: approval.amount,
-    };
-    if (approval.asset_symbol) transferBody.assetSymbol = approval.asset_symbol;
+    // 2. Build the DFNS TransferAsset body from the stored approval.
+    //    DFNS is strict :
+    //      · `kind` is required ('Native', 'Erc20', 'Spl', …)
+    //      · `amount` must be a BigInt string in the smallest unit
+    //        (wei / satoshi / lamport). We convert from the human
+    //        string we stored ("0.01") using the network decimals.
+    //      · `contract` is required for Erc20 / Erc721 / Spl tokens.
+    const kind = approval.kind || 'Native';
+    let amountSmallest;
+    try {
+      amountSmallest = toSmallestUnit(approval.amount, approval.network);
+    } catch (convErr) {
+      return res.status(400).json({
+        error: `Impossible de convertir le montant '${approval.amount}' pour ${approval.network}: ${convErr.message}`,
+        code: 'AMOUNT_CONVERSION_FAILED',
+      });
+    }
+
+    const transferBody = { kind, to: approval.to_address, amount: amountSmallest };
+    if (kind !== 'Native' && approval.contract_address) {
+      transferBody.contract = approval.contract_address;
+    }
 
     const transferResult = await dfns.wallets.transferAsset({
       walletId: approval.wallet_id,

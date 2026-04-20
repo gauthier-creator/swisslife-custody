@@ -80,7 +80,8 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
   const [screeningResults, setScreeningResults] = useState([]);
   const [screeningRunning, setScreeningRunning] = useState(false);
   const [lastScreeningAt, setLastScreeningAt] = useState(null);
-  const { user, isAdmin } = useAuth();
+  const { profile, isAdmin } = useAuth();
+  const user = profile; // legacy alias — AuthContext exposes `profile`, not `user`
 
   const reloadClient = async () => {
     try {
@@ -354,11 +355,13 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
       const netInfo = SUPPORTED_NETWORKS.find(n => n.id === selectedWallet.network);
       const approval = await createApproval({
         walletId: selectedWallet.id,
-        to: transfer.to,                          // server field name
+        to: transfer.to,
         amount: transfer.amount,
-        assetSymbol: netInfo?.symbol || transfer.kind,
+        assetSymbol: netInfo?.symbol || 'NATIVE',
         network: selectedWallet.network,
-        note: `Transfert ${transfer.amount} ${netInfo?.symbol || transfer.kind} vers ${transfer.to.slice(0, 12)}…`,
+        kind: transfer.kind || 'Native',             // DFNS TransferAsset kind
+        contract: transfer.contract || null,          // ERC20 / Erc721 : token contract
+        note: `Transfert ${transfer.amount} ${netInfo?.symbol || ''} vers ${transfer.to.slice(0, 12)}…`,
         walletName: selectedWallet.name,
         salesforceAccountId: client.id,
         clientName: client.name,
