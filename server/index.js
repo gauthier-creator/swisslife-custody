@@ -654,6 +654,104 @@ app.post('/api/signing/:token/sign', async (req, res) => {
   }
 });
 
+// POST /api/signing/:token/revoke — Revoke a pending signing link
+// Usage : si le banquier a envoyé un lien à la mauvaise adresse,
+// ou si le client demande à re-signer avec des infos mises à jour.
+// Irréversible — un nouveau lien devra être généré.
+app.post('/api/signing/:token/revoke', requireAuth, async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const { data: tokenData, error: fetchErr } = await supabaseAdmin
+      .from('signing_tokens')
+      .select('*')
+      .eq('token', req.params.token)
+      .single();
+    if (fetchErr || !tokenData) return res.status(404).json({ error: 'Lien introuvable' });
+    if (tokenData.status === 'signed') {
+      return res.status(400).json({ error: 'Contrat déjà signé — impossible de révoquer' });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('signing_tokens')
+      .update({ status: 'revoked', revoked_at: new Date().toISOString(), revoked_by: req.user?.email || 'unknown', revoke_reason: reason || null })
+      .eq('token', req.params.token)
+      .select()
+      .single();
+    if (error) throw error;
+
+    await logAudit({
+      userEmail: req.user?.email,
+      action: 'signing_link_revoked',
+      category: 'custody',
+      entityType: 'Account',
+      entityId: tokenData.salesforce_account_id,
+      clientName: tokenData.client_name,
+      salesforceAccountId: tokenData.salesforce_account_id,
+      details: { token: req.params.token, reason },
+      severity: 'high',
+      req,
+    });
+
+    res.json(data);
+  } catch (err) {
+    console.error('Revoke signing error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/signing/:token/pdf — Banker-side re-download of signed contract PDF
+// Re-génère le PDF depuis les données signées stockées dans signing_tokens.
+// Nécessite auth (banquier ou admin). Utile pour audit, contestation,
+// ou envoi tardif au client. Le PDF re-généré est bit-for-bit identique
+// à la version signée d'origine (même inputs → même output PDFKit).
+app.get('/api/signing/:token/pdf', requireAuth, async (req, res) => {
+  try {
+    const { data: tokenData, error } = await supabaseAdmin
+      .from('signing_tokens')
+      .select('*')
+      .eq('token', req.params.token)
+      .single();
+    if (error || !tokenData) return res.status(404).json({ error: 'Lien introuvable' });
+    if (tokenData.status !== 'signed') {
+      return res.status(400).json({ error: `Contrat non signé — statut: ${tokenData.status}` });
+    }
+
+    const clientAddress = [tokenData.client_street, tokenData.client_postal_code, tokenData.client_city, tokenData.client_country].filter(Boolean).join(', ') || 'Non renseigne';
+    const pdfBuffer = await generateContractPDF({
+      clientName: tokenData.client_name,
+      clientAddress,
+      clientPhone: tokenData.client_phone || 'Non renseigne',
+      signerName: tokenData.signer_name || tokenData.client_name,
+      signerIp: tokenData.signer_ip || 'unknown',
+      signedAt: tokenData.signed_at,
+    });
+
+    const dateSlug = new Date(tokenData.signed_at).toISOString().slice(0, 10).replace(/-/g, '');
+    const safeName = (tokenData.client_name || 'Client').replace(/[^a-zA-Z0-9]/g, '_');
+    const filename = `Contrat_Custody_${safeName}_${dateSlug}.pdf`;
+
+    await logAudit({
+      userEmail: req.user?.email,
+      action: 'custody_contract_redownloaded',
+      category: 'custody',
+      entityType: 'Account',
+      entityId: tokenData.salesforce_account_id,
+      clientName: tokenData.client_name,
+      salesforceAccountId: tokenData.salesforce_account_id,
+      details: { token: req.params.token, filename },
+      severity: 'info',
+      req,
+    });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(pdfBuffer);
+  } catch (err) {
+    console.error('Re-download signed PDF error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ============================================================
 // ADEQUACY QUESTIONNAIRE — Signing link for client
 // ============================================================
