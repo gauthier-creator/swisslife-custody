@@ -1712,10 +1712,19 @@ function CryptoHoldingsCard({ wallets, holdings, loading, net, onSelectWallet })
         </p>
         <ul className="divide-y divide-[#E7E7E7]">
           {walletsWithAssets.map(({ wallet, assets }) => {
+            // Local price lookup — this component is outside ClientDetail's
+            // closure so we can't use resolvePriceEur. Read directly from
+            // holdings.oracle.prices (passed via prop) with static fallback.
+            const priceFor = (symbol) => {
+              const s = (symbol || '').toUpperCase();
+              const live = holdings?.oracle?.prices?.[s]?.priceEur;
+              if (typeof live === 'number' && live > 0) return live;
+              const fb = { BTC: 58000, ETH: 2950, SOL: 135, USDC: 0.92, USDT: 0.92, LINK: 13 };
+              return fb[s] ?? 0;
+            };
             const walletEur = assets.reduce((s, a) => {
               const bal = (a.decimals > 6 ? parseFloat(a.balance || 0) / Math.pow(10, a.decimals) : parseFloat(a.balance || 0));
-              const price = resolvePriceEur(a.symbol, holdings?.oracle?.prices) || FALLBACK_PRICES_EUR[a.symbol] || 0;
-              return s + bal * price;
+              return s + bal * priceFor(a.symbol);
             }, 0);
             const n = net(wallet.network);
             const summary = assets.length > 0
