@@ -1927,6 +1927,32 @@ app.post('/api/compliance/approvals', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'walletId, to, and amount are required' });
     }
 
+    // ─── Compliance Gate · wallet freeze (per-wallet) ─────────
+    // If this specific wallet is frozen, refuse the approval request
+    // up-front. Defense-in-depth : the DFNS transfer endpoint gates
+    // execution too, but we fail fast to give the banquier immediate
+    // feedback ("this wallet is frozen") instead of letting the
+    // request sit as pending until a reviewer tries to execute.
+    try {
+      const { data: freeze } = await supabaseAdmin
+        .from('wallet_freezes')
+        .select('id, reason, frozen_at, legal_reference')
+        .eq('wallet_id', walletId)
+        .eq('status', 'frozen')
+        .maybeSingle();
+      if (freeze) {
+        return res.status(403).json({
+          error: 'Wallet gelé — demande de transfert refusée',
+          code: 'WALLET_FROZEN',
+          freezeReason: freeze.reason,
+          legalReference: freeze.legal_reference,
+          frozenAt: freeze.frozen_at,
+        });
+      }
+    } catch (e) {
+      console.warn('[Approval Gate] wallet_freezes check skipped:', e.message);
+    }
+
     const { data, error } = await supabaseAdmin.from('transfer_approvals').insert({
       wallet_id: walletId,
       to_address: to,

@@ -939,6 +939,9 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
           {selectedWallet && (
             <WalletFreezePanel
               walletId={selectedWallet.id}
+              walletName={selectedWallet.name}
+              walletAddress={selectedWallet.address}
+              walletNetwork={selectedWallet.network}
               salesforceAccountId={client.id}
               clientName={client.name || client.Name}
             />

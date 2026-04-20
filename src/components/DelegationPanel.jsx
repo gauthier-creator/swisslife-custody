@@ -27,6 +27,11 @@ export default function DelegationPanel({ client }) {
   const [delegations, setDelegations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
+  // Revoke confirmation modal — replaces window.confirm() for a cleaner UX.
+  const [revokeTarget, setRevokeTarget] = useState(null); // { id, delegate_email, ... } | null
+  const [revoking, setRevoking] = useState(false);
   const [form, setForm] = useState({
     delegateEmail: '',
     delegateName: '',
@@ -54,37 +59,66 @@ export default function DelegationPanel({ client }) {
 
   useEffect(() => { load(); }, [load]);
 
+  const resetForm = () => setForm({
+    delegateEmail: '', delegateName: '', permissionLevel: 'view',
+    transferLimit: '', currency: 'EUR', expiresAt: '', notes: '',
+  });
+
   const handleCreate = async () => {
+    setErrorMsg(null);
+    if (!form.delegateEmail?.trim()) {
+      setErrorMsg('L\'email du délégataire est obligatoire.');
+      return;
+    }
+    // Basic email sanity — avoid sending obvious garbage to the API
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.delegateEmail.trim())) {
+      setErrorMsg('Adresse email invalide.');
+      return;
+    }
+    if (!profile?.email) {
+      setErrorMsg('Session expirée — reconnectez-vous pour créer une délégation.');
+      return;
+    }
+    setSubmitting(true);
     try {
       await createDelegation({
         grantorAccountId: accountId,
         grantorName: client?.name,
-        delegateEmail: form.delegateEmail,
+        delegateEmail: form.delegateEmail.trim(),
         delegateName: form.delegateName || null,
         permissionLevel: form.permissionLevel,
         transferLimit: form.permissionLevel === 'transfer' && form.transferLimit ? Number(form.transferLimit) : null,
         currency: form.currency,
         expiresAt: form.expiresAt || null,
         notes: form.notes || null,
-        grantedByEmail: profile?.email,
+        grantedByEmail: profile.email,
       });
-      toast('Délégation créée');
+      toast('Délégation créée · tracée dans le journal d\'audit');
       setShowModal(false);
-      setForm({ delegateEmail: '', delegateName: '', permissionLevel: 'view', transferLimit: '', currency: 'EUR', expiresAt: '', notes: '' });
+      resetForm();
       load();
     } catch (err) {
-      toast(err.message, 'error');
+      setErrorMsg(err.message || 'Erreur lors de la création de la délégation.');
     }
+    setSubmitting(false);
   };
 
-  const handleRevoke = async (id) => {
+  const handleRevoke = async () => {
+    if (!revokeTarget?.id) return;
+    if (!profile?.email) {
+      toast('Session expirée · reconnectez-vous', 'error');
+      return;
+    }
+    setRevoking(true);
     try {
-      await revokeDelegation(id, profile?.email);
+      await revokeDelegation(revokeTarget.id, profile.email);
       toast('Délégation révoquée');
+      setRevokeTarget(null);
       load();
     } catch (err) {
       toast(err.message, 'error');
     }
+    setRevoking(false);
   };
 
   const activeDelegations = delegations.filter(d => d.status === 'active');
@@ -199,7 +233,7 @@ export default function DelegationPanel({ client }) {
                         <td className="px-6 py-4 text-[12px] text-[#5D5D5D]">{d.granted_by_email || '—'}</td>
                         <td className="px-6 py-4">
                           <button
-                            onClick={() => handleRevoke(d.id)}
+                            onClick={() => setRevokeTarget(d)}
                             className="inline-flex items-center h-7 px-2.5 rounded-full text-[11.5px] font-medium text-[#DC2626] border border-[rgba(220,38,38,0.22)] bg-white hover:bg-[#FEF2F2] hover:border-[rgba(220,38,38,0.4)] transition-colors tracking-[-0.003em]"
                           >
                             Révoquer
@@ -252,11 +286,17 @@ export default function DelegationPanel({ client }) {
       {/* ── Create Delegation Modal ─────────────────────── */}
       <Modal
         isOpen={showModal}
-        onClose={() => setShowModal(false)}
+        onClose={() => { setShowModal(false); setErrorMsg(null); }}
         title="Nouvelle délégation d'accès"
         subtitle="Partage d'accès conditionnel. Chaque délégation est horodatée dans le journal d'audit ACPR."
       >
         <div className="space-y-5">
+          <div className="px-4 py-3 bg-[#F9F8F5] border border-[#E7E7E7] rounded-[8px]">
+            <p className="text-[12px] text-[#5D5D5D] leading-[1.5] tracking-[-0.003em]">
+              <strong className="text-[#0A0A0A]">Grantor :</strong> {client?.name || '—'}<br />
+              La délégation sera conservée 5 ans dans le journal d'audit (obligation ACPR art. L.561-12 CMF).
+            </p>
+          </div>
           <div>
             <label className={labelCls}>Email du délégataire *</label>
             <input
@@ -333,10 +373,56 @@ export default function DelegationPanel({ client }) {
               rows={3}
             />
           </div>
+          {errorMsg && (
+            <div className="px-4 py-3 bg-[#FEF2F2] border border-[rgba(220,38,38,0.22)] rounded-[8px]">
+              <p className="text-[12.5px] text-[#991B1B] tracking-[-0.003em]">{errorMsg}</p>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-5 border-t border-[#E7E7E7]">
-            <Button variant="ghost" onClick={() => setShowModal(false)}>Annuler</Button>
-            <Button variant="primary" onClick={handleCreate} disabled={!form.delegateEmail}>
-              Créer la délégation
+            <Button variant="ghost" onClick={() => { setShowModal(false); setErrorMsg(null); }}>
+              Annuler
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleCreate}
+              disabled={submitting || !form.delegateEmail?.trim()}
+            >
+              {submitting ? 'Création…' : 'Créer la délégation'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ── Revoke confirmation modal ───────────────────── */}
+      <Modal
+        isOpen={!!revokeTarget}
+        onClose={() => setRevokeTarget(null)}
+        title="Révoquer la délégation ?"
+        subtitle="La révocation est immédiate et tracée dans le journal d'audit. Elle ne peut pas être annulée — il faudra recréer une nouvelle délégation si besoin."
+      >
+        <div className="space-y-5">
+          {revokeTarget && (
+            <div className="px-4 py-3 bg-[#F9F8F5] border border-[#E7E7E7] rounded-[8px]">
+              <div className="grid grid-cols-2 gap-4 text-[12.5px]">
+                <div>
+                  <p className="text-[10.5px] font-medium text-[#8A8278] uppercase tracking-[0.1em]">Délégataire</p>
+                  <p className="text-[13px] text-[#0A0A0A] font-medium mt-1">{revokeTarget.delegate_name || revokeTarget.delegate_email}</p>
+                  {revokeTarget.delegate_name && (
+                    <p className="text-[11.5px] text-[#5D5D5D] font-mono mt-0.5">{revokeTarget.delegate_email}</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-[10.5px] font-medium text-[#8A8278] uppercase tracking-[0.1em]">Permission</p>
+                  <div className="mt-1">{permBadge(revokeTarget.permission_level)}</div>
+                </div>
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end gap-2 pt-5 border-t border-[#E7E7E7]">
+            <Button variant="ghost" onClick={() => setRevokeTarget(null)}>Annuler</Button>
+            <Button variant="primary" onClick={handleRevoke} disabled={revoking}>
+              {revoking ? 'Révocation…' : 'Confirmer la révocation'}
             </Button>
           </div>
         </div>
