@@ -4920,82 +4920,259 @@ app.patch('/api/compliance/freezes/:id/unfreeze', requireAdmin, async (req, res)
 });
 
 // ============================================================
-// UBO (BENEFICIAIRES EFFECTIFS) — Art. L.561-2-2 CMF
+// UBO (BENEFICIAIRES EFFECTIFS) — stockés dans Salesforce Contact
+// avec flag Custody_Is_UBO__c = true.
+// Base légale : Art. L.561-2-2 CMF · AMLD5 Art. 30.
+//
+// Les UBO sont des personnes physiques liées à un Account (personne
+// morale). On les expose via l'API Contact Salesforce pour que le CRM
+// reste la source de vérité de la PII client. Le mapping :
+//
+//   id                      ← Contact.Id
+//   full_name               ← Contact.FirstName + LastName
+//   birth_date              ← Contact.Birthdate
+//   nationality             ← Contact.Custody_UBO_Nationality__c
+//   ownership_percentage    ← Contact.Custody_UBO_Ownership_Pct__c
+//   control_type            ← Contact.Custody_UBO_Control_Type__c
+//   address                 ← Contact.MailingStreet + MailingCity...
+//   document_type           ← Contact.Custody_UBO_Document_Type__c
+//   document_reference      ← Contact.Custody_UBO_Document_Ref__c
+//   verified                ← Contact.Custody_UBO_Verified__c
+//   verified_by_email       ← Contact.Custody_UBO_Verified_By__c
+//   verified_at             ← Contact.Custody_UBO_Verified_At__c
+//   notes                   ← Contact.Custody_UBO_Notes__c
 // ============================================================
+
+function mapContactToUbo(c) {
+  const address = [c.MailingStreet, c.MailingPostalCode, c.MailingCity, c.MailingCountry]
+    .filter(Boolean).join(', ');
+  return {
+    id: c.Id,
+    salesforce_account_id: c.AccountId,
+    full_name: [c.FirstName, c.LastName].filter(Boolean).join(' '),
+    first_name: c.FirstName,
+    last_name: c.LastName,
+    birth_date: c.Birthdate,
+    nationality: c.Custody_UBO_Nationality__c,
+    ownership_percentage: c.Custody_UBO_Ownership_Pct__c,
+    control_type: c.Custody_UBO_Control_Type__c,
+    address: address || null,
+    document_type: c.Custody_UBO_Document_Type__c,
+    document_reference: c.Custody_UBO_Document_Ref__c,
+    verified: !!c.Custody_UBO_Verified__c,
+    verified_by_email: c.Custody_UBO_Verified_By__c,
+    verified_at: c.Custody_UBO_Verified_At__c,
+    notes: c.Custody_UBO_Notes__c,
+    email: c.Email,
+    phone: c.Phone,
+  };
+}
+
+// Split "Prénom Nom de Famille" → { firstName: 'Prénom', lastName: 'Nom de Famille' }
+function splitFullName(fullName = '') {
+  const parts = String(fullName).trim().split(/\s+/);
+  if (parts.length === 1) return { firstName: '—', lastName: parts[0] || 'UBO' };
+  return { firstName: parts[0], lastName: parts.slice(1).join(' ') };
+}
+
+// GET /api/compliance/ubos/:accountId — liste les UBO (SFDC Contact filtrés)
 app.get('/api/compliance/ubos/:accountId', async (req, res) => {
+  if (!SF_CONFIGURED) return res.status(501).json({ error: 'Salesforce not configured' });
   try {
-    const { data, error } = await supabaseAdmin.from('ubos')
-      .select('*').eq('salesforce_account_id', req.params.accountId).order('ownership_percentage', { ascending: false });
-    if (error) return res.status(500).json({ error: error.message });
-    res.json(data);
+    const { accessToken, instanceUrl } = await getSalesforceToken();
+    const fields = [
+      'Id', 'AccountId', 'FirstName', 'LastName', 'Email', 'Phone', 'Birthdate',
+      'MailingStreet', 'MailingCity', 'MailingPostalCode', 'MailingCountry',
+      'Custody_Is_UBO__c', 'Custody_UBO_Ownership_Pct__c', 'Custody_UBO_Control_Type__c',
+      'Custody_UBO_Document_Type__c', 'Custody_UBO_Document_Ref__c', 'Custody_UBO_Nationality__c',
+      'Custody_UBO_Verified__c', 'Custody_UBO_Verified_By__c', 'Custody_UBO_Verified_At__c',
+      'Custody_UBO_Notes__c',
+    ].join(',');
+    const soql = `SELECT ${fields} FROM Contact WHERE AccountId = '${req.params.accountId}' AND Custody_Is_UBO__c = true ORDER BY Custody_UBO_Ownership_Pct__c DESC NULLS LAST`;
+    const r = await fetch(`${instanceUrl}/services/data/v59.0/query/?q=${encodeURIComponent(soql)}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d[0]?.message || `SFDC ${r.status}`);
+    res.json((d.records || []).map(mapContactToUbo));
   } catch (err) {
     console.error('UBO list error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
+// POST /api/compliance/ubos — crée un Contact UBO lié à l'Account
 app.post('/api/compliance/ubos', requireAuth, async (req, res) => {
+  if (!SF_CONFIGURED) return res.status(501).json({ error: 'Salesforce not configured' });
   try {
-    const { salesforceAccountId, fullName, birthDate, nationality, ownershipPercentage, controlType, address, documentType, documentReference, addedByEmail, notes } = req.body;
-    if (!salesforceAccountId || !fullName || !addedByEmail) return res.status(400).json({ error: 'Required: salesforceAccountId, fullName, addedByEmail' });
-    const { data, error } = await supabaseAdmin.from('ubos').insert({
-      salesforce_account_id: salesforceAccountId, full_name: fullName, birth_date: birthDate,
-      nationality, ownership_percentage: ownershipPercentage, control_type: controlType,
-      address, document_type: documentType, document_reference: documentReference,
-      added_by_email: addedByEmail, notes,
-    }).select().single();
-    if (error) return res.status(500).json({ error: error.message });
-    await supabaseAdmin.from('audit_log').insert({
-      category: 'compliance', action: 'ubo_added', severity: 'medium',
-      salesforce_account_id: salesforceAccountId,
-      details: { fullName, ownershipPercentage, controlType },
-      performed_by: addedByEmail,
+    const {
+      salesforceAccountId, fullName, birthDate, nationality,
+      ownershipPercentage, controlType, address,
+      documentType, documentReference, notes,
+    } = req.body;
+    if (!salesforceAccountId || !fullName) {
+      return res.status(400).json({ error: 'salesforceAccountId et fullName requis' });
+    }
+    const { firstName, lastName } = splitFullName(fullName);
+    const { accessToken, instanceUrl } = await getSalesforceToken();
+    const payload = {
+      AccountId: salesforceAccountId,
+      FirstName: firstName,
+      LastName: lastName,
+      Birthdate: birthDate || null,
+      MailingStreet: address || null,
+      Custody_Is_UBO__c: true,
+      Custody_UBO_Nationality__c: nationality || null,
+      Custody_UBO_Ownership_Pct__c: ownershipPercentage == null ? null : Number(ownershipPercentage),
+      Custody_UBO_Control_Type__c: controlType || 'Capital',
+      Custody_UBO_Document_Type__c: documentType || 'Passport',
+      Custody_UBO_Document_Ref__c: documentReference || null,
+      Custody_UBO_Notes__c: notes || null,
+    };
+    const r = await fetch(`${instanceUrl}/services/data/v59.0/sobjects/Contact/`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
     });
-    res.json(data);
+    const d = await r.json();
+    if (!r.ok) throw new Error(Array.isArray(d) ? d[0]?.message : d.message || `SFDC ${r.status}`);
+
+    await logAudit({
+      userEmail: req.user?.email,
+      action: 'ubo_added',
+      category: 'compliance',
+      entityType: 'Contact',
+      entityId: d.id,
+      salesforceAccountId,
+      details: { fullName, ownershipPercentage, controlType, contactId: d.id },
+      severity: 'warning',
+      req,
+    });
+
+    // Re-fetch + map pour retourner la même forme que GET
+    const fetchR = await fetch(`${instanceUrl}/services/data/v59.0/sobjects/Contact/${d.id}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const fetchD = await fetchR.json();
+    res.json(mapContactToUbo(fetchD));
   } catch (err) {
     console.error('UBO create error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
+// PATCH /api/compliance/ubos/:id — met à jour un UBO (Contact.Id)
 app.patch('/api/compliance/ubos/:id', requireAuth, async (req, res) => {
+  if (!SF_CONFIGURED) return res.status(501).json({ error: 'Salesforce not configured' });
   try {
-    const updates = {};
-    const allowed = ['full_name', 'birth_date', 'nationality', 'ownership_percentage', 'control_type', 'address', 'document_type', 'document_reference', 'notes'];
-    const camelToSnake = { fullName: 'full_name', birthDate: 'birth_date', ownershipPercentage: 'ownership_percentage', controlType: 'control_type', documentType: 'document_type', documentReference: 'document_reference' };
-    for (const [key, val] of Object.entries(req.body)) {
-      const snakeKey = camelToSnake[key] || key;
-      if (allowed.includes(snakeKey) && val !== undefined) updates[snakeKey] = val;
+    const payload = {};
+    if (req.body.fullName !== undefined) {
+      const { firstName, lastName } = splitFullName(req.body.fullName);
+      payload.FirstName = firstName;
+      payload.LastName = lastName;
     }
-    updates.updated_at = new Date().toISOString();
-    const { data, error } = await supabaseAdmin.from('ubos').update(updates).eq('id', req.params.id).select().single();
-    if (error) return res.status(500).json({ error: error.message });
-    res.json(data);
+    if (req.body.birthDate !== undefined)             payload.Birthdate = req.body.birthDate || null;
+    if (req.body.nationality !== undefined)           payload.Custody_UBO_Nationality__c = req.body.nationality || null;
+    if (req.body.ownershipPercentage !== undefined)   payload.Custody_UBO_Ownership_Pct__c = req.body.ownershipPercentage == null ? null : Number(req.body.ownershipPercentage);
+    if (req.body.controlType !== undefined)           payload.Custody_UBO_Control_Type__c = req.body.controlType || null;
+    if (req.body.address !== undefined)               payload.MailingStreet = req.body.address || null;
+    if (req.body.documentType !== undefined)          payload.Custody_UBO_Document_Type__c = req.body.documentType || null;
+    if (req.body.documentReference !== undefined)     payload.Custody_UBO_Document_Ref__c = req.body.documentReference || null;
+    if (req.body.notes !== undefined)                 payload.Custody_UBO_Notes__c = req.body.notes || null;
+
+    const { accessToken, instanceUrl } = await getSalesforceToken();
+    const r = await fetch(`${instanceUrl}/services/data/v59.0/sobjects/Contact/${req.params.id}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok && r.status !== 204) {
+      const d = await r.json().catch(() => ({}));
+      throw new Error(Array.isArray(d) ? d[0]?.message : d.message || `SFDC ${r.status}`);
+    }
+
+    const fetchR = await fetch(`${instanceUrl}/services/data/v59.0/sobjects/Contact/${req.params.id}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const fetchD = await fetchR.json();
+    res.json(mapContactToUbo(fetchD));
   } catch (err) {
     console.error('UBO update error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
+// PATCH /api/compliance/ubos/:id/verify — vérification admin
 app.patch('/api/compliance/ubos/:id/verify', requireAdmin, async (req, res) => {
+  if (!SF_CONFIGURED) return res.status(501).json({ error: 'Salesforce not configured' });
   try {
     const { verifiedByEmail } = req.body;
-    if (!verifiedByEmail) return res.status(400).json({ error: 'verifiedByEmail required' });
-    const { data, error } = await supabaseAdmin.from('ubos').update({
-      verified: true, verified_by_email: verifiedByEmail, verified_at: new Date().toISOString(),
-    }).eq('id', req.params.id).select().single();
-    if (error) return res.status(500).json({ error: error.message });
-    res.json(data);
+    if (!verifiedByEmail) return res.status(400).json({ error: 'verifiedByEmail requis' });
+    const { accessToken, instanceUrl } = await getSalesforceToken();
+    const r = await fetch(`${instanceUrl}/services/data/v59.0/sobjects/Contact/${req.params.id}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        Custody_UBO_Verified__c: true,
+        Custody_UBO_Verified_By__c: verifiedByEmail.slice(0, 120),
+        Custody_UBO_Verified_At__c: new Date().toISOString(),
+      }),
+    });
+    if (!r.ok && r.status !== 204) {
+      const d = await r.json().catch(() => ({}));
+      throw new Error(Array.isArray(d) ? d[0]?.message : d.message || `SFDC ${r.status}`);
+    }
+
+    await logAudit({
+      userEmail: verifiedByEmail,
+      action: 'ubo_verified',
+      category: 'compliance',
+      entityType: 'Contact',
+      entityId: req.params.id,
+      details: { contactId: req.params.id },
+      severity: 'info',
+      req,
+    });
+
+    const fetchR = await fetch(`${instanceUrl}/services/data/v59.0/sobjects/Contact/${req.params.id}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    res.json(mapContactToUbo(await fetchR.json()));
   } catch (err) {
     console.error('UBO verify error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
+// DELETE /api/compliance/ubos/:id — on "déflag" le Custody_Is_UBO__c
+// plutôt que de supprimer le Contact (peut avoir d'autres usages CRM).
 app.delete('/api/compliance/ubos/:id', requireAdmin, async (req, res) => {
+  if (!SF_CONFIGURED) return res.status(501).json({ error: 'Salesforce not configured' });
   try {
-    const { error } = await supabaseAdmin.from('ubos').delete().eq('id', req.params.id);
-    if (error) return res.status(500).json({ error: error.message });
+    const { accessToken, instanceUrl } = await getSalesforceToken();
+    const r = await fetch(`${instanceUrl}/services/data/v59.0/sobjects/Contact/${req.params.id}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        Custody_Is_UBO__c: false,
+        Custody_UBO_Ownership_Pct__c: null,
+        Custody_UBO_Verified__c: false,
+      }),
+    });
+    if (!r.ok && r.status !== 204) {
+      const d = await r.json().catch(() => ({}));
+      throw new Error(Array.isArray(d) ? d[0]?.message : d.message || `SFDC ${r.status}`);
+    }
+    await logAudit({
+      userEmail: req.user?.email,
+      action: 'ubo_removed',
+      category: 'compliance',
+      entityType: 'Contact',
+      entityId: req.params.id,
+      details: { contactId: req.params.id },
+      severity: 'warning',
+      req,
+    });
     res.json({ ok: true });
   } catch (err) {
     console.error('UBO delete error:', err.message);
@@ -5013,18 +5190,29 @@ app.delete('/api/compliance/ubos/:id', requireAdmin, async (req, res) => {
 // Le PDF reprend tous les UBOs ≥ 25% ownership OU control_type non
 // nul, avec leur statut de vérification et la base légale.
 app.get('/api/compliance/ubos/:accountId/declaration-pdf', requireAuth, async (req, res) => {
+  if (!SF_CONFIGURED) return res.status(501).json({ error: 'Salesforce not configured' });
   try {
-    // 1. Fetch UBOs for the account (all, we filter in memory for clarity)
-    const { data: ubos, error: uboErr } = await supabaseAdmin
-      .from('ubos')
-      .select('*')
-      .eq('salesforce_account_id', req.params.accountId)
-      .order('ownership_percentage', { ascending: false });
-    if (uboErr) return res.status(500).json({ error: uboErr.message });
+    // 1. Fetch UBO Contacts from Salesforce (source of truth)
+    const { accessToken, instanceUrl } = await getSalesforceToken();
+    const fields = [
+      'Id', 'AccountId', 'FirstName', 'LastName', 'Birthdate',
+      'MailingStreet', 'MailingCity', 'MailingPostalCode', 'MailingCountry',
+      'Custody_Is_UBO__c', 'Custody_UBO_Ownership_Pct__c', 'Custody_UBO_Control_Type__c',
+      'Custody_UBO_Document_Type__c', 'Custody_UBO_Document_Ref__c', 'Custody_UBO_Nationality__c',
+      'Custody_UBO_Verified__c', 'Custody_UBO_Verified_By__c', 'Custody_UBO_Verified_At__c',
+      'Custody_UBO_Notes__c',
+    ].join(',');
+    const soql = `SELECT ${fields} FROM Contact WHERE AccountId = '${req.params.accountId}' AND Custody_Is_UBO__c = true ORDER BY Custody_UBO_Ownership_Pct__c DESC NULLS LAST`;
+    const sfR = await fetch(`${instanceUrl}/services/data/v59.0/query/?q=${encodeURIComponent(soql)}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const sfD = await sfR.json();
+    if (!sfR.ok) return res.status(500).json({ error: sfD[0]?.message || 'SFDC query failed' });
+    const ubos = (sfD.records || []).map(mapContactToUbo);
 
     // 2. AMLD5 filter : ≥25% ownership OR non-null control_type
     //    (Art. R.561-1 CMF — bénéficiaire effectif)
-    const declarableUbos = (ubos || []).filter(u =>
+    const declarableUbos = ubos.filter(u =>
       Number(u.ownership_percentage || 0) >= 25 || !!u.control_type
     );
 
@@ -5249,13 +5437,14 @@ app.get('/api/compliance/reporting/acpr', requireAdmin, async (req, res) => {
       .lt('created_at', to);
     const kycList = kycData || [];
 
-    // UBOs
-    const { data: uboData } = await supabaseAdmin
-      .from('ubos')
-      .select('verification_status')
-      .gte('created_at', from)
-      .lt('created_at', to);
-    const uboList = uboData || [];
+    // UBOs — la source de vérité est maintenant Salesforce Contact
+    // avec le flag Custody_Is_UBO__c. Pour les stats ACPR, on pourrait
+    // faire un COUNT via SFDC SOQL ici. Pour l'instant on renvoie un
+    // tableau vide car (a) la table Supabase ubos n'est plus écrite,
+    // (b) la colonne verification_status n'existait pas historiquement,
+    // (c) le cas d'usage "nouveaux UBOs ce mois-ci" est rare.
+    // TODO: remplacer par SOQL count if needed (ex. statistiques ACPR mensuelles).
+    const uboList = [];
 
     // Whitelist
     const { data: wlData } = await supabaseAdmin
@@ -5370,7 +5559,7 @@ app.get('/api/compliance/reporting/acpr/export', requireAdmin, async (req, res) 
       supabaseAdmin.from('wallet_freezes').select('status').gte('created_at', from).lt('created_at', to),
       supabaseAdmin.from('wallet_freezes').select('id').eq('status', 'frozen'),
       supabaseAdmin.from('kyc_checks').select('status').gte('created_at', from).lt('created_at', to),
-      supabaseAdmin.from('ubos').select('verification_status').gte('created_at', from).lt('created_at', to),
+      Promise.resolve({ data: [] }), // ubos déplacés vers SFDC Contact (flag Custody_Is_UBO__c)
       supabaseAdmin.from('address_whitelist').select('status').gte('created_at', from).lt('created_at', to),
       supabaseAdmin.from('client_risk_config').select('risk_level'),
       supabaseAdmin.from('audit_log').select('severity, category').gte('created_at', from).lt('created_at', to),
