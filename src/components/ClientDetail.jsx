@@ -9,7 +9,7 @@ import UBOPanel from './UBOPanel';
 import WalletFreezePanel from './WalletFreezePanel';
 import CustodyEligibilityPanel from './CustodyEligibilityPanel';
 import { SUPPORTED_NETWORKS } from '../config/constants';
-import { createApproval, checkTransferRisk, checkWalletFreeze, screenAddress, fetchApprovals } from '../services/complianceApi';
+import { createApproval, checkTransferRisk, checkWalletFreeze, screenAddress, fetchApprovals, fetchAuditLog } from '../services/complianceApi';
 import { fetchOraclePrices } from '../services/oracleApi';
 import { getKycStatus } from '../services/kycService';
 import { useAuth } from '../context/AuthContext';
@@ -56,6 +56,11 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
   // celles du wallet sélectionné — le banquier veut la vue globale du client.
   const [approvals, setApprovals] = useState([]);
   const [loadingApprovals, setLoadingApprovals] = useState(false);
+  // Timeline d'événements pour ce client (audit_log filtré).
+  // Rassemble KYC/contrat/adéquation/transferts/gels/UBO/risk
+  // dans un seul flux chronologique.
+  const [timeline, setTimeline] = useState([]);
+  const [loadingTimeline, setLoadingTimeline] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
   const [transfer, setTransfer] = useState({ to: '', amount: '', kind: 'Native' });
   // Transfer request flow — 3 stages inside the modal :
@@ -99,7 +104,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
   const kycValid = !kycModuleEnabled || kycLive?.overallStatus === 'validated' || parsed.kyc?.toLowerCase().includes('valid');
 
   useEffect(() => {
-    loadWallets(); loadContacts(); loadKycStatus(); loadApprovals();
+    loadWallets(); loadContacts(); loadKycStatus(); loadApprovals(); loadTimeline();
     fetch(`${API_BASE}/api/admin/settings`).then(r => r.json()).then(s => setKycModuleEnabled(!!s.kyc_module_enabled)).catch(() => {});
     getSalesforceStatus().then(setSfStatus).catch(() => {});
   }, []);
@@ -118,6 +123,22 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
       setApprovals([]);
     }
     setLoadingApprovals(false);
+  };
+
+  // Charge l'historique complet du client : tous les événements
+  // audit_log liés à cet Account (KYC, contrat, transferts, gels,
+  // UBO, risk config, signatures…).
+  const loadTimeline = async () => {
+    setLoadingTimeline(true);
+    try {
+      const raw = await fetchAuditLog({ salesforceAccountId: client.id, limit: 200 });
+      const list = raw?.data || raw || [];
+      setTimeline(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error('loadTimeline error:', err);
+      setTimeline([]);
+    }
+    setLoadingTimeline(false);
   };
 
   // Deep-link to the Salesforce Lightning Account record in a new tab.
@@ -1126,43 +1147,43 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
       )}
 
       {/* ══════════ HISTORY ══════════ */}
+      {/* Timeline chronologique de TOUS les événements client :
+          KYC, adéquation, contrat, UBO, transferts, gels, risk config,
+          signatures, screenings. Source : audit_log filtré par
+          salesforce_account_id, 200 derniers événements. */}
       {tab === 'history' && (
         <div className="animate-fade space-y-6">
-          <div>
-            <h2 className="display-sm text-[#0A0A0A]">Historique global</h2>
-            <p className="text-[13.5px] text-[#5D5D5D] mt-1.5 tracking-[-0.003em]">Tous les wallets sous mandat</p>
+          <div className="flex items-end justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="display-sm text-[#0A0A0A]">
+                Journal <span className="font-display italic text-[#7C5E3C]">d'audit</span>
+              </h2>
+              <p className="text-[13.5px] text-[#5D5D5D] mt-1.5 tracking-[-0.003em] max-w-[60ch]">
+                Tous les événements liés à ce client — KYC, signatures, transferts, gels, UBO.
+                Piste d'audit ACPR Art. L.561-12 CMF · archivage 5 ans.
+              </p>
+            </div>
+            <button
+              onClick={loadTimeline}
+              disabled={loadingTimeline}
+              className="text-[11.5px] font-medium text-[#5D5D5D] hover:text-[#1E1E1E] transition-colors"
+            >
+              {loadingTimeline ? 'Chargement…' : `Rafraîchir · ${timeline.length} événement${timeline.length > 1 ? 's' : ''}`}
+            </button>
           </div>
-          {wallets.length === 0 ? (
+
+          {timeline.length === 0 && !loadingTimeline ? (
             <Card className="py-4">
-              <EmptyState title="Aucun wallet" description="Créez un wallet pour voir l'historique." />
+              <EmptyState
+                title="Aucun événement"
+                description="Les actions sur ce dossier apparaîtront ici chronologiquement."
+              />
             </Card>
           ) : (
-            <Card>
-              {wallets.map((w, i) => {
-                const n = net(w.network);
-                return (
-                  <div
-                    key={w.id}
-                    className={`px-6 py-4 flex items-center justify-between gap-4 ${i < wallets.length - 1 ? 'border-b border-[#E7E7E7]' : ''}`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-[10px] flex items-center justify-center bg-[#F5F3EE] border border-[#E7E7E7]">
-                        <span className="font-mono text-[11px] font-medium">{n.icon}</span>
-                      </div>
-                      <div>
-                        <p className="text-[13.5px] font-medium text-[#0A0A0A] tracking-[-0.01em]">{w.name}</p>
-                        <p className="font-mono text-[11.5px] text-[#5D5D5D]">{truncAddr(w.address, 10)}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <Badge variant={w.status === 'Active' ? 'success' : 'default'} size="sm" dot>{w.status}</Badge>
-                      <p className="text-[11px] text-[#8A8278] mt-1">
-                        {w.dateCreated ? new Date(w.dateCreated).toLocaleDateString('fr-FR') : ''}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
+            <Card className="overflow-hidden">
+              <ul className="divide-y divide-[#E7E7E7]">
+                {timeline.map(ev => <TimelineEvent key={ev.id} event={ev} />)}
+              </ul>
             </Card>
           )}
         </div>
@@ -2147,6 +2168,121 @@ function MandatCard({ isSigned, createdDate }) {
         </div>
       </div>
     </Card>
+  );
+}
+
+/* ─── Sub · TimelineEvent ─────────────────────────────────
+   Rend une ligne du journal d'audit — icône/couleur selon
+   la catégorie, label lisible, détails en petit caractères. */
+function TimelineEvent({ event }) {
+  const { action, category, severity, details, user_email, timestamp } = event || {};
+  const cat = category || 'other';
+  // Couleur/icône par catégorie — palette bronze + semantic
+  const CAT_STYLE = {
+    transfer:   { bg: '#F5EEE0', fg: '#7C5E3C', icon: 'M4 4h16v16H4z M8 12h8' },
+    approval:   { bg: '#F5EEE0', fg: '#7C5E3C', icon: 'M9 12l2 2 4-4' },
+    compliance: { bg: '#FEF2F2', fg: '#991B1B', icon: 'M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+    custody:    { bg: '#F5F3EE', fg: '#0A0A0A', icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' },
+    risk:       { bg: '#FFFBEB', fg: '#92400E', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
+    delegation: { bg: '#F5EEE0', fg: '#7C5E3C', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857' },
+    whitelist:  { bg: '#ECFDF5', fg: '#065F46', icon: 'M5 13l4 4L19 7' },
+    policy:     { bg: '#F5F3EE', fg: '#0A0A0A', icon: 'M9 12l2 2 4-4' },
+    auth:       { bg: '#F5F3EE', fg: '#5D5D5D', icon: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z' },
+    other:      { bg: '#F5F3EE', fg: '#5D5D5D', icon: 'M12 9v2m0 4h.01' },
+  };
+  const style = CAT_STYLE[cat] || CAT_STYLE.other;
+
+  // Mapping des actions vers libellés FR lisibles
+  const ACTION_LABELS = {
+    'kyc.aml_screening': 'Screening AML lancé',
+    'kyc.validated': 'KYC validé',
+    'kyc.rejected': 'KYC rejeté',
+    'adequacy_link_generated': "Lien d'adéquation généré",
+    'adequacy_signed_by_client': 'Questionnaire d\'adéquation signé par le client',
+    'custody_contract_signed_in_app': 'Contrat signé en présentiel',
+    'custody_contract_signed': 'Contrat signé par le client',
+    'custody_contract_redownloaded': 'Contrat re-téléchargé',
+    'approval.requested': 'Demande de transfert créée',
+    'approval.approved': 'Transfert approuvé (4-yeux)',
+    'approval.rejected': 'Transfert rejeté',
+    'approval.executed': 'Transfert exécuté',
+    'approval.execution_failed': 'Échec exécution transfert',
+    'transfer.initiated': 'Transfert initié',
+    'transfer.completed': 'Transfert complété',
+    'transfer.failed': 'Transfert échoué',
+    'transfer.blocked_frozen_wallet': 'Transfert bloqué · wallet gelé',
+    'transfer.blocked_sanctions_match': 'Transfert bloqué · adresse sanctionnée',
+    'transfer.blocked_whitelist': 'Transfert bloqué · absent whitelist',
+    'transfer.blocked_hard_cap': 'Transfert bloqué · plafond dépassé',
+    'wallet_frozen': 'Wallet gelé',
+    'wallet_unfrozen': 'Wallet dégelé',
+    'compliance.sanctions_hit_blocked': 'Adresse sanctionnée détectée',
+    'compliance.address_screening': 'Screening d\'adresse',
+    'compliance.screen_unavailable': 'Screening indisponible',
+    'ubo_added': 'Bénéficiaire effectif ajouté',
+    'ubo_verified': 'Bénéficiaire effectif vérifié',
+    'ubo_removed': 'Bénéficiaire effectif retiré',
+    'delegation.created': 'Délégation créée',
+    'delegation.revoked': 'Délégation révoquée',
+    'risk.config_updated': 'Configuration de risque modifiée',
+    'risk.transfer_check': 'Vérification préalable au transfert',
+    'whitelist.address_added': 'Adresse ajoutée à la whitelist',
+    'whitelist.address_approved': 'Adresse whitelist approuvée',
+    'whitelist.address_revoked': 'Adresse whitelist révoquée',
+    'dfns.policy_archived': 'Policy DFNS archivée',
+    'salesforce_account_update': 'Compte Salesforce modifié',
+  };
+  const label = ACTION_LABELS[action] || action || 'Événement';
+
+  // Date + heure ("12 sept. 2026 · 14:32")
+  const d = timestamp ? new Date(timestamp) : null;
+  const dateStr = d
+    ? `${d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })} · ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+    : '—';
+
+  // Construit un sous-texte depuis les détails les plus pertinents
+  const buildSubtext = () => {
+    if (!details || typeof details !== 'object') return null;
+    const parts = [];
+    if (details.amount && details.assetSymbol) parts.push(`${details.amount} ${details.assetSymbol}`);
+    else if (details.amount) parts.push(String(details.amount));
+    if (details.to) parts.push(`→ ${String(details.to).slice(0, 10)}…`);
+    if (details.destination) parts.push(`→ ${String(details.destination).slice(0, 10)}…`);
+    if (details.riskLevel) parts.push(`Niveau ${details.riskLevel}`);
+    if (details.verdict) parts.push(`Verdict: ${details.verdict}`);
+    if (details.scoring?.score != null) parts.push(`Score ${details.scoring.score}/${details.scoring.max}`);
+    if (details.reason) parts.push(details.reason);
+    if (details.fileName) parts.push(details.fileName);
+    return parts.join(' · ') || null;
+  };
+  const subtext = buildSubtext();
+
+  return (
+    <li className="px-6 py-4 flex items-start gap-4 hover:bg-[#FDFBF6] transition-colors">
+      <div
+        className="flex-shrink-0 w-9 h-9 rounded-[8px] flex items-center justify-center"
+        style={{ background: style.bg, color: style.fg }}
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+          <path strokeLinecap="round" strokeLinejoin="round" d={style.icon} />
+        </svg>
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-[13px] font-medium text-[#0A0A0A] tracking-[-0.006em]">{label}</p>
+          {severity === 'critical' && <Badge variant="error" size="sm">Critique</Badge>}
+          {severity === 'warning'  && <Badge variant="warning" size="sm">Avertissement</Badge>}
+          {severity === 'high'     && <Badge variant="error" size="sm">Haute</Badge>}
+        </div>
+        {subtext && (
+          <p className="text-[12px] text-[#5D5D5D] mt-0.5 truncate">{subtext}</p>
+        )}
+        <p className="text-[11px] text-[#8A8278] mt-1 tabular-nums">
+          <span>{dateStr}</span>
+          {user_email && <> · <span className="font-mono">{user_email}</span></>}
+        </p>
+      </div>
+    </li>
   );
 }
 
