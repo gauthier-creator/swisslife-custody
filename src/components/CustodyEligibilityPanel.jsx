@@ -352,57 +352,69 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
         </div>
       </Card>
 
-      {/* ── Checklist card ──────────────────────────────── */}
-      <Card>
-        <div className="px-7 py-5 border-b border-[#E7E7E7] flex items-center justify-between">
-          <div>
-            <h3 className="text-[15px] font-medium text-[#0A0A0A] tracking-[-0.015em]">Conditions réglementaires</h3>
-            <p className="text-[12.5px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">
-              Checklist MiCA Art. 60 · chaque étape est horodatée et auditée
-            </p>
+      {/* ── Conditional : Checklist (en cours) ou Dossier complet (4/4) ─── */}
+      {isEligible ? (
+        <EligibleDossierCard
+          client={client}
+          salesforceDeepLink={salesforceDeepLink}
+          openInSalesforce={openInSalesforce}
+          runScreening={runScreening}
+          screening={screening}
+          screeningResult={screeningResult}
+          screeningError={screeningError}
+        />
+      ) : (
+        <Card>
+          <div className="px-7 py-5 border-b border-[#E7E7E7] flex items-center justify-between">
+            <div>
+              <h3 className="text-[15px] font-medium text-[#0A0A0A] tracking-[-0.015em]">Conditions réglementaires</h3>
+              <p className="text-[12.5px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">
+                Checklist MiCA Art. 60 · chaque étape est horodatée et auditée
+              </p>
+            </div>
+            <span className="text-[11px] text-[#8A8278] tracking-[0.04em] uppercase font-medium hidden md:block">
+              {items.length} conditions
+            </span>
           </div>
-          <span className="text-[11px] text-[#8A8278] tracking-[0.04em] uppercase font-medium hidden md:block">
-            {items.length} conditions
-          </span>
-        </div>
-        <ul>
-          {items.map((item, i) => (
-            <li
-              key={item.key}
-              className={`px-7 py-5 ${i < items.length - 1 ? 'border-b border-[#E7E7E7]' : ''}`}
-            >
-              <div className="flex items-start justify-between gap-6">
-                <div className="flex items-start gap-5 min-w-0 flex-1">
-                  {/* Check indicator */}
-                  <div className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center"
-                    style={item.done
-                      ? { background: '#0A0A0A', color: '#FFFFFF' }
-                      : { background: '#F5F3EE', color: '#6B6B6B', border: '1px solid rgba(10,10,10,0.06)' }
-                    }
-                  >
-                    {item.done ? (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    ) : (
-                      <span className="text-[13px] font-medium tabular-nums">{item.idx}</span>
-                    )}
+          <ul>
+            {items.map((item, i) => (
+              <li
+                key={item.key}
+                className={`px-7 py-5 ${i < items.length - 1 ? 'border-b border-[#E7E7E7]' : ''}`}
+              >
+                <div className="flex items-start justify-between gap-6">
+                  <div className="flex items-start gap-5 min-w-0 flex-1">
+                    <div className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center"
+                      style={item.done
+                        ? { background: '#0A0A0A', color: '#FFFFFF' }
+                        : { background: '#F5F3EE', color: '#6B6B6B', border: '1px solid rgba(10,10,10,0.06)' }
+                      }
+                    >
+                      {item.done ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <span className="text-[13px] font-medium tabular-nums">{item.idx}</span>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1 pt-0.5">
+                      <h4 className="text-[14.5px] font-medium text-[#0A0A0A] tracking-[-0.01em]">{item.title}</h4>
+                      <p className="text-[13px] text-[#5D5D5D] mt-1 tracking-[-0.003em]">{item.caption}</p>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1 pt-0.5">
-                    <h4 className="text-[14.5px] font-medium text-[#0A0A0A] tracking-[-0.01em]">{item.title}</h4>
-                    <p className="text-[13px] text-[#5D5D5D] mt-1 tracking-[-0.003em]">{item.caption}</p>
-                  </div>
+                  <div className="flex-shrink-0 pt-0.5">{item.action}</div>
                 </div>
-                <div className="flex-shrink-0 pt-0.5">{item.action}</div>
-              </div>
-              {item.meta && <div className="mt-4 pl-14">{item.meta}</div>}
-            </li>
-          ))}
-        </ul>
-      </Card>
+                {item.meta && <div className="mt-4 pl-14">{item.meta}</div>}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
-      {/* ── Documents signés (PDF retrievable depuis SFDC) ──── */}
-      {(client.Custody_Contract_Signed__c || client.Custody_Adequacy_Done__c) && (
+      {/* ── Documents signés — uniquement quand PAS encore éligible, sinon
+          c'est intégré dans EligibleDossierCard pour éviter la redondance. */}
+      {!isEligible && (client.Custody_Contract_Signed__c || client.Custody_Adequacy_Done__c) && (
         <SignedDocumentsCard accountId={client.id} client={client} />
       )}
 
@@ -620,6 +632,195 @@ function AdequacyQuestion({ n, question, value, onChange }) {
    UX : une ligne par doc avec nom, date, taille, actions
    [Prévisualiser] [Télécharger] [Ouvrir dans Salesforce].
 */
+/* ─── Sub · EligibleDossierCard ───────────────────────────
+   Remplace la checklist quand client.Custody_Eligible__c = true
+   (toutes les conditions MiCA 60 validées).
+   4 actions en cards 2×2 :
+     1. Ouvrir dans Salesforce
+     2. Télécharger le contrat de conservation (PDF SFDC)
+     3. Télécharger le questionnaire d'adéquation (PDF SFDC)
+     4. Relancer le screening AML (Chainalysis + ComplyCube)
+*/
+function EligibleDossierCard({ client, salesforceDeepLink, openInSalesforce, runScreening, screening, screeningResult, screeningError }) {
+  const [files, setFiles] = useState([]);
+  const [loadingFiles, setLoadingFiles] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/sf-files/${client.id}`);
+        const list = res.ok ? await res.json() : [];
+        if (alive) setFiles(list || []);
+      } catch {
+        if (alive) setFiles([]);
+      }
+      if (alive) setLoadingFiles(false);
+    })();
+    return () => { alive = false; };
+  }, [client.id, client?.Custody_Contract_Signed__c, client?.Custody_Adequacy_Done__c]);
+
+  // Détection par préfixe de nom de fichier
+  const contractFile = files.find(f => String(f.title || '').toLowerCase().startsWith('contrat_custody_'));
+  const adequacyFile = files.find(f => {
+    const t = String(f.title || '').toLowerCase();
+    return t.startsWith('adequation_mifid_') || t.startsWith('adequation_custody_');
+  });
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="px-7 py-5 border-b border-[#E7E7E7] flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <p className="text-eyebrow">Dossier complet · MiCA Art. 60 validé</p>
+          <h3 className="text-[15px] font-medium text-[#0A0A0A] tracking-[-0.015em] mt-1.5">
+            Documents <span className="font-display italic text-[#7C5E3C]">& actions</span>
+          </h3>
+          <p className="text-[12.5px] text-[#5D5D5D] mt-1 tracking-[-0.003em] max-w-[58ch]">
+            Le client est éligible à la conservation. Retrouve ici ses pièces signées
+            et relance les contrôles de conformité.
+          </p>
+        </div>
+        <Badge variant="success" dot>Éligible</Badge>
+      </div>
+      <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* ① Salesforce */}
+        <DossierCard
+          tone="ink"
+          title="Fiche Salesforce"
+          caption="Voir l'Account complet dans le CRM — conformité, activité, contacts."
+          icon={(
+            <svg className="w-[17px] h-[17px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          )}
+          primaryLabel="Ouvrir dans Salesforce"
+          primaryOnClick={openInSalesforce}
+          primaryDisabled={!salesforceDeepLink}
+        />
+
+        {/* ② Contrat de conservation */}
+        <DossierCard
+          tone="bronze"
+          title="Contrat de conservation"
+          caption={contractFile
+            ? `Signé le ${new Date(contractFile.createdDate).toLocaleDateString('fr-FR')}`
+            : 'PDF introuvable dans Salesforce · re-signer ?'}
+          icon={(
+            <svg className="w-[17px] h-[17px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          )}
+          primaryLabel={contractFile ? 'Télécharger' : 'Indisponible'}
+          primaryHref={contractFile ? `${API_BASE}/api/sf-files/download/${contractFile.versionId}` : null}
+          primaryDownload={contractFile?.title}
+          primaryDisabled={!contractFile || loadingFiles}
+        />
+
+        {/* ③ Questionnaire d'adéquation */}
+        <DossierCard
+          tone="bronze"
+          title="Questionnaire d'adéquation"
+          caption={adequacyFile
+            ? `Signé le ${new Date(adequacyFile.createdDate).toLocaleDateString('fr-FR')}`
+            : 'PDF introuvable dans Salesforce'}
+          icon={(
+            <svg className="w-[17px] h-[17px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+          )}
+          primaryLabel={adequacyFile ? 'Télécharger' : 'Indisponible'}
+          primaryHref={adequacyFile ? `${API_BASE}/api/sf-files/download/${adequacyFile.versionId}` : null}
+          primaryDownload={adequacyFile?.title}
+          primaryDisabled={!adequacyFile || loadingFiles}
+        />
+
+        {/* ④ Screening AML */}
+        <DossierCard
+          tone="cream"
+          title="Screening AML"
+          caption={screening
+            ? 'En cours — Chainalysis + ComplyCube…'
+            : screeningResult?.status === 'complete'
+              ? 'Dernier screening : clean'
+              : screeningResult?.status === 'failed'
+                ? 'Dernier screening : match détecté'
+                : 'Relancer pour vérifier les listes sanctions + adverse media'}
+          icon={(
+            <svg className="w-[17px] h-[17px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+          )}
+          primaryLabel={screening ? 'Screening en cours…' : 'Lancer le screening'}
+          primaryOnClick={runScreening}
+          primaryDisabled={screening}
+        />
+      </div>
+      {screeningError && (
+        <div className="mx-5 mb-5 px-4 py-3 bg-[#FEF2F2] border border-[rgba(220,38,38,0.2)] rounded-[8px]">
+          <p className="text-[12px] text-[#991B1B]">{screeningError}</p>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+/* Petit tile réutilisable pour EligibleDossierCard. */
+function DossierCard({ tone, title, caption, icon, primaryLabel, primaryOnClick, primaryHref, primaryDownload, primaryDisabled }) {
+  const toneStyles = {
+    ink:    { iconBg: '#0A0A0A',  iconFg: '#FFFFFF' },
+    bronze: { iconBg: '#F5EEE0',  iconFg: '#7C5E3C' },
+    cream:  { iconBg: '#FDFBF6',  iconFg: '#7C5E3C' },
+  }[tone] || { iconBg: '#F5F3EE', iconFg: '#1E1E1E' };
+
+  const btnDisabled = !!primaryDisabled;
+
+  return (
+    <div className="bg-white border border-[#E7E7E7] rounded-[10px] p-5 flex flex-col gap-4 hover:border-[#D1D5DB] transition-colors">
+      <div className="flex items-start gap-3">
+        <span
+          className="flex-shrink-0 w-10 h-10 rounded-[10px] flex items-center justify-center"
+          style={{ background: toneStyles.iconBg, color: toneStyles.iconFg }}
+        >
+          {icon}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[13.5px] font-semibold text-[#0A0A0A] tracking-[-0.006em]">{title}</p>
+          <p className="text-[12px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em] leading-[1.5]">{caption}</p>
+        </div>
+      </div>
+      {primaryHref ? (
+        <a
+          href={btnDisabled ? undefined : primaryHref}
+          {...(primaryDownload ? { download: primaryDownload } : {})}
+          target={primaryDownload ? undefined : '_blank'}
+          rel="noopener noreferrer"
+          aria-disabled={btnDisabled}
+          className={`w-full inline-flex items-center justify-center gap-2 h-9 rounded-[6px] text-[12.5px] font-semibold transition-colors ${
+            btnDisabled
+              ? 'bg-[#F5F3EE] text-[#8A8278] cursor-not-allowed'
+              : 'bg-[#1E1E1E] text-white hover:bg-black'
+          }`}
+        >
+          {primaryLabel}
+        </a>
+      ) : (
+        <button
+          type="button"
+          onClick={primaryOnClick}
+          disabled={btnDisabled}
+          className={`w-full inline-flex items-center justify-center gap-2 h-9 rounded-[6px] text-[12.5px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+            btnDisabled
+              ? 'bg-[#F5F3EE] text-[#8A8278]'
+              : 'bg-[#1E1E1E] text-white hover:bg-black'
+          }`}
+        >
+          {primaryLabel}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function SignedDocumentsCard({ accountId, client }) {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);

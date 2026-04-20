@@ -524,11 +524,33 @@ app.post('/api/signing/contract/in-app-sign', requireAuth, async (req, res) => {
       signedAt,
     });
 
-    // 2. Upload to Salesforce Files (Account attachment)
+    // 2. Upload to Salesforce Files (Account attachment) — REQUIRED.
+    // Si l'upload échoue on propage l'erreur au client pour qu'il voie le
+    // problème immédiatement (plutôt que de découvrir plus tard que le
+    // contrat signé n'a jamais été archivé dans le CRM).
     const dateSlug = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const safeName = clientName.replace(/[^a-zA-Z0-9]/g, '_');
     const fileName = `Contrat_Custody_${safeName}_${dateSlug}.pdf`;
     const uploadResult = await uploadPDFToSalesforce(pdfBuffer, fileName, salesforceAccountId);
+    if (!uploadResult) {
+      // Upload a échoué — on logue et on retourne une erreur claire
+      await logAudit({
+        userEmail: req.user?.email,
+        action: 'custody_contract_upload_failed',
+        category: 'custody',
+        entityType: 'Account',
+        entityId: salesforceAccountId,
+        clientName,
+        salesforceAccountId,
+        details: { fileName, reason: 'uploadPDFToSalesforce returned null' },
+        severity: 'critical',
+        req,
+      });
+      return res.status(500).json({
+        error: 'Contrat signé mais échec de l\'archivage Salesforce — ré-essayez. Consulter les logs serveur pour le détail.',
+        fileName,
+      });
+    }
 
     // 3. Flag Custody_Contract_Signed__c on Account
     let sfWriteback = { attempted: false, ok: false };
