@@ -70,6 +70,30 @@ export async function getWalletHistory(walletId) {
   return res.json();
 }
 
+// Archive a wallet (soft-delete via DFNS tag sl:archived).
+// Garde-fous serveur : solde = 0 et aucun approval pending.
+export async function archiveWallet(walletId, reason = null) {
+  const authHeaders = await getAuthHeaders();
+  const res = await fetch(`${API_BASE}/api/dfns/wallets/${walletId}/archive`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ reason }),
+  });
+  if (!res.ok) throw await dfnsError(res, 'Archivage refusé');
+  return res.json();
+}
+
+export async function unarchiveWallet(walletId, reason = null) {
+  const authHeaders = await getAuthHeaders();
+  const res = await fetch(`${API_BASE}/api/dfns/wallets/${walletId}/unarchive`, {
+    method: 'POST',
+    headers: authHeaders,
+    body: JSON.stringify({ reason }),
+  });
+  if (!res.ok) throw await dfnsError(res, 'Désarchivage refusé');
+  return res.json();
+}
+
 export async function transferAsset(walletId, { kind, to, amount, contract, assetSymbol, approvalId }) {
   const authHeaders = await getAuthHeaders();
   const body = { kind, to, amount };

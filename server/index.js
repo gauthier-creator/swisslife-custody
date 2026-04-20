@@ -1506,6 +1506,118 @@ app.get('/api/dfns/wallets/:walletId/transfers/:transferId', async (req, res) =>
   }
 });
 
+// ============================================================
+// WALLET ARCHIVE — "suppression logique" d'un wallet DFNS
+// ============================================================
+// DFNS ne permet pas de hard-delete un wallet MPC (c'est une
+// cryptographic root, pas une donnée éphémère). Notre archivage :
+//   1. Vérifie garde-fous compliance (solde = 0, aucun approval pending)
+//   2. Ajoute le tag `sl:archived` via dfns.wallets.tagWallet
+//   3. L'UI filtre les wallets avec ce tag hors de la liste active
+//   4. Audit log (ACPR Art. L.561-12 — archivage 5 ans)
+//
+// Réversible : POST .../unarchive retire le tag.
+// Référence : MiCA Art. 75 (conservation documentaire), DFNS Policy
+// Engine (tags filtering).
+const ARCHIVED_TAG = 'sl:archived';
+
+async function walletHasPendingApprovals(walletId) {
+  const { data } = await supabaseAdmin
+    .from('transfer_approvals')
+    .select('id')
+    .eq('wallet_id', walletId)
+    .in('status', ['pending', 'approved'])
+    .limit(1);
+  return !!(data && data.length);
+}
+
+async function walletHasNonZeroBalance(walletId) {
+  try {
+    const r = await dfns.wallets.getWalletAssets({ walletId });
+    const assets = r?.assets || [];
+    return assets.some(a => Number(a.balance || 0) > 0);
+  } catch {
+    // Si l'API échoue, on fail-closed (refuse l'archivage)
+    return true;
+  }
+}
+
+app.post('/api/dfns/wallets/:walletId/archive', requireAuth, async (req, res) => {
+  const walletId = req.params.walletId;
+  try {
+    // 1. Fetch current wallet (pour recupérer les tags existants)
+    const wallet = await dfns.wallets.getWallet({ walletId });
+
+    if ((wallet?.tags || []).includes(ARCHIVED_TAG)) {
+      return res.status(400).json({ error: 'Wallet déjà archivé' });
+    }
+
+    // 2. Garde-fou : solde non vide
+    if (await walletHasNonZeroBalance(walletId)) {
+      return res.status(403).json({
+        error: 'Wallet non vide — videz le solde avant archivage',
+        code: 'WALLET_NOT_EMPTY',
+      });
+    }
+
+    // 3. Garde-fou : pas d'approvals pending
+    if (await walletHasPendingApprovals(walletId)) {
+      return res.status(403).json({
+        error: 'Des demandes de transfert sont en attente ou approuvées — résolvez-les avant archivage',
+        code: 'PENDING_APPROVALS',
+      });
+    }
+
+    // 4. Tag le wallet comme archivé (préserve les tags existants)
+    const nextTags = [...(wallet?.tags || []), ARCHIVED_TAG];
+    await dfns.wallets.tagWallet({ walletId, body: { tags: nextTags } });
+
+    // 5. Audit log — ACPR Art. L.561-12 (archivage 5 ans)
+    await logAudit({
+      userEmail: req.user?.email,
+      action: 'wallet.archived',
+      category: 'custody',
+      entityType: 'wallet',
+      entityId: walletId,
+      details: { walletId, reason: req.body?.reason || 'Demande banquier', name: wallet?.name },
+      severity: 'warning',
+      req,
+    });
+
+    res.json({ ok: true, walletId, tags: nextTags });
+  } catch (err) {
+    console.error('wallet archive error:', err.message);
+    res.status((err.httpStatus > 99 && err.httpStatus < 1000) ? err.httpStatus : 500).json({ error: err.message });
+  }
+});
+
+// Désarchivage — réversible si erreur d'archivage
+app.post('/api/dfns/wallets/:walletId/unarchive', requireAuth, async (req, res) => {
+  const walletId = req.params.walletId;
+  try {
+    const wallet = await dfns.wallets.getWallet({ walletId });
+    if (!(wallet?.tags || []).includes(ARCHIVED_TAG)) {
+      return res.status(400).json({ error: 'Wallet non archivé' });
+    }
+    const nextTags = (wallet?.tags || []).filter(t => t !== ARCHIVED_TAG);
+    await dfns.wallets.tagWallet({ walletId, body: { tags: nextTags } });
+    await logAudit({
+      userEmail: req.user?.email,
+      action: 'wallet.unarchived',
+      category: 'custody',
+      entityType: 'wallet',
+      entityId: walletId,
+      details: { walletId, reason: req.body?.reason || null },
+      severity: 'info',
+      req,
+    });
+    res.json({ ok: true, walletId, tags: nextTags });
+  } catch (err) {
+    console.error('wallet unarchive error:', err.message);
+    res.status((err.httpStatus > 99 && err.httpStatus < 1000) ? err.httpStatus : 500).json({ error: err.message });
+  }
+});
+
 app.post('/api/dfns/wallets/:walletId/transfers', requireAuth, async (req, res) => {
   const walletId = req.params.walletId;
   const destination = (req.body?.to || '').trim();

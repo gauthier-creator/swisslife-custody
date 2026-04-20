@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { listWallets, createWallet, getWalletAssets, transferAsset, getWalletHistory } from '../services/dfnsApi';
+import { listWallets, createWallet, getWalletAssets, transferAsset, getWalletHistory, archiveWallet, unarchiveWallet } from '../services/dfnsApi';
 import { fetchContacts, fetchClientById, parseDescription, getSalesforceStatus } from '../services/salesforceApi';
 import WhitelistPanel from './WhitelistPanel';
 import RiskConfigPanel from './RiskConfigPanel';
@@ -966,6 +966,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-[14.5px] font-medium text-[#0A0A0A] truncate tracking-[-0.015em]">{w.name || n.name}</p>
                         {frozenWallets[w.id] && <Badge variant="error" size="sm" dot>Gelé</Badge>}
+                        {(w.tags || []).includes('sl:archived') && <Badge variant="default" size="sm" dot>Archivé</Badge>}
                         <Badge variant={w.status === 'Active' ? 'success' : 'warning'} size="sm" dot>{w.status}</Badge>
                       </div>
                       <p className="text-[12px] font-mono text-[#5D5D5D] truncate mt-1">{truncAddr(w.address, 12)}</p>
@@ -1798,23 +1799,62 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                 {/* Actions — keyboard-focusable.
                     • Historique → tab Transferts avec ce wallet sélectionné
                     • Transfert → tab Transferts + ouvre modal transfert
-                    "Voir détails complets" retiré : le drawer EST le détail. */}
-                <div className="grid grid-cols-2 gap-2 pt-4 border-t border-[#E7E7E7]">
-                  <Button
-                    variant="secondary"
-                    size="md"
-                    onClick={() => { setWalletDrawerId(null); setTab('transfers'); setSelectedWallet(w); }}
-                  >
-                    Voir l'historique
-                  </Button>
-                  <Button
-                    variant="primary"
-                    size="md"
-                    onClick={() => { setWalletDrawerId(null); setTab('transfers'); setSelectedWallet(w); setShowTransfer(true); }}
-                  >
-                    Demander un transfert
-                  </Button>
-                </div>
+                    • Archiver → soft-delete via DFNS tag (archivage ACPR)
+                    Les deux premiers sont désactivés si le wallet est archivé. */}
+                {(() => {
+                  const isArchived = (w.tags || []).includes('sl:archived');
+                  return (
+                    <div className="space-y-2 pt-4 border-t border-[#E7E7E7]">
+                      {isArchived && (
+                        <div className="px-3 py-2.5 bg-[#FEF2F2] border border-[rgba(220,38,38,0.18)] rounded-[8px] mb-1">
+                          <p className="text-[12px] text-[#991B1B] tracking-[-0.003em]">
+                            <strong>Wallet archivé</strong> — Aucun transfert possible.
+                            Conservé 5 ans pour audit ACPR (Art. L.561-12 CMF).
+                          </p>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="secondary"
+                          size="md"
+                          onClick={() => { setWalletDrawerId(null); setTab('transfers'); setSelectedWallet(w); }}
+                        >
+                          Voir l'historique
+                        </Button>
+                        <Button
+                          variant="primary"
+                          size="md"
+                          disabled={isArchived}
+                          onClick={() => { setWalletDrawerId(null); setTab('transfers'); setSelectedWallet(w); setShowTransfer(true); }}
+                        >
+                          Demander un transfert
+                        </Button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const label = isArchived ? 'désarchiver' : 'archiver';
+                          if (!confirm(`Confirmer ${label} ce wallet ?${isArchived ? '' : '\n\nL\'archivage est réversible. Le solde doit être à zéro et aucune demande de transfert en attente.'}`)) return;
+                          try {
+                            if (isArchived) await unarchiveWallet(w.id);
+                            else await archiveWallet(w.id);
+                            setWalletDrawerId(null);
+                            await loadWallets();
+                          } catch (err) {
+                            alert(err.message || 'Erreur');
+                          }
+                        }}
+                        className={`w-full h-9 px-4 rounded-[6px] text-[13px] font-semibold border transition-colors ${
+                          isArchived
+                            ? 'bg-white text-[#7C5E3C] border-[rgba(124,94,60,0.28)] hover:bg-[#FDFBF6]'
+                            : 'bg-white text-[#DC2626] border-[rgba(220,38,38,0.22)] hover:bg-[#FEF2F2] hover:border-[rgba(220,38,38,0.4)]'
+                        }`}
+                      >
+                        {isArchived ? 'Désarchiver ce wallet' : 'Archiver ce wallet'}
+                      </button>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </Drawer>
