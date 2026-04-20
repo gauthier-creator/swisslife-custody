@@ -1919,12 +1919,14 @@ app.get('/api/compliance/approvals', async (req, res) => {
 app.post('/api/compliance/approvals', requireAuth, async (req, res) => {
   try {
     const {
-      walletId, to, amount, assetSymbol, network, note,
+      walletId, walletName, to, amount, assetSymbol, network, note,
       requestedBy, requestedByEmail, clientName, salesforceAccountId,
     } = req.body;
 
-    if (!walletId || !to || !amount) {
-      return res.status(400).json({ error: 'walletId, to, and amount are required' });
+    if (!walletId || !to || !amount || !salesforceAccountId || !assetSymbol) {
+      return res.status(400).json({
+        error: 'walletId, to, amount, salesforceAccountId et assetSymbol sont requis',
+      });
     }
 
     // ─── Compliance Gate · wallet freeze (per-wallet) ─────────
@@ -1955,15 +1957,16 @@ app.post('/api/compliance/approvals', requireAuth, async (req, res) => {
 
     const { data, error } = await supabaseAdmin.from('transfer_approvals').insert({
       wallet_id: walletId,
+      wallet_name: walletName || null,
       to_address: to,
-      amount,
-      asset_symbol: assetSymbol || null,
+      amount: String(amount),
+      asset_symbol: assetSymbol,
       network: network || null,
       note: note || null,
       requested_by: requestedBy || null,
-      requested_by_email: requestedByEmail || null,
+      requested_by_email: requestedByEmail || req.user?.email || null,
       client_name: clientName || null,
-      salesforce_account_id: salesforceAccountId || null,
+      salesforce_account_id: salesforceAccountId,
       status: 'pending',
     }).select().single();
 
@@ -4739,7 +4742,7 @@ app.get('/api/compliance/reporting/acpr/export', requireAdmin, async (req, res) 
       { data: riskData },
       { data: auditData },
     ] = await Promise.all([
-      supabaseAdmin.from('transfer_approvals').select('status, amount').gte('created_at', from).lt('created_at', to),
+      supabaseAdmin.from('transfer_approvals').select('status, amount').gte('requested_at', from).lt('requested_at', to),
       supabaseAdmin.from('suspicious_activity_reports').select('status, filing_authority').gte('created_at', from).lt('created_at', to),
       supabaseAdmin.from('compliance_alerts').select('status').gte('created_at', from).lt('created_at', to),
       supabaseAdmin.from('wallet_freezes').select('status').gte('created_at', from).lt('created_at', to),
