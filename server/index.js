@@ -3183,11 +3183,15 @@ app.post('/api/kyc/upload-document', upload.single('file'), async (req, res) => 
     } else {
       // ── LIVE ComplyCube flow ──
       // 1. Reuse existing ComplyCube client id if we already created one.
+      //    Filtre strict sur provider='complycube' — ignore les anciens
+      //    demo_cli_... qui sont invalides côté API ComplyCube LIVE.
       const { data: existingChecks } = await supabaseAdmin
         .from('kyc_checks')
         .select('complycube_client_id')
         .eq('salesforce_account_id', salesforceAccountId)
+        .eq('provider', 'complycube')
         .not('complycube_client_id', 'is', null)
+        .order('created_at', { ascending: false })
         .limit(1);
 
       let complyCubeClientId = existingChecks?.[0]?.complycube_client_id;
@@ -3308,13 +3312,17 @@ app.post('/api/kyc/aml-screen', async (req, res) => {
     } else {
       // ── LIVE ComplyCube screening ──
       // Reuse an existing ComplyCube client if one was created by an earlier
-      // document upload; otherwise provision a fresh one so the screening can
-      // run even before any document is uploaded (standalone AML flow).
+      // LIVE-mode check; otherwise provision a fresh one. On filtre
+      // strictement sur provider='complycube' pour ignorer les anciens
+      // demo_cli_... laissés par des runs sandbox passés (leur réutilisation
+      // provoque une erreur "'clientId' is invalid" chez ComplyCube).
       const { data: existingChecks } = await supabaseAdmin
         .from('kyc_checks')
         .select('complycube_client_id')
         .eq('salesforce_account_id', salesforceAccountId)
+        .eq('provider', 'complycube')
         .not('complycube_client_id', 'is', null)
+        .order('created_at', { ascending: false })
         .limit(1);
 
       let complyCubeClientId = existingChecks?.[0]?.complycube_client_id;
