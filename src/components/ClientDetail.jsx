@@ -726,42 +726,13 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                 </div>
               </Card>
 
-              {/* Patrimoine consolidé */}
-              <Card>
-                <div className="px-6 pt-5 pb-4 border-b border-[#E7E7E7]">
-                  <p className="text-eyebrow">Patrimoine consolidé</p>
-                  <p className="display-sm text-[#0A0A0A] tabular-nums mt-2">
-                    {client.aum ? fmtCompactEUR(client.aum) : '—'}
-                  </p>
-                </div>
-                <ul>
-                  <WealthRow
-                    label="Liquidités"
-                    sub="Comptes courants"
-                    value={fmtEUR(Math.round((client.aum || 0) * 0.15))}
-                    pct={15}
-                  />
-                  <WealthRow
-                    label="Investissements"
-                    sub="Actions · Obligations"
-                    value={fmtEUR(Math.round((client.aum || 0) * 0.65))}
-                    pct={65}
-                  />
-                  <WealthRow
-                    label="Immobilier"
-                    sub="Direct et indirect"
-                    value={fmtEUR(Math.round((client.aum || 0) * 0.15))}
-                    pct={15}
-                  />
-                  <WealthRow
-                    label="Actifs numériques"
-                    sub={parsed.allocation ? `Cible ${parsed.allocation}` : 'Conservation MiCA'}
-                    value={fmtEUR(Math.round((client.aum || 0) * 0.05))}
-                    pct={5}
-                    last
-                  />
-                </ul>
-              </Card>
+              {/* Patrimoine consolidé — lit Custody_AUM_*__c depuis SFDC.
+                  Si tous null → fallback sur l'ancienne heuristique basée
+                  sur AnnualRevenue (compatibilité avec comptes non remplis).
+                  Le banquier édite les 4 champs dans la fiche SFDC
+                  (section "Custody · Conformité KYC" — on ajoutera un
+                  tab dédié au patrimoine plus tard). */}
+              <PatrimonyCard client={client} parsedAllocation={parsed.allocation} />
 
               {/* Conformité KYC — compact compliance dashboard */}
               <Card>
@@ -1938,6 +1909,77 @@ function MetaRow({ label, value, mono }) {
       <dt className="text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em] mb-1">{label}</dt>
       <dd className={`text-[12.5px] ${mono ? 'font-mono text-[#1E1E1E] break-all' : 'text-[#0A0A0A] font-medium tracking-[-0.01em]'}`}>{value}</dd>
     </div>
+  );
+}
+
+/* PatrimonyCard — répartition du patrimoine lue depuis SFDC (4 custom fields).
+   Si aucun champ n'est rempli, fallback sur l'ancienne répartition fictive
+   basée sur AnnualRevenue (pour ne pas casser les comptes existants). */
+function PatrimonyCard({ client, parsedAllocation }) {
+  const liquidity   = Number(client.Custody_AUM_Liquidity__c)     || 0;
+  const securities  = Number(client.Custody_AUM_Securities__c)    || 0;
+  const realEstate  = Number(client.Custody_AUM_RealEstate__c)    || 0;
+  const cryptoTgt   = Number(client.Custody_AUM_Crypto_Target__c) || 0;
+  const sfTotal     = liquidity + securities + realEstate + cryptoTgt;
+  const hasSfdcData = sfTotal > 0;
+
+  // Fallback : ancienne répartition 15/65/15/5 sur AnnualRevenue
+  const fallbackTotal = Number(client.aum) || 0;
+  const showFallback  = !hasSfdcData && fallbackTotal > 0;
+
+  const total = hasSfdcData ? sfTotal : fallbackTotal;
+  const rows = hasSfdcData
+    ? [
+        { label: 'Liquidités',        sub: 'Comptes courants',    value: liquidity,  pct: total ? (liquidity / total) * 100 : 0 },
+        { label: 'Investissements',   sub: 'Actions · Obligations · AV', value: securities, pct: total ? (securities / total) * 100 : 0 },
+        { label: 'Immobilier',        sub: 'Direct et indirect',  value: realEstate, pct: total ? (realEstate / total) * 100 : 0 },
+        { label: 'Actifs numériques', sub: parsedAllocation ? `Cible ${parsedAllocation}` : 'Allocation cible custody', value: cryptoTgt, pct: total ? (cryptoTgt / total) * 100 : 0 },
+      ]
+    : [
+        { label: 'Liquidités',        sub: 'Comptes courants',    value: Math.round(fallbackTotal * 0.15), pct: 15 },
+        { label: 'Investissements',   sub: 'Actions · Obligations', value: Math.round(fallbackTotal * 0.65), pct: 65 },
+        { label: 'Immobilier',        sub: 'Direct et indirect',  value: Math.round(fallbackTotal * 0.15), pct: 15 },
+        { label: 'Actifs numériques', sub: parsedAllocation ? `Cible ${parsedAllocation}` : 'Conservation MiCA', value: Math.round(fallbackTotal * 0.05), pct: 5 },
+      ];
+
+  return (
+    <Card>
+      <div className="px-6 pt-5 pb-4 border-b border-[#E7E7E7]">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-eyebrow">Patrimoine consolidé</p>
+            <p className="display-sm text-[#0A0A0A] tabular-nums mt-2">
+              {total ? fmtCompactEUR(total) : '—'}
+            </p>
+          </div>
+          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-[5px] text-[10px] font-semibold uppercase tracking-[0.06em] ${
+            hasSfdcData
+              ? 'bg-[#ECFDF5] text-[#065F46]'
+              : 'bg-[#FFFBEB] text-[#92400E]'
+          }`}>
+            <span className="w-1 h-1 rounded-full" style={{ background: 'currentColor' }} />
+            {hasSfdcData ? 'Salesforce' : 'Estimé'}
+          </span>
+        </div>
+        {showFallback && (
+          <p className="text-[11px] text-[#92400E] mt-2 tracking-[-0.003em]">
+            Répartition estimative — remplir Custody_AUM_* dans Salesforce pour une ventilation réelle.
+          </p>
+        )}
+      </div>
+      <ul>
+        {rows.map((r, i) => (
+          <WealthRow
+            key={r.label}
+            label={r.label}
+            sub={r.sub}
+            value={fmtEUR(r.value)}
+            pct={r.pct}
+            last={i === rows.length - 1}
+          />
+        ))}
+      </ul>
+    </Card>
   );
 }
 

@@ -159,18 +159,34 @@ function custodySectionXml() {
     </layoutColumns>
     <style>TwoColumnsTopToBottom</style>
   </layoutSections>
+  <layoutSections>
+    <customLabel>true</customLabel>
+    <detailHeading>true</detailHeading>
+    <editHeading>true</editHeading>
+    <label>Custody · Patrimoine consolidé</label>
+    <layoutColumns>
+      <layoutItems><behavior>Edit</behavior><field>Custody_AUM_Liquidity__c</field></layoutItems>
+      <layoutItems><behavior>Edit</behavior><field>Custody_AUM_Securities__c</field></layoutItems>
+    </layoutColumns>
+    <layoutColumns>
+      <layoutItems><behavior>Edit</behavior><field>Custody_AUM_RealEstate__c</field></layoutItems>
+      <layoutItems><behavior>Edit</behavior><field>Custody_AUM_Crypto_Target__c</field></layoutItems>
+    </layoutColumns>
+    <style>TwoColumnsTopToBottom</style>
+  </layoutSections>
 `;
 }
 
 function addCustodySection(layoutXml) {
   // Move-or-insert : on extrait chaque bloc <layoutSections>...</layoutSections>
   // individuellement (pour éviter qu'un regex greedy ne bouffe le Name).
-  // Si Custody existe → retiré puis ré-inséré en position #2.
+  // Si une section Custody existe (KYC, Patrimoine) → retirée puis
+  // ré-insérée en position #2 avec les valeurs à jour.
   let cleaned = layoutXml;
-  // Remove existing Custody block, one layoutSections at a time
   const blockRe = /\n\s*<layoutSections>([\s\S]*?)<\/layoutSections>/g;
+  const CUSTODY_LABELS = ['Custody · Conformité KYC', 'Custody · Patrimoine consolidé'];
   cleaned = cleaned.replace(blockRe, (full, inner) =>
-    inner.includes('Custody · Conformité KYC') ? '' : full
+    CUSTODY_LABELS.some(l => inner.includes(l)) ? '' : full
   );
 
   // Insert after the FIRST layoutSections (= "Account Information")
