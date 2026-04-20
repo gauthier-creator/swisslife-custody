@@ -200,44 +200,52 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
         </div>
       ),
     },
-    {
-      key: 'sanctions',
-      idx: 2,
-      title: 'Screening AML',
-      caption: 'Listes OFAC, EU, ONU, UK HMT · PEP · adverse media — via ComplyCube',
-      done: client.Custody_Sanctions_Clear__c === true,
-      action: (
-        <div className="flex items-center gap-2 flex-wrap justify-end">
-          <Badge
-            variant={
-              screening ? 'warning' :
-              client.Custody_Sanctions_Clear__c ? 'success' :
-              screeningResult && screeningResult.status === 'failed' ? 'error' : 'default'
-            }
-            dot
-          >
-            {screening ? 'Analyse…' :
-              client.Custody_Sanctions_Clear__c ? 'Clear' :
-              screeningResult && screeningResult.status === 'failed' ? 'Alerte' : 'Non vérifié'}
-          </Badge>
-          {/* Screening ouvert à tous les banquiers : c'est une lecture OFAC
-              non destructive. L'isAdmin gate était une erreur — les RM
-              doivent pouvoir vérifier eux-mêmes leurs clients. */}
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={runScreening}
-            disabled={screening}
-          >
-            {screening && <Spinner />}
-            {client.Custody_Sanctions_Clear__c ? 'Relancer' : 'Lancer le screening'}
-          </Button>
-        </div>
-      ),
-      meta: (screeningResult || screeningError) && (
-        <ScreeningReport check={screeningResult} error={screeningError} />
-      ),
-    },
+    (() => {
+      // Source de vérité = 1/ screeningResult local vient d'être posé
+      //                    OU 2/ flag SFDC déjà positionné à true
+      // Si le champ custom Custody_Sanctions_Clear__c n'existe pas dans
+      // l'org SFDC, le PATCH server silencie mais le screeningResult local
+      // reste autoritaire. Pas de régression UX.
+      const screeningCleared = screeningResult?.status === 'complete' || client.Custody_Sanctions_Clear__c === true;
+      const screeningFailed  = screeningResult?.status === 'failed';
+      return {
+        key: 'sanctions',
+        idx: 2,
+        title: 'Screening AML',
+        caption: 'Listes OFAC, EU, ONU, UK HMT · PEP · adverse media — via ComplyCube',
+        done: screeningCleared,
+        action: (
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <Badge
+              variant={
+                screening ? 'warning' :
+                screeningCleared ? 'success' :
+                screeningFailed ? 'error' : 'default'
+              }
+              dot
+            >
+              {screening ? 'Analyse…' :
+                screeningCleared ? 'Clear' :
+                screeningFailed ? 'Alerte' : 'Non vérifié'}
+            </Badge>
+            {/* Screening ouvert à tous les banquiers : c'est une lecture OFAC
+                non destructive. */}
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={runScreening}
+              disabled={screening}
+            >
+              {screening && <Spinner />}
+              {screeningCleared ? 'Relancer' : 'Lancer le screening'}
+            </Button>
+          </div>
+        ),
+        meta: (screeningResult || screeningError) && (
+          <ScreeningReport check={screeningResult} error={screeningError} />
+        ),
+      };
+    })(),
     {
       key: 'adequacy',
       idx: 3,
