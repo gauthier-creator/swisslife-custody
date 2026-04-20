@@ -139,10 +139,11 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
     window.open(salesforceDeepLink, '_blank', 'noopener,noreferrer');
   };
 
-  const allAdequacyOui = adequacy.q1 === 'Oui' && adequacy.q2 === 'Oui' && adequacy.q3 === 'Oui' && adequacy.q4 === 'Oui';
-
+  // Génération du lien adéquation — plus de pré-remplissage banquier.
+  // Le client répond lui-même aux 12 questions MiFID II et signe.
+  // (Ancien comportement : banquier pré-remplissait 4 Oui/Non → non conforme
+  // MiFID II Art. 25 qui exige que le test vienne du client.)
   const submitAdequacy = async () => {
-    if (!allAdequacyOui) return;
     setSubmittingAdequacy(true);
     try {
       const res = await fetch(`${API_BASE}/api/signing/adequacy/generate`, {
@@ -156,7 +157,6 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
           clientPostalCode: client.postalCode || null,
           clientCountry: client.country || null,
           clientPhone: client.phone || null,
-          assessment: adequacy,
         }),
       });
       if (!res.ok) {
@@ -165,8 +165,6 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
       }
       const json = await res.json();
       setAdequacyLink(`${window.location.origin}/sign/adequacy/${json.token}`);
-      setShowAdequacy(false);
-      setAdequacy({ q1: null, q2: null, q3: null, q4: null, notes: '' });
     } catch (err) {
       alert('Erreur : ' + err.message);
     }
@@ -250,7 +248,7 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
       key: 'adequacy',
       idx: 3,
       title: "Évaluation d'adéquation",
-      caption: 'Questionnaire MiCA Art. 66 · signé par le client',
+      caption: 'Questionnaire MiFID II Art. 25 · MiCA Art. 66 · rempli et signé par le client',
       done: client.Custody_Adequacy_Done__c === true,
       action: (
         <div className="flex items-center gap-2">
@@ -258,8 +256,8 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
             {client.Custody_Adequacy_Done__c ? 'Complétée' : 'Non réalisée'}
           </Badge>
           {!client.Custody_Adequacy_Done__c && (
-            <Button size="sm" variant="secondary" onClick={() => setShowAdequacy(true)}>
-              Lancer
+            <Button size="sm" variant="secondary" onClick={submitAdequacy} disabled={submittingAdequacy}>
+              {submittingAdequacy ? 'Génération…' : 'Générer le lien'}
             </Button>
           )}
         </div>
@@ -425,71 +423,8 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
         />
       )}
 
-      {/* ── Adequacy Modal ──────────────────────────────── */}
-      <Modal
-        isOpen={showAdequacy}
-        onClose={() => setShowAdequacy(false)}
-        title="Questionnaire d'adéquation"
-        subtitle="Article 66 du règlement MiCA. Préparez le questionnaire ; le client le signera via un lien dédié et horodaté."
-        maxWidth="max-w-xl"
-      >
-        <div className="space-y-6">
-          <AdequacyQuestion
-            n={1}
-            question="Le client comprend-il la nature volatile des actifs numériques ?"
-            value={adequacy.q1}
-            onChange={(v) => setAdequacy(p => ({ ...p, q1: v }))}
-          />
-          <AdequacyQuestion
-            n={2}
-            question="A-t-il une expérience préalable avec les cryptomonnaies ?"
-            value={adequacy.q2}
-            onChange={(v) => setAdequacy(p => ({ ...p, q2: v }))}
-          />
-          <AdequacyQuestion
-            n={3}
-            question="L'allocation envisagée est-elle cohérente avec son profil de risque ?"
-            value={adequacy.q3}
-            onChange={(v) => setAdequacy(p => ({ ...p, q3: v }))}
-          />
-          <AdequacyQuestion
-            n={4}
-            question="A-t-il été informé des risques de perte en capital ?"
-            value={adequacy.q4}
-            onChange={(v) => setAdequacy(p => ({ ...p, q4: v }))}
-          />
-
-          <div>
-            <label className={labelCls}>Notes complémentaires</label>
-            <textarea
-              className={textareaCls + ' min-h-[70px]'}
-              placeholder="Observations, remarques…"
-              value={adequacy.notes}
-              onChange={(e) => setAdequacy(p => ({ ...p, notes: e.target.value }))}
-            />
-          </div>
-
-          {!allAdequacyOui && adequacy.q1 !== null && (
-            <div className="px-4 py-3.5 bg-white border border-[rgba(220,38,38,0.2)] rounded-[10px]">
-              <p className="text-[12.5px] text-[#991B1B] leading-relaxed tracking-[-0.003em]">
-                Toutes les réponses doivent être « Oui » pour proposer la conservation. Si le client ne remplit pas les conditions, le service ne peut pas lui être offert.
-              </p>
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2 pt-5 border-t border-[#E7E7E7]">
-            <Button variant="ghost" onClick={() => setShowAdequacy(false)}>Annuler</Button>
-            <Button
-              variant="primary"
-              onClick={submitAdequacy}
-              disabled={!allAdequacyOui || submittingAdequacy}
-            >
-              {submittingAdequacy && <Spinner />}
-              {submittingAdequacy ? 'Génération…' : 'Générer le lien client'}
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      {/* Plus de modal pré-remplissage adéquation — le client remplit
+          lui-même le questionnaire MiFID II via le lien signé. */}
 
       {/* ── Contract Modal ──────────────────────────────── */}
       <CustodyContractModal

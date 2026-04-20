@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { DfnsApiClient } from '@dfns/sdk';
+import { ADEQUACY_QUESTIONS, ADEQUACY_SECTIONS, computeAdequacyScore, VERDICT_LABELS, getAnswerLabel } from '../src/config/adequacyQuestions.js';
 import { AsymmetricKeySigner } from '@dfns/sdk-keysigner';
 import fs from 'fs';
 import path from 'path';
@@ -289,7 +290,7 @@ function generateContractPDF({ clientName, clientAddress, clientPhone, signerNam
   });
 }
 
-function generateAdequacyPDF({ clientName, clientAddress, clientPhone, assessment, signerName, signerIp, signedAt, assessedBy }) {
+function generateAdequacyPDF({ clientName, clientAddress, clientPhone, answers = {}, scoring, signerName, signerIp, signedAt, assessedBy }) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 60 });
     const chunks = [];
@@ -300,14 +301,14 @@ function generateAdequacyPDF({ clientName, clientAddress, clientPhone, assessmen
     const dateStr = new Date(signedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
 
     // Title
-    doc.font('Helvetica-Bold').fontSize(16).text('QUESTIONNAIRE D\'ADEQUATION', { align: 'center' });
+    doc.font('Helvetica-Bold').fontSize(16).text('QUESTIONNAIRE D\'ADEQUATION MiFID II', { align: 'center' });
     doc.font('Helvetica').fontSize(11).fillColor('#666666').text('Conservation d\'Actifs Numeriques', { align: 'center' });
     doc.fillColor('#000000');
     doc.moveDown(1);
 
     // Legal reference
     doc.font('Helvetica').fontSize(9).fillColor('#888888');
-    doc.text('Conformement a l\'article 66 du reglement (UE) 2023/1114 (MiCA) et aux obligations AMF relatives a l\'evaluation de l\'adequation des services de conservation d\'actifs numeriques.', { align: 'justify' });
+    doc.text('Test d\'adequation realise par le client conformement a l\'article 25(2) de la directive MiFID II, l\'article 66 du reglement (UE) 2023/1114 (MiCA) et aux obligations AMF relatives a l\'evaluation prealable des services de conservation.', { align: 'justify' });
     doc.fillColor('#000000');
     doc.moveDown(1);
 
@@ -323,48 +324,63 @@ function generateAdequacyPDF({ clientName, clientAddress, clientPhone, assessmen
     doc.moveTo(60, doc.y).lineTo(535, doc.y).stroke('#cccccc');
     doc.moveDown(0.5);
 
-    // Questions & answers
+    // Questions & answers — grouped by section
     doc.font('Helvetica-Bold').fontSize(11).text('Evaluation');
-    doc.moveDown(0.5);
+    doc.moveDown(0.4);
 
-    const questions = [
-      { q: '1. Le client comprend-il la nature volatile des actifs numeriques et les risques de perte en capital associes ?', a: assessment.q1 },
-      { q: '2. Le client a-t-il une experience prealable avec les cryptomonnaies ou actifs numeriques ?', a: assessment.q2 },
-      { q: '3. L\'allocation crypto envisagee est-elle coherente avec le profil de risque global du client ?', a: assessment.q3 },
-      { q: '4. Le client a-t-il ete informe des risques specifiques lies a la conservation d\'actifs numeriques (cles privees, irreversibilite des transactions, risque de piratage) ?', a: assessment.q4 },
-    ];
-
-    for (const { q, a } of questions) {
-      doc.font('Helvetica').fontSize(10).text(q, { align: 'justify' });
-      doc.moveDown(0.2);
-      const color = a === 'Oui' ? '#059669' : '#DC2626';
-      doc.font('Helvetica-Bold').fontSize(11).fillColor(color).text(`Reponse : ${a || 'Non renseigne'}`);
+    let qNum = 0;
+    for (const section of ADEQUACY_SECTIONS) {
+      doc.font('Helvetica-Bold').fontSize(10).fillColor('#7C5E3C').text(section.label.toUpperCase(), { continued: false });
       doc.fillColor('#000000');
-      doc.moveDown(0.6);
-    }
-
-    if (assessment.notes) {
       doc.moveDown(0.3);
-      doc.font('Helvetica-Bold').fontSize(10).text('Notes complementaires :');
+
+      for (const q of ADEQUACY_QUESTIONS.filter(x => x.section === section.id)) {
+        if (q.type === 'textarea') {
+          const val = answers[q.id];
+          if (val) {
+            doc.font('Helvetica-Oblique').fontSize(9).fillColor('#666666').text('Commentaires du client :');
+            doc.font('Helvetica').fontSize(10).fillColor('#000000').text(val, { align: 'justify' });
+            doc.moveDown(0.4);
+          }
+          continue;
+        }
+        qNum++;
+        doc.font('Helvetica').fontSize(10).text(`${qNum}. ${q.label}`, { align: 'justify' });
+        doc.moveDown(0.15);
+        const answerLabel = getAnswerLabel(q.id, answers[q.id]);
+        doc.font('Helvetica-Bold').fontSize(10).fillColor('#059669').text(`Reponse : ${answerLabel}`);
+        doc.fillColor('#000000');
+        doc.moveDown(0.5);
+      }
       doc.moveDown(0.2);
-      doc.font('Helvetica').fontSize(10).text(assessment.notes, { align: 'justify' });
-      doc.moveDown(0.5);
     }
 
-    // Conclusion
-    doc.moveDown(0.5);
+    // Conclusion — with score + verdict
     doc.moveTo(60, doc.y).lineTo(535, doc.y).stroke('#cccccc');
     doc.moveDown(0.5);
 
-    const allOui = assessment.q1 === 'Oui' && assessment.q2 === 'Oui' && assessment.q3 === 'Oui' && assessment.q4 === 'Oui';
-    doc.font('Helvetica-Bold').fontSize(12);
-    if (allOui) {
-      doc.fillColor('#059669').text('CONCLUSION : Le client est juge adequat pour les services de conservation d\'actifs numeriques.');
-    } else {
-      doc.fillColor('#DC2626').text('CONCLUSION : Le client ne remplit pas les conditions d\'adequation pour les services de conservation d\'actifs numeriques.');
-    }
+    const verdictInfo = VERDICT_LABELS[scoring?.verdict] || {};
+    const color = verdictInfo.tone === 'success' ? '#059669' : verdictInfo.tone === 'warning' ? '#CA8A04' : '#DC2626';
+    doc.font('Helvetica-Bold').fontSize(12).fillColor(color).text(
+      `CONCLUSION : ${verdictInfo.label || 'A evaluer'}  ·  Score ${scoring?.score ?? 0}/${scoring?.max ?? 0}`
+    );
     doc.fillColor('#000000');
-    doc.moveDown(1);
+    doc.font('Helvetica').fontSize(10).text(verdictInfo.description || '', { align: 'justify' });
+    doc.moveDown(0.5);
+
+    // Breakdown par section
+    if (scoring?.breakdown) {
+      doc.font('Helvetica').fontSize(9).fillColor('#666666').text('Detail par section :');
+      for (const section of ADEQUACY_SECTIONS) {
+        const b = scoring.breakdown[section.id];
+        if (!b) continue;
+        doc.text(`  · ${section.label.padEnd(22)} : ${b.score}/${b.max}`);
+      }
+      doc.fillColor('#000000');
+      doc.moveDown(0.5);
+    }
+
+    doc.moveDown(0.5);
 
     // Evaluator info
     doc.font('Helvetica').fontSize(9).fillColor('#888888');
@@ -824,12 +840,14 @@ app.get('/api/oracle/feeds-list', (req, res) => {
 // ADEQUACY QUESTIONNAIRE — Signing link for client
 // ============================================================
 
-// Generate adequacy signing link (banker creates it after filling questionnaire)
+// Generate adequacy signing link — le banquier crée juste un lien VIDE,
+// le client le remplit lui-même (MiFID II Art. 25 · le test doit venir
+// du client, pas du banquier). Pas de pré-remplissage côté serveur.
 app.post('/api/signing/adequacy/generate', requireAuth, async (req, res) => {
   try {
-    const { salesforceAccountId, clientName, clientStreet, clientCity, clientPostalCode, clientCountry, clientPhone, assessment } = req.body;
-    if (!salesforceAccountId || !clientName || !assessment) {
-      return res.status(400).json({ error: 'salesforceAccountId, clientName and assessment are required' });
+    const { salesforceAccountId, clientName, clientStreet, clientCity, clientPostalCode, clientCountry, clientPhone } = req.body;
+    if (!salesforceAccountId || !clientName) {
+      return res.status(400).json({ error: 'salesforceAccountId and clientName are required' });
     }
 
     const token = crypto.randomUUID();
@@ -851,19 +869,16 @@ app.post('/api/signing/adequacy/generate', requireAuth, async (req, res) => {
 
     if (error) throw error;
 
-    // Store assessment data in a separate row or in audit for retrieval
-    await supabaseAdmin.from('audit_log').insert({
-      user_id: req.user?.id || null,
-      user_email: req.user?.email || 'system',
-      user_role: req.user?.role || 'system',
+    await logAudit({
       action: 'adequacy_link_generated',
       category: 'custody',
-      entity_type: 'Account',
-      entity_id: salesforceAccountId,
-      client_name: clientName,
-      salesforce_account_id: salesforceAccountId,
-      details: { token, assessment, expiresAt },
+      entityType: 'Account',
+      entityId: salesforceAccountId,
+      clientName,
+      salesforceAccountId,
+      details: { token, expiresAt },
       severity: 'info',
+      req,
     });
 
     res.json({ token, expiresAt, url: `/sign/adequacy/${token}` });
@@ -873,7 +888,8 @@ app.post('/api/signing/adequacy/generate', requireAuth, async (req, res) => {
   }
 });
 
-// Get adequacy data (public)
+// Get adequacy data (public — accessible via lien client, pas d'auth).
+// Retourne les questions + les réponses déjà saisies (si signé).
 app.get('/api/signing/adequacy/:token', async (req, res) => {
   try {
     const { data: tokenData, error } = await supabaseAdmin
@@ -894,14 +910,6 @@ app.get('/api/signing/adequacy/:token', async (req, res) => {
       return res.status(410).json({ error: 'Ce lien a expire' });
     }
 
-    // Get assessment data from audit log
-    const { data: auditData } = await supabaseAdmin
-      .from('audit_log')
-      .select('details')
-      .eq('action', 'adequacy_link_generated')
-      .filter('details->>token', 'eq', req.params.token)
-      .single();
-
     res.json({
       client_name: tokenData.client_name,
       client_street: tokenData.client_street,
@@ -911,7 +919,13 @@ app.get('/api/signing/adequacy/:token', async (req, res) => {
       client_phone: tokenData.client_phone,
       status: tokenData.status,
       signed_at: tokenData.signed_at,
-      assessment: auditData?.details?.assessment || null,
+      // Questions + réponses du client (si signé) + score calculé
+      questions: ADEQUACY_QUESTIONS,
+      sections: ADEQUACY_SECTIONS,
+      answers: tokenData.adequacy_answers || null,
+      score: tokenData.adequacy_score ?? null,
+      max_score: tokenData.adequacy_max_score ?? null,
+      verdict: tokenData.adequacy_verdict || null,
     });
   } catch (err) {
     console.error('Get adequacy token error:', err.message);
@@ -919,10 +933,14 @@ app.get('/api/signing/adequacy/:token', async (req, res) => {
   }
 });
 
-// Sign adequacy (public)
+// Sign adequacy (public) — le client soumet ses réponses + signe.
+// Payload attendu :
+//   { signerName: string, answers: { [questionId]: value } }
+// Le scoring et le verdict sont calculés côté serveur (source de vérité
+// — le client ne peut pas manipuler son propre score).
 app.post('/api/signing/adequacy/:token/sign', async (req, res) => {
   try {
-    const { signerName } = req.body;
+    const { signerName, answers } = req.body;
 
     const { data: tokenData, error: fetchErr } = await supabaseAdmin
       .from('signing_tokens')
@@ -935,59 +953,88 @@ app.post('/api/signing/adequacy/:token/sign', async (req, res) => {
     if (tokenData.status === 'revoked') return res.status(410).json({ error: 'Lien revoque' });
     if (new Date(tokenData.expires_at) < new Date()) return res.status(410).json({ error: 'Lien expire' });
 
+    if (!answers || typeof answers !== 'object') {
+      return res.status(400).json({ error: 'Réponses manquantes' });
+    }
+
+    // Vérifier que toutes les questions obligatoires sont répondues
+    const missing = ADEQUACY_QUESTIONS
+      .filter(q => q.type === 'radio' && !q.optional)
+      .filter(q => !answers[q.id])
+      .map(q => q.label);
+    if (missing.length > 0) {
+      return res.status(400).json({
+        error: `Questions obligatoires non répondues : ${missing.slice(0, 3).join(' · ')}${missing.length > 3 ? ` (+${missing.length - 3})` : ''}`,
+      });
+    }
+
     const signerIp = req.ip || req.headers['x-forwarded-for'] || 'unknown';
     const signedAt = new Date().toISOString();
 
-    // 1. Mark as signed
+    // Scoring déterministe côté serveur (source de vérité)
+    const scoring = computeAdequacyScore(answers);
+
+    // 1. Mark as signed + save answers + score
     await supabaseAdmin.from('signing_tokens')
-      .update({ status: 'signed', signed_at: signedAt, signer_ip: signerIp })
+      .update({
+        status: 'signed',
+        signed_at: signedAt,
+        signer_ip: signerIp,
+        adequacy_answers: answers,
+        adequacy_score: scoring.score,
+        adequacy_max_score: scoring.max,
+        adequacy_verdict: scoring.verdict,
+      })
       .eq('token', req.params.token);
 
-    // 2. Update Salesforce
+    // 2. Update Salesforce — flag adequacy done + risk level si le verdict
+    //    est non éligible (force le niveau critical pour bloquer les services)
+    let sfWriteback = { attempted: false, ok: false };
     if (SF_CONFIGURED) {
+      sfWriteback.attempted = true;
       try {
         const { accessToken, instanceUrl } = await getSalesforceToken();
-        await fetch(`${instanceUrl}/services/data/v59.0/sobjects/Account/${tokenData.salesforce_account_id}`, {
+        const sfPayload = {
+          Custody_Adequacy_Done__c: true,
+          Custody_KYC_Notes__c: `Adéquation MiFID II : ${VERDICT_LABELS[scoring.verdict]?.label || scoring.verdict} · Score ${scoring.score}/${scoring.max} · Signé le ${new Date(signedAt).toLocaleDateString('fr-FR')}`.slice(0, 32000),
+        };
+        if (scoring.verdict === 'not_eligible') {
+          sfPayload.Custody_Risk_Level__c = 'Tres eleve';
+        }
+        const sfRes = await fetch(`${instanceUrl}/services/data/v59.0/sobjects/Account/${tokenData.salesforce_account_id}`, {
           method: 'PATCH',
           headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ Custody_Adequacy_Done__c: true }),
+          body: JSON.stringify(sfPayload),
         });
+        sfWriteback.ok = sfRes.ok || sfRes.status === 204;
       } catch (sfErr) {
+        sfWriteback.error = sfErr.message;
         console.error('Salesforce adequacy update failed:', sfErr.message);
       }
     }
 
-    // 3. Get assessment from audit log
-    const { data: auditData } = await supabaseAdmin
-      .from('audit_log')
-      .select('details')
-      .eq('action', 'adequacy_link_generated')
-      .filter('details->>token', 'eq', req.params.token)
-      .single();
-
-    const assessment = auditData?.details?.assessment || {};
-
-    // 4. Generate PDF and upload to Salesforce
+    // 3. Generate PDF and upload to Salesforce
     const clientAddress = [tokenData.client_street, tokenData.client_postal_code, tokenData.client_city, tokenData.client_country].filter(Boolean).join(', ') || 'Non renseigne';
     try {
       const pdfBuffer = await generateAdequacyPDF({
         clientName: tokenData.client_name,
         clientAddress,
         clientPhone: tokenData.client_phone || 'Non renseigne',
-        assessment,
+        answers,
+        scoring,
         signerName: signerName || tokenData.client_name,
         signerIp,
         signedAt,
         assessedBy: tokenData.created_by,
       });
       const dateSlug = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-      const fileName = `Adequation_Custody_${tokenData.client_name.replace(/[^a-zA-Z0-9]/g, '_')}_${dateSlug}.pdf`;
+      const fileName = `Adequation_MiFID_${tokenData.client_name.replace(/[^a-zA-Z0-9]/g, '_')}_${dateSlug}.pdf`;
       await uploadPDFToSalesforce(pdfBuffer, fileName, tokenData.salesforce_account_id);
     } catch (pdfErr) {
       console.error('Adequacy PDF generation/upload error:', pdfErr.message);
     }
 
-    // 5. Audit log
+    // 4. Audit log
     await logAudit({
       action: 'adequacy_signed_by_client',
       category: 'custody',
@@ -995,12 +1042,16 @@ app.post('/api/signing/adequacy/:token/sign', async (req, res) => {
       entityId: tokenData.salesforce_account_id,
       clientName: tokenData.client_name,
       salesforceAccountId: tokenData.salesforce_account_id,
-      details: { signerName, signerIp, signedAt, token: req.params.token, assessment, pdfGenerated: true },
-      severity: 'info',
+      details: {
+        signerName, signerIp, signedAt, token: req.params.token,
+        scoring: { score: scoring.score, max: scoring.max, verdict: scoring.verdict },
+        sfWriteback, pdfGenerated: true,
+      },
+      severity: scoring.verdict === 'not_eligible' ? 'warning' : 'info',
       req,
     });
 
-    res.json({ success: true, signedAt });
+    res.json({ success: true, signedAt, scoring, sfWriteback });
   } catch (err) {
     console.error('Sign adequacy error:', err.message);
     res.status(500).json({ error: err.message });
