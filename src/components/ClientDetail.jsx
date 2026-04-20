@@ -475,7 +475,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
           New flow, banker-priority ordered:
           R1 — Intro + quick actions (what + how)
           R2 — Crypto holdings (flagship) + Patrimoine consolidé (context)
-          R3 — Compliance trio: KYC / Mandat / Historique contact
+          R3 — Compliance duo : KYC / Mandat + Métadonnées
           R4 — Detailed info + Address
           R5 — Contacts list + Metadata
           R6 — Risk config (full width)
@@ -783,9 +783,6 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                 isSigned={!!parsed.kyc?.toLowerCase().includes('valid')}
                 createdDate={client.createdDate}
               />
-
-              {/* Historique contact */}
-              <ContactHistoryCard clientName={client.name} />
 
               {/* Métadonnées */}
               <SectionCard title="Métadonnées">
@@ -2011,60 +2008,3 @@ function MandatCard({ isSigned, createdDate }) {
   );
 }
 
-// ═══ ContactHistoryCard — last 3 interactions ══════════════════
-// Placeholder data until we wire SFDC Activities/Tasks. Mimics a banker's
-// relationship log (email, call, meeting) with type icon + date + note.
-// The "Ajouter une note" footer is a CTA for the banker to log an
-// interaction without switching to SFDC.
-function ContactHistoryCard({ clientName }) {
-  // Stub: in production these come from SFDC Activity history
-  const interactions = [
-    { type: 'meeting', label: 'Rendez-vous patrimonial', days: 12 },
-    { type: 'email',   label: 'Envoi relevé trimestriel', days: 24 },
-    { type: 'call',    label: 'Appel de courtoisie',      days: 47 },
-  ];
-  const typeGlyph = { meeting: 'handshake', email: 'envelope', call: 'timestamp' };
-  const typeLabel = { meeting: 'RDV', email: 'Email', call: 'Appel' };
-  const fmtRelative = (d) => d === 1 ? 'hier' : d < 7 ? `il y a ${d} j` : d < 30 ? `il y a ${Math.round(d / 7)} sem` : `il y a ${Math.round(d / 30)} mois`;
-
-  return (
-    <Card>
-      <div className="px-5 py-4 border-b border-[#E7E7E7] flex items-center justify-between">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <span className="flex-shrink-0 w-8 h-8 rounded-[7px] bg-[#F3F2EE] text-[#1E1E1E] flex items-center justify-center">
-            <BrandGlyph name="ledger" size={16} />
-          </span>
-          <div>
-            <p className="text-[13.5px] font-semibold text-[#0F0F10]">Historique contact</p>
-            <p className="text-[11.5px] text-[#8A8278]">3 dernières interactions</p>
-          </div>
-        </div>
-      </div>
-      <ul className="divide-y divide-[#E7E7E7]">
-        {interactions.map((it, i) => (
-          <li key={i} className="px-5 py-3 flex items-center gap-3">
-            <span className="w-8 h-8 rounded-[6px] bg-[#F5F2EB] text-[#5D5D5D] flex items-center justify-center flex-shrink-0">
-              <BrandGlyph name={typeGlyph[it.type]} size={15} />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[12.5px] font-medium text-[#0F0F10] truncate">{it.label}</p>
-              <p className="text-[11.5px] text-[#8A8278]">{typeLabel[it.type]} · {fmtRelative(it.days)}</p>
-            </div>
-          </li>
-        ))}
-      </ul>
-      <div className="px-4 py-3 border-t border-[#E7E7E7]">
-        <button
-          type="button"
-          className="w-full flex items-center justify-center gap-2 h-9 rounded-[6px] text-[12.5px] font-semibold text-[#5D5D5D] hover:text-[#1E1E1E] hover:bg-[#FDFBF6] transition-colors"
-          onClick={() => { /* TODO: open add-note modal */ }}
-        >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-          Ajouter une note
-        </button>
-      </div>
-    </Card>
-  );
-}
