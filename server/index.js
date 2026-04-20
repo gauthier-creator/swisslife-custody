@@ -3576,7 +3576,9 @@ app.post('/api/kyc/reject', requireAdmin, async (req, res) => {
           method: 'PATCH',
           headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            Custody_KYC_Status__c: 'Rejeté',
+            // Valeur picklist sans accent — l'org utilise "Rejete" côté SFDC
+            // même si le label affiché est "Rejeté".
+            Custody_KYC_Status__c: 'Rejete',
             Custody_KYC_Validated_At__c: rejectedAt,
             Custody_KYC_Validated_By__c: (rejectedByEmail || '').slice(0, 120),
             Custody_KYC_Notes__c: `Rejet : ${reason}`.slice(0, 32000),
