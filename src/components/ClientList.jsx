@@ -3,7 +3,7 @@ import { fetchClients } from '../services/salesforceApi';
 import {
   fmtEUR, fmtCompactEUR, Badge, Card, EmptyState, Avatar,
   SkeletonCircle, Skeleton, useCountUp,
-  PageHeader, StatusDot, Timestamp, SignatureMark, FleuronRule,
+  PageHeader, StatusDot, Timestamp,
   Metric, MetricRow,
 } from './shared';
 import {
@@ -439,14 +439,6 @@ export default function ClientList({ onSelectClient, onNavigate }) {
           workflows réels (ex: générer rapport Tracfin ERMES du mois,
           planifier cérémonie de clé MPC, etc.) quand ils seront câblés. */}
 
-      {/* ── Editorial signature footer ─────────────────── */}
-      <footer className="pt-10 mt-4 border-t border-[#E7E7E7] space-y-4">
-        <SignatureMark name="G. Alexandrian" role="Banquier privé" location="Paris" />
-        <div className="flex items-center justify-between text-[10.5px] text-[#8A8278] tracking-[0.06em] uppercase font-medium">
-          <span>SwissLife Banque Privée · 7 rue Boudreau, 75009 Paris</span>
-          <span>AMF · ACPR · Tracfin · MiCA Art. 60</span>
-        </div>
-      </footer>
     </div>
   );
 }
