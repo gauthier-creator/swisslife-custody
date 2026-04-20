@@ -90,9 +90,17 @@ export function getKycStatus(salesforceAccountId) {
   return jsonGet(`/api/kyc/status/${salesforceAccountId}`);
 }
 
-// Validate KYC (admin action — marks all checks as reviewed)
-export function validateKyc({ salesforceAccountId, validatedByEmail }) {
-  return jsonPost('/api/kyc/validate', { salesforceAccountId, validatedByEmail });
+// Validate KYC (admin action). Double-écriture :
+//   · Supabase kyc_checks (historique)
+//   · Salesforce Account (Custody_KYC_* fields → visible dans le CRM)
+export function validateKyc({ salesforceAccountId, validatedByEmail, notes, providerRef }) {
+  return jsonPost('/api/kyc/validate', { salesforceAccountId, validatedByEmail, notes, providerRef });
+}
+
+// Reject KYC — miroir de validateKyc, pour refuser un dossier incomplet ou
+// suspect. Marque Custody_KYC_Status__c = 'Rejeté' dans SFDC.
+export function rejectKyc({ salesforceAccountId, rejectedByEmail, reason }) {
+  return jsonPost('/api/kyc/reject', { salesforceAccountId, rejectedByEmail, reason });
 }
 
 // KYC document types with labels

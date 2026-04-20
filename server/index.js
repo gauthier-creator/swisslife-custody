@@ -3456,23 +3456,37 @@ app.get('/api/kyc/status/:accountId', async (req, res) => {
   }
 });
 
-// POST /api/kyc/validate — Admin validates KYC (manual final step)
+// POST /api/kyc/validate — Admin validates KYC (manual final step).
+// Double-écriture :
+//   1. Row dans kyc_checks (Supabase) → historique complet local
+//   2. PATCH de l'Account Salesforce → le banquier voit la validation
+//      dans son CRM avec l'horodatage + qui a validé + ref provider
+//
+// Fields Salesforce écrits :
+//   · Custody_KYC_Status__c        = 'Valide'
+//   · Custody_Sanctions_Clear__c   = true
+//   · Custody_KYC_Validated_At__c  = now()
+//   · Custody_KYC_Validated_By__c  = <email>
+//   · Custody_KYC_Provider__c      = 'ComplyCube · <mode>'
+//   · Custody_KYC_Notes__c         = <notes>   (si fourni)
 app.post('/api/kyc/validate', requireAdmin, async (req, res) => {
   try {
-    const { salesforceAccountId, validatedByEmail } = req.body;
+    const { salesforceAccountId, validatedByEmail, notes, providerRef } = req.body;
 
     if (!salesforceAccountId) {
       return res.status(400).json({ error: 'salesforceAccountId is required' });
     }
 
-    // Create a manual_validation check
+    const validatedAt = new Date().toISOString();
+
+    // 1. Create a manual_validation check (local audit)
     const { data, error } = await supabaseAdmin
       .from('kyc_checks')
       .insert({
         salesforce_account_id: salesforceAccountId,
         check_type: 'manual_validation',
         status: 'complete',
-        result: { validatedBy: validatedByEmail, validatedAt: new Date().toISOString() },
+        result: { validatedBy: validatedByEmail, validatedAt, notes: notes || null, providerRef: providerRef || null },
         initiated_by_email: validatedByEmail,
       })
       .select()
@@ -3480,7 +3494,39 @@ app.post('/api/kyc/validate', requireAdmin, async (req, res) => {
 
     if (error) throw error;
 
-    // Audit log
+    // 2. Write back to Salesforce — the banker CRM is the source-of-truth
+    //    for "is this client KYC-validated" from the bank's point of view.
+    let sfWriteback = { attempted: false, ok: false };
+    if (SF_CONFIGURED) {
+      sfWriteback.attempted = true;
+      try {
+        const { accessToken, instanceUrl } = await getSalesforceToken();
+        const payload = {
+          Custody_KYC_Status__c: 'Valide',
+          Custody_Sanctions_Clear__c: true,
+          Custody_KYC_Validated_At__c: validatedAt,
+          Custody_KYC_Validated_By__c: (validatedByEmail || '').slice(0, 120),
+          Custody_KYC_Provider__c: (providerRef || (KYC_DEMO_MODE ? 'ComplyCube · sandbox' : 'ComplyCube')).slice(0, 120),
+        };
+        if (notes) payload.Custody_KYC_Notes__c = notes.slice(0, 32000);
+        const sfRes = await fetch(`${instanceUrl}/services/data/v59.0/sobjects/Account/${salesforceAccountId}`, {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        sfWriteback.ok = sfRes.ok || sfRes.status === 204;
+        if (!sfWriteback.ok) {
+          const body = await sfRes.text().catch(() => '');
+          sfWriteback.error = `${sfRes.status}: ${body.slice(0, 300)}`;
+          console.error('[KYC] SF writeback failed:', sfWriteback.error);
+        }
+      } catch (sfErr) {
+        sfWriteback.error = sfErr.message;
+        console.error('[KYC] SF writeback exception:', sfErr.message);
+      }
+    }
+
+    // 3. Audit log
     await logAudit({
       userEmail: validatedByEmail,
       action: 'kyc.validated',
@@ -3488,14 +3534,75 @@ app.post('/api/kyc/validate', requireAdmin, async (req, res) => {
       entityType: 'kyc_validation',
       entityId: data.id,
       salesforceAccountId,
-      details: { validatedBy: validatedByEmail },
+      details: { validatedBy: validatedByEmail, sfWriteback, notes: notes || null },
       severity: 'info',
       req,
     });
 
-    res.json(data);
+    res.json({ ...data, sfWriteback });
   } catch (err) {
     console.error('KYC validate error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/kyc/reject — Mark KYC as rejected, with Salesforce writeback.
+// Symétrique à /validate : le banquier peut rejeter un dossier (ex. docs
+// non conformes, suspicion AML). SFDC devient la source de vérité
+// "statut KYC" de l'établissement.
+app.post('/api/kyc/reject', requireAdmin, async (req, res) => {
+  try {
+    const { salesforceAccountId, rejectedByEmail, reason } = req.body;
+    if (!salesforceAccountId || !reason) {
+      return res.status(400).json({ error: 'salesforceAccountId et reason sont requis' });
+    }
+    const rejectedAt = new Date().toISOString();
+
+    const { data, error } = await supabaseAdmin.from('kyc_checks').insert({
+      salesforce_account_id: salesforceAccountId,
+      check_type: 'manual_rejection',
+      status: 'failed',
+      result: { rejectedBy: rejectedByEmail, rejectedAt, reason },
+      initiated_by_email: rejectedByEmail,
+    }).select().single();
+    if (error) throw error;
+
+    let sfWriteback = { attempted: false, ok: false };
+    if (SF_CONFIGURED) {
+      sfWriteback.attempted = true;
+      try {
+        const { accessToken, instanceUrl } = await getSalesforceToken();
+        const sfRes = await fetch(`${instanceUrl}/services/data/v59.0/sobjects/Account/${salesforceAccountId}`, {
+          method: 'PATCH',
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            Custody_KYC_Status__c: 'Rejeté',
+            Custody_KYC_Validated_At__c: rejectedAt,
+            Custody_KYC_Validated_By__c: (rejectedByEmail || '').slice(0, 120),
+            Custody_KYC_Notes__c: `Rejet : ${reason}`.slice(0, 32000),
+          }),
+        });
+        sfWriteback.ok = sfRes.ok || sfRes.status === 204;
+      } catch (sfErr) {
+        sfWriteback.error = sfErr.message;
+      }
+    }
+
+    await logAudit({
+      userEmail: rejectedByEmail,
+      action: 'kyc.rejected',
+      category: 'compliance',
+      entityType: 'kyc_validation',
+      entityId: data.id,
+      salesforceAccountId,
+      details: { rejectedBy: rejectedByEmail, reason, sfWriteback },
+      severity: 'warning',
+      req,
+    });
+
+    res.json({ ...data, sfWriteback });
+  } catch (err) {
+    console.error('KYC reject error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
