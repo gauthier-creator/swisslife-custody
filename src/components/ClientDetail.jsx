@@ -10,6 +10,7 @@ import WalletFreezePanel from './WalletFreezePanel';
 import CustodyEligibilityPanel from './CustodyEligibilityPanel';
 import { SUPPORTED_NETWORKS } from '../config/constants';
 import { createApproval, checkTransferRisk, checkWalletFreeze, screenAddress } from '../services/complianceApi';
+import { fetchOraclePrices } from '../services/oracleApi';
 import { getKycStatus } from '../services/kycService';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -161,14 +162,12 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
     setLoading(false);
   };
 
-  // Rough EUR prices for demo — in production these come from a pricing
-  // oracle (Chainlink, CoinGecko) called server-side with cache.
-  const PRICES_EUR = {
+  // Fallback prices used only if Chainlink RPC is unreachable AND the
+  // server fallback itself fails. Testnets stay at 0.
+  const FALLBACK_PRICES_EUR = {
     BTC: 58000, ETH: 2950, SOL: 135,
     USDC: 0.92, USDT: 0.92, DAI: 0.92,
-    // Testnets render 0 — we still show the asset row so the banker sees
-    // which chains are provisioned, just with €0.00 (clearly flagged).
-    SepoliaETH: 0, EthereumGoerli: 0, BitcoinTestnet: 0,
+    SepoliaETH: 0, EthereumGoerli: 0, BitcoinTestnet: 0, POL: 0.35, MATIC: 0.35,
   };
   const humanBalance = (a) => {
     const raw = parseFloat(a.balance || 0);
@@ -176,27 +175,49 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
     // DFNS usually returns decimal-adjusted already; fall back to raw if no decimals.
     return dec > 6 ? raw / Math.pow(10, dec) : raw;
   };
-  const assetValueEur = (a) => humanBalance(a) * (PRICES_EUR[a.symbol] ?? 0);
+  const resolvePriceEur = (symbol, oraclePrices) => {
+    const s = (symbol || '').toUpperCase();
+    const live = oraclePrices?.[s]?.priceEur;
+    if (typeof live === 'number' && live > 0) return live;
+    return FALLBACK_PRICES_EUR[symbol] ?? FALLBACK_PRICES_EUR[s] ?? 0;
+  };
 
   const loadHoldings = async (wlts) => {
     if (!wlts || wlts.length === 0) { setHoldings(null); return; }
     setHoldingsLoading(true);
     try {
-      const results = await Promise.all(
-        wlts.map(w =>
+      // Fetch oracle prices and wallet assets in parallel. Oracle call
+      // has a 60s server-side cache, so multiple clients on screen
+      // at once cost essentially nothing.
+      const uniqueSymbols = ['BTC', 'ETH', 'SOL', 'USDC', 'USDT', 'LINK'];
+      const [pricesResp, ...walletResults] = await Promise.all([
+        fetchOraclePrices(uniqueSymbols).catch(() => null),
+        ...wlts.map(w =>
           getWalletAssets(w.id)
             .then(data => ({ wallet: w, assets: data.assets || [] }))
             .catch(() => ({ wallet: w, assets: [] }))
-        )
-      );
-      // Aggregate by asset symbol
+        ),
+      ]);
+      const oraclePrices = pricesResp?.prices || {};
+      const oracleMeta = {
+        fetchedAt: pricesResp?.fetchedAt,
+        source: pricesResp?.source || 'fallback',
+        rpc: pricesResp?.rpcEndpoint,
+        // Keep the full price map so the wallet drawer can re-price assets
+        // without refetching the oracle.
+        prices: oraclePrices,
+      };
+      const results = walletResults;
+      // Aggregate by asset symbol using oracle prices
       const byAsset = {};
       results.forEach(({ wallet, assets }) => {
         assets.forEach(a => {
           const key = a.symbol || a.kind || '?';
-          if (!byAsset[key]) byAsset[key] = { symbol: key, kind: a.kind, balance: 0, valueEur: 0, walletCount: 0 };
-          byAsset[key].balance += humanBalance(a);
-          byAsset[key].valueEur += assetValueEur(a);
+          const price = resolvePriceEur(key, oraclePrices);
+          const bal = humanBalance(a);
+          if (!byAsset[key]) byAsset[key] = { symbol: key, kind: a.kind, balance: 0, valueEur: 0, walletCount: 0, priceEur: price };
+          byAsset[key].balance += bal;
+          byAsset[key].valueEur += bal * price;
           byAsset[key].walletCount += 1;
         });
       });
@@ -204,7 +225,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
       const assetList = Object.values(byAsset)
         .map(a => ({ ...a, percentage: totalValueEur > 0 ? (a.valueEur / totalValueEur) * 100 : 0 }))
         .sort((a, b) => b.valueEur - a.valueEur);
-      setHoldings({ totalValueEur, assets: assetList, walletsBreakdown: results });
+      setHoldings({ totalValueEur, assets: assetList, walletsBreakdown: results, oracle: oracleMeta });
     } catch (err) {
       console.error('loadHoldings error:', err); setHoldings(null);
     }
@@ -1350,7 +1371,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
         const n = w ? (SUPPORTED_NETWORKS.find(s => s.id === w.network) || { icon: '?', color: '#8A8278', name: w.network }) : null;
         const walletEur = walletAssets.reduce((s, a) => {
           const bal = (a.decimals > 6 ? parseFloat(a.balance || 0) / Math.pow(10, a.decimals) : parseFloat(a.balance || 0));
-          const price = { BTC: 58000, ETH: 2950, SOL: 135, USDC: 0.92, USDT: 0.92 }[a.symbol] || 0;
+          const price = resolvePriceEur(a.symbol, holdings?.oracle?.prices) || FALLBACK_PRICES_EUR[a.symbol] || 0;
           return s + bal * price;
         }, 0);
         return (
@@ -1406,7 +1427,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                     <ul className="bg-white border border-[#E7E7E7] rounded-[8px] divide-y divide-[#E7E7E7]">
                       {walletAssets.map((a, i) => {
                         const bal = (a.decimals > 6 ? parseFloat(a.balance || 0) / Math.pow(10, a.decimals) : parseFloat(a.balance || 0));
-                        const price = { BTC: 58000, ETH: 2950, SOL: 135, USDC: 0.92, USDT: 0.92 }[a.symbol] || 0;
+                        const price = resolvePriceEur(a.symbol, holdings?.oracle?.prices) || FALLBACK_PRICES_EUR[a.symbol] || 0;
                         const eur = bal * price;
                         return (
                           <li key={i} className="px-4 py-3 flex items-center gap-3">
@@ -1619,6 +1640,23 @@ function CryptoHoldingsCard({ wallets, holdings, loading, net, onSelectWallet })
           {wallets.length} wallet{wallets.length > 1 ? 's' : ''} · {networkCount} réseau{networkCount > 1 ? 'x' : ''}
           {holdings?.totalValueEur === 0 && <span className="ml-2 text-[#CA8A04]">· solde testnet</span>}
         </p>
+        {/* Chainlink oracle source — transparence banquier.
+            Badge vert si prix live Chainlink, orange si fallback. */}
+        {holdings?.oracle && (
+          <div className="mt-2 inline-flex items-center gap-1.5 text-[10.5px]" title={`Source : ${holdings.oracle.source} · RPC ${holdings.oracle.rpc || ''} · maj ${holdings.oracle.fetchedAt ? new Date(holdings.oracle.fetchedAt).toLocaleTimeString('fr-FR') : '?'}`}>
+            <span
+              className={`inline-block w-1.5 h-1.5 rounded-full ${holdings.oracle.source === 'chainlink' ? 'bg-[#2A5ADA]' : 'bg-[#CA8A04]'}`}
+            />
+            <span className="text-[#5D5D5D]">
+              Prix {holdings.oracle.source === 'chainlink' ? 'Chainlink · on-chain' : 'fallback (RPC indispo)'}
+            </span>
+            {holdings.oracle.fetchedAt && (
+              <span className="text-[#8A8278] tabular-nums">
+                · {new Date(holdings.oracle.fetchedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Stacked bar + per-asset rows */}
@@ -1676,7 +1714,7 @@ function CryptoHoldingsCard({ wallets, holdings, loading, net, onSelectWallet })
           {walletsWithAssets.map(({ wallet, assets }) => {
             const walletEur = assets.reduce((s, a) => {
               const bal = (a.decimals > 6 ? parseFloat(a.balance || 0) / Math.pow(10, a.decimals) : parseFloat(a.balance || 0));
-              const price = { BTC: 58000, ETH: 2950, SOL: 135, USDC: 0.92, USDT: 0.92 }[a.symbol] || 0;
+              const price = resolvePriceEur(a.symbol, holdings?.oracle?.prices) || FALLBACK_PRICES_EUR[a.symbol] || 0;
               return s + bal * price;
             }, 0);
             const n = net(wallet.network);

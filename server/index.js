@@ -8,6 +8,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
 import PDFDocument from 'pdfkit';
+import { getCryptoPriceEur, getAllPricesEur, getRawFeed, chainlinkHealth, CHAINLINK_FEEDS } from './services/chainlink.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -753,6 +754,73 @@ app.get('/api/signing/:token/pdf', requireAuth, async (req, res) => {
 });
 
 // ============================================================
+// CHAINLINK ORACLES — On-chain price feeds
+// ============================================================
+// Expose les Data Feeds Chainlink au front. Utilisé pour :
+//   - Valorisation temps réel des holdings (CryptoHoldingsCard)
+//   - Transparence oracle (badge Chainlink dans l'UI)
+//   - Audit : chaque prix inclut feedAddress + updatedAt + source
+// Cache 60s côté service → endpoints supportent un appel/seconde
+// par client sans saturer le RPC public.
+
+// GET /api/oracle/prices — All major crypto prices in EUR
+// Optional query : ?symbols=BTC,ETH,SOL (default all)
+app.get('/api/oracle/prices', async (req, res) => {
+  try {
+    const requested = (req.query.symbols || '').split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+    const data = await getAllPricesEur(requested.length > 0 ? requested : undefined);
+    res.json(data);
+  } catch (err) {
+    console.error('Oracle prices error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/oracle/health — Chainlink RPC connectivity + feed freshness
+app.get('/api/oracle/health', async (req, res) => {
+  try {
+    const health = await chainlinkHealth();
+    res.json(health);
+  } catch (err) {
+    res.status(500).json({ healthy: false, error: err.message });
+  }
+});
+
+// GET /api/oracle/feed/:pair — Raw single feed (BTC/USD, ETH/USD…)
+// Returns the exact on-chain values: price, decimals, updatedAt round,
+// contract address. Used for audit proof — a RCSI can show that a
+// given AUM valuation was derived from this specific oracle round.
+app.get('/api/oracle/feed/:pair', async (req, res) => {
+  try {
+    const pair = decodeURIComponent(req.params.pair).toUpperCase();
+    if (!CHAINLINK_FEEDS[pair]) {
+      return res.status(404).json({ error: `Feed unknown: ${pair}`, supported: Object.keys(CHAINLINK_FEEDS) });
+    }
+    const data = await getRawFeed(pair);
+    res.json(data);
+  } catch (err) {
+    console.error('Oracle feed error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/oracle/feeds-list — List of all supported feeds with addresses
+// Used to render an "Oracles utilisés" transparency panel in the
+// compliance dashboard. No auth needed — these are public smart
+// contract addresses on Ethereum mainnet.
+app.get('/api/oracle/feeds-list', (req, res) => {
+  res.json({
+    network: 'Ethereum Mainnet',
+    feeds: Object.entries(CHAINLINK_FEEDS).map(([pair, addr]) => ({
+      pair,
+      address: addr,
+      etherscanUrl: `https://etherscan.io/address/${addr}`,
+    })),
+    docs: 'https://docs.chain.link/data-feeds/price-feeds',
+  });
+});
+
+// ============================================================
 // ADEQUACY QUESTIONNAIRE — Signing link for client
 // ============================================================
 
@@ -1425,10 +1493,13 @@ app.post('/api/dfns/wallets/:walletId/transfers', requireAuth, async (req, res) 
     //    empêcher le replay.
     let matchedApproval = null;
     try {
-      const PRICES_EUR = { BTC: 58000, ETH: 2950, SOL: 135, USDC: 0.92, USDT: 0.92, POL: 0.38, MATIC: 0.38, SepoliaETH: 0, TEST_MATIC: 0 };
       const rawAmount = Number(req.body?.amount || 0);
       const symbol = (req.body?.assetSymbol || req.body?.kind || '').toUpperCase();
-      const price = PRICES_EUR[symbol] ?? 0;
+      // Prix spot via Chainlink Data Feeds on-chain (Ethereum mainnet).
+      // Fallback automatique si RPC down (cf. server/services/chainlink.js).
+      // Testnets (SepoliaETH, TEST_MATIC) valorisés à 0 → pas de gate.
+      const priceData = await getCryptoPriceEur(symbol);
+      const price = priceData?.priceEur || 0;
       const amountEur = rawAmount * price;
 
       const hardCap = Number(riskCfgRow?.max_single_transfer || 0);
@@ -1441,7 +1512,15 @@ app.post('/api/dfns/wallets/:walletId/transfers', requireAuth, async (req, res) 
           category: 'transfer',
           entityType: 'wallet',
           entityId: walletId,
-          details: { walletId, destination, amount: rawAmount, amountEur, hardCap, accountId: resolvedAccountId },
+          details: {
+            walletId, destination, amount: rawAmount, amountEur, hardCap, accountId: resolvedAccountId,
+            // Traçabilité oracle — ACPR peut vérifier le prix retenu
+            priceSource: priceData?.source,
+            priceEur: priceData?.priceEur,
+            priceUsd: priceData?.priceUsd,
+            feedAddress: priceData?.feedAddress,
+            priceAgeSec: priceData?.ageSec,
+          },
           severity: 'critical',
           req,
         });
@@ -1450,6 +1529,7 @@ app.post('/api/dfns/wallets/:walletId/transfers', requireAuth, async (req, res) 
           code: 'HARD_CAP_EXCEEDED',
           amountEur,
           hardCap,
+          priceSource: priceData?.source,
           regulation: 'ACPR Conformité LCB-FT',
         });
       }
@@ -1463,7 +1543,12 @@ app.post('/api/dfns/wallets/:walletId/transfers', requireAuth, async (req, res) 
             category: 'transfer',
             entityType: 'wallet',
             entityId: walletId,
-            details: { walletId, destination, amount: rawAmount, amountEur, threshold: approvalThreshold },
+            details: {
+              walletId, destination, amount: rawAmount, amountEur, threshold: approvalThreshold,
+              priceSource: priceData?.source,
+              priceEur: priceData?.priceEur,
+              feedAddress: priceData?.feedAddress,
+            },
             severity: 'warning',
             req,
           });
