@@ -344,86 +344,49 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
         </nav>
       </div>
 
-      {/* ══════════ PROFILE ══════════ */}
+      {/* ══════════ PROFILE ══════════
+          Layout redesigned as Ramify-style asymmetric blocks of varying widths
+          rather than one tall right sidebar. Rationale: the previous 8/4 split
+          stacked 7 cards on the right, creating a 1800px-tall column while the
+          left ran out of content at 800px, leaving a visual void.
+          New flow, banker-priority ordered:
+          R1 — Intro + quick actions (what + how)
+          R2 — Crypto holdings (flagship) + Patrimoine consolidé (context)
+          R3 — Compliance trio: KYC / Mandat / Historique contact
+          R4 — Detailed info + Address
+          R5 — Contacts list + Metadata
+          R6 — Risk config (full width)
+      */}
       {tab === 'profile' && (
         <div className="space-y-6 animate-fade">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-8 space-y-6">
-            {parsed.text && (
-              <SectionCard title="À propos">
-                <p className="text-[14px] text-[#1E1E1E] leading-[1.65] tracking-[-0.003em] max-w-2xl">{parsed.text}</p>
-              </SectionCard>
-            )}
 
-            <SectionCard title="Informations détaillées">
-              <div className="grid grid-cols-2 gap-x-10 gap-y-6">
-                <Field label="Nom complet" value={client.name} />
-                <Field label="Numéro de compte" value={client.accountNumber} mono />
-                <Field label="Type de compte" value={typeLabel(client.type)} />
-                <Field label="Industrie" value={client.industry} />
-                <Field label="Chiffre d'affaires / AUM" value={client.aum ? fmtEUR(client.aum) : '—'} />
-                <Field label="Téléphone" value={client.phone} />
-                <Field label="Site web" value={client.website} link />
-                <Field label="Nombre d'employés" value={client.employees} />
-              </div>
-            </SectionCard>
-
-            <SectionCard title="Adresse de facturation">
-              <div className="grid grid-cols-2 gap-x-10 gap-y-6">
-                <Field label="Rue" value={client.street} />
-                <Field label="Ville" value={client.city} />
-                <Field label="Code postal" value={client.postalCode} />
-                <Field label="Pays" value={client.country} />
-              </div>
-            </SectionCard>
-
-            <Card>
-              <div className="px-6 py-4 flex items-center justify-between border-b border-[#E7E7E7]">
-                <h3 className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em]">Contacts</h3>
-                <span className="text-[12px] text-[#5D5D5D] tracking-[-0.003em]">{contacts.length} personne{contacts.length > 1 ? 's' : ''}</span>
-              </div>
-              {loadingContacts ? (
-                <div className="py-10 text-center"><Spinner /></div>
-              ) : contacts.length === 0 ? (
-                <p className="px-6 py-8 text-[13px] text-[#5D5D5D]">Aucun contact associé.</p>
+          {/* R1 — Intro + Actions banquier */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <SectionCard
+              title={parsed.text ? 'À propos' : 'Résumé client'}
+              className="lg:col-span-8"
+            >
+              {parsed.text ? (
+                <p className="text-[14px] text-[#1E1E1E] leading-[1.65] tracking-[-0.003em]">
+                  {parsed.text}
+                </p>
               ) : (
-                <ul>
-                  {contacts.map((c, i) => {
-                    const name = [c.FirstName, c.LastName].filter(Boolean).join(' ');
-                    return (
-                      <li
-                        key={c.Id}
-                        className={`px-6 py-4 flex items-center justify-between gap-4 ${i < contacts.length - 1 ? 'border-b border-[#E7E7E7]' : ''}`}
-                      >
-                        <div className="flex items-center gap-4 min-w-0">
-                          <Avatar name={name} size={38} />
-                          <div className="min-w-0">
-                            <p className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em] truncate">
-                              {name || '—'}
-                            </p>
-                            {c.Title && <p className="text-[12px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">{c.Title}</p>}
-                          </div>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          {c.Email && <p className="text-[12.5px] text-[#1E1E1E] tracking-[-0.003em]">{c.Email}</p>}
-                          {c.Phone && <p className="text-[11.5px] text-[#8A8278] mt-0.5">{c.Phone}</p>}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+                <div className="space-y-3 text-[14px] text-[#1E1E1E] leading-[1.65] tracking-[-0.003em]">
+                  <p>
+                    <span className="font-medium">{client.name}</span>
+                    {' · '}
+                    <span className="text-[#5D5D5D]">{typeLabel(client.type)}</span>
+                    {client.industry && <span className="text-[#5D5D5D]"> · {client.industry}</span>}
+                  </p>
+                  <p className="text-[13px] text-[#5D5D5D]">
+                    {client.aum ? `AUM consolidé ${fmtCompactEUR(client.aum)}.` : 'Patrimoine non renseigné.'}
+                    {wallets.length > 0 ? ` ${wallets.length} wallet${wallets.length > 1 ? 's' : ''} sous conservation DFNS.` : ' Aucun wallet en custody.'}
+                  </p>
+                </div>
               )}
-            </Card>
-          </div>
+            </SectionCard>
 
-          <aside className="lg:col-span-4 space-y-6">
-            {/* Banker quick actions — 4 cards covering the real workflow:
-                1. Ouvrir dans Salesforce (banker's CRM reflex #1)
-                2. Lancer screening (Chainalysis before any custody action)
-                3. Créer un wallet (after screening passes)
-                4. Envoyer relevé custody (quarterly ACPR statement to client)
-                "Transferts" removed — accessible via tab, not a sidebar CTA. */}
-            <Card>
+            <Card className="lg:col-span-4">
               <div className="px-5 py-4 border-b border-[#E7E7E7]">
                 <p className="text-[11px] font-semibold text-[#8A8278] uppercase tracking-[0.1em]">
                   Actions banquier
@@ -444,7 +407,6 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                   subtitle={sfStatus?.configured ? 'Compte · Contacts · CRM' : 'Salesforce non configuré'}
                   disabled={!sfStatus?.configured}
                 />
-
                 <ActionRow
                   onClick={() => setTab('kyc')}
                   icon={
@@ -455,7 +417,6 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                   title="Lancer screening"
                   subtitle="Chainalysis · sanctions OFAC"
                 />
-
                 <ActionRow
                   onClick={() => { setTab('wallets'); setShowCreate(true); }}
                   icon={
@@ -467,7 +428,6 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                   title="Créer un wallet"
                   subtitle={wallets.length > 0 ? `${wallets.length} existant${wallets.length > 1 ? 's' : ''} · DFNS MPC` : 'DFNS · MPC 2 / 3'}
                 />
-
                 <ActionRow
                   onClick={() => setShowStatementModal(true)}
                   icon={
@@ -481,9 +441,20 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                 />
               </div>
             </Card>
+          </div>
 
-            {/* Wealth breakdown */}
-            <Card>
+          {/* R2 — Money : Crypto holdings (flagship) + Patrimoine consolidé */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="lg:col-span-8">
+              <CryptoHoldingsCard
+                wallets={wallets}
+                holdings={holdings}
+                loading={holdingsLoading}
+                net={(id) => SUPPORTED_NETWORKS.find(n => n.id === id) || { icon: '?', color: '#8A8278', name: id }}
+                onSelectWallet={(w) => setWalletDrawerId(w.id)}
+              />
+            </div>
+            <Card className="lg:col-span-4">
               <div className="px-6 pt-5 pb-4 border-b border-[#E7E7E7]">
                 <p className="text-eyebrow">Patrimoine consolidé</p>
                 <p className="display-sm text-[#0A0A0A] tabular-nums mt-2">
@@ -518,18 +489,11 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                 />
               </ul>
             </Card>
+          </div>
 
-            {/* Crypto holdings — real DFNS data aggregated per asset + per wallet */}
-            <CryptoHoldingsCard
-              wallets={wallets}
-              holdings={holdings}
-              loading={holdingsLoading}
-              net={(id) => SUPPORTED_NETWORKS.find(n => n.id === id) || { icon: '?', color: '#8A8278', name: id }}
-              onSelectWallet={(w) => setWalletDrawerId(w.id)}
-            />
-
-            {/* KYC summary */}
-            <SectionCard title="Conformité KYC">
+          {/* R3 — Compliance trio : KYC / Mandat / Historique contact */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <SectionCard title="Conformité KYC" className="lg:col-span-4">
               <div className="flex items-start gap-3">
                 <div
                   className="w-2 h-2 rounded-full mt-[8px] flex-shrink-0"
@@ -578,32 +542,94 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
               )}
             </SectionCard>
 
-            {/* Mandat de conservation — contract state & renewal countdown.
-               Real banker need: know if the signed mandate is still valid
-               (not expired, not pending renewal). Signals urgency visually. */}
-            <MandatCard
-              isSigned={!!parsed.kyc?.toLowerCase().includes('valid')}
-              createdDate={client.createdDate}
-            />
+            <div className="lg:col-span-4">
+              <MandatCard
+                isSigned={!!parsed.kyc?.toLowerCase().includes('valid')}
+                createdDate={client.createdDate}
+              />
+            </div>
 
-            {/* Historique contact — last 3 interactions (emails, calls, meetings).
-               Bankers relationship-manage; they need to see when they last
-               touched the client without opening SFDC. Data is placeholder
-               until we wire SFDC Activities/Tasks. */}
-            <ContactHistoryCard clientName={client.name} />
+            <div className="lg:col-span-4">
+              <ContactHistoryCard clientName={client.name} />
+            </div>
+          </div>
 
-            <SectionCard title="Métadonnées">
+          {/* R4 — Detailed info + Address */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <SectionCard title="Informations détaillées" className="lg:col-span-8">
+              <div className="grid grid-cols-2 gap-x-10 gap-y-6">
+                <Field label="Nom complet" value={client.name} />
+                <Field label="Numéro de compte" value={client.accountNumber} mono />
+                <Field label="Type de compte" value={typeLabel(client.type)} />
+                <Field label="Industrie" value={client.industry} />
+                <Field label="Chiffre d'affaires / AUM" value={client.aum ? fmtEUR(client.aum) : '—'} />
+                <Field label="Téléphone" value={client.phone} />
+                <Field label="Site web" value={client.website} link />
+                <Field label="Nombre d'employés" value={client.employees} />
+              </div>
+            </SectionCard>
+
+            <SectionCard title="Adresse de facturation" className="lg:col-span-4">
+              <div className="space-y-5">
+                <Field label="Rue" value={client.street} />
+                <Field label="Ville" value={client.city} />
+                <Field label="Code postal" value={client.postalCode} />
+                <Field label="Pays" value={client.country} />
+              </div>
+            </SectionCard>
+          </div>
+
+          {/* R5 — Contacts list + Metadata */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <Card className="lg:col-span-8">
+              <div className="px-6 py-4 flex items-center justify-between border-b border-[#E7E7E7]">
+                <h3 className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em]">Contacts</h3>
+                <span className="text-[12px] text-[#5D5D5D] tracking-[-0.003em]">{contacts.length} personne{contacts.length > 1 ? 's' : ''}</span>
+              </div>
+              {loadingContacts ? (
+                <div className="py-10 text-center"><Spinner /></div>
+              ) : contacts.length === 0 ? (
+                <p className="px-6 py-8 text-[13px] text-[#5D5D5D]">Aucun contact associé.</p>
+              ) : (
+                <ul>
+                  {contacts.map((c, i) => {
+                    const name = [c.FirstName, c.LastName].filter(Boolean).join(' ');
+                    return (
+                      <li
+                        key={c.Id}
+                        className={`px-6 py-4 flex items-center justify-between gap-4 ${i < contacts.length - 1 ? 'border-b border-[#E7E7E7]' : ''}`}
+                      >
+                        <div className="flex items-center gap-4 min-w-0">
+                          <Avatar name={name} size={38} />
+                          <div className="min-w-0">
+                            <p className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em] truncate">
+                              {name || '—'}
+                            </p>
+                            {c.Title && <p className="text-[12px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">{c.Title}</p>}
+                          </div>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          {c.Email && <p className="text-[12.5px] text-[#1E1E1E] tracking-[-0.003em]">{c.Email}</p>}
+                          {c.Phone && <p className="text-[11.5px] text-[#8A8278] mt-0.5">{c.Phone}</p>}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </Card>
+
+            <SectionCard title="Métadonnées" className="lg:col-span-4">
               <dl className="space-y-4">
                 <MetaRow label="ID Salesforce" value={client.id} mono />
                 <MetaRow label="Propriétaire" value={client.ownerId || '—'} mono />
                 <MetaRow label="Créé le" value={fmtDate(client.createdDate)} />
               </dl>
             </SectionCard>
-          </aside>
-        </div>
+          </div>
 
-        {/* Risk config — full width so its 3-column limits grid breathes */}
-        <RiskConfigPanel client={client} />
+          {/* R6 — Risk config, full width so its 3-column grid breathes */}
+          <RiskConfigPanel client={client} />
         </div>
       )}
 
