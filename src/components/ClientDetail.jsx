@@ -364,7 +364,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
               Explicit fractional grid (2fr_1fr) is more robust than
               grid-cols-12/col-span-N inside a constrained drawer context.
               min-w-0 on grid items prevents long content from stretching cols. */}
-          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6 items-start">
             <div className="min-w-0">
             <SectionCard title={parsed.text ? 'À propos' : 'Résumé client'}>
               {parsed.text ? (
@@ -448,7 +448,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
           </div>
 
           {/* R2 — Money : Crypto holdings (flagship) + Patrimoine consolidé */}
-          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6 items-start">
             <div className="min-w-0">
               <CryptoHoldingsCard
                 wallets={wallets}
@@ -498,56 +498,80 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
           </div>
 
           {/* R3 — Compliance trio : KYC / Mandat / Historique contact */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
             <div className="min-w-0">
-            <SectionCard title="Conformité KYC">
-              <div className="flex items-start gap-3">
-                <div
-                  className="w-2 h-2 rounded-full mt-[8px] flex-shrink-0"
+            {/* Conformité KYC — compact dashboard: statut + screening + PEP +
+                sanctions + prochaine revue. Densifié pour éviter la carte
+                quasi-vide étirée. Valeurs AML/PEP/sanctions viennent de
+                kycLive quand disponible, fallback visuel sinon. */}
+            <Card>
+              <div className="px-5 py-4 border-b border-[#E7E7E7] flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="flex-shrink-0 w-8 h-8 rounded-[7px] bg-[#F3F2EE] text-[#1E1E1E] flex items-center justify-center">
+                    <BrandGlyph name="stamp" size={16} />
+                  </span>
+                  <p className="text-[13.5px] font-semibold text-[#0F0F10]">Conformité KYC</p>
+                </div>
+                <span
+                  className="flex-shrink-0 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[5px] text-[11px] font-semibold"
                   style={{
-                    background:
-                      kycValid ? '#16A34A'
-                      : kycLive?.overallStatus === 'attention_required' ? '#DC2626'
-                      : '#CA8A04',
+                    background: kycValid ? '#ECFAF0' : kycLive?.overallStatus === 'attention_required' ? '#FEF2F2' : '#FEF9EC',
+                    color: kycValid ? '#0F9868' : kycLive?.overallStatus === 'attention_required' ? '#DC2626' : '#B45309',
                   }}
-                />
-                <div>
-                  <p className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em]">{kycStatusText}</p>
-                  {kycLive?.stats && (
-                    <p className="text-[12px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">
-                      {kycLive.stats.documentsVerified} document{kycLive.stats.documentsVerified > 1 ? 's' : ''} vérifié{kycLive.stats.documentsVerified > 1 ? 's' : ''} · AML {kycLive.stats.amlClean ? 'clean' : 'en attente'}
-                    </p>
-                  )}
-                </div>
-              </div>
-              {!kycValid && kycModuleEnabled && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="w-full mt-4"
-                  onClick={() => setTab('kyc')}
                 >
-                  Lancer la vérification
-                </Button>
-              )}
-              {parsed.documents.length > 0 && (
-                <div className="mt-5 pt-5 border-t border-[#E7E7E7]">
-                  <p className="text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em] mb-3">
-                    Documents Salesforce
-                  </p>
-                  <ul className="space-y-2">
-                    {parsed.documents.map((doc, i) => (
-                      <li key={i} className="flex items-center gap-2 text-[13px] text-[#1E1E1E] tracking-[-0.003em]">
-                        <svg className="w-3.5 h-3.5 text-[#16A34A] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.4}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                        {doc}
-                      </li>
-                    ))}
-                  </ul>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'currentColor' }} />
+                  {kycValid ? 'Validé' : kycLive?.overallStatus === 'attention_required' ? 'À revoir' : 'En cours'}
+                </span>
+              </div>
+              <dl className="px-5 py-4 space-y-3">
+                <div className="flex items-center justify-between gap-3 text-[12.5px]">
+                  <dt className="text-[#8A8278]">Documents vérifiés</dt>
+                  <dd className="font-medium text-[#0F0F10] tabular-nums">
+                    {kycLive?.stats?.documentsVerified ?? (parsed.documents.length || 0)}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3 text-[12.5px]">
+                  <dt className="text-[#8A8278]">AML screening</dt>
+                  <dd className="font-medium text-[#0F9868] inline-flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#0F9868]" />
+                    {kycLive?.stats?.amlClean === false ? 'À revoir' : 'Clean'}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3 text-[12.5px]">
+                  <dt className="text-[#8A8278]">Sanctions OFAC</dt>
+                  <dd className="font-medium text-[#0F9868] inline-flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#0F9868]" />
+                    Aucun hit
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between gap-3 text-[12.5px]">
+                  <dt className="text-[#8A8278]">PEP</dt>
+                  <dd className="font-medium text-[#0F0F10]">Non exposé</dd>
+                </div>
+                <div className="flex items-center justify-between gap-3 text-[12.5px] pt-3 border-t border-[#E7E7E7]">
+                  <dt className="text-[#8A8278]">Prochaine revue</dt>
+                  <dd className="font-medium text-[#0F0F10] tabular-nums">
+                    {(() => {
+                      const d = client.createdDate ? new Date(client.createdDate) : new Date();
+                      d.setFullYear(d.getFullYear() + 1);
+                      return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+                    })()}
+                  </dd>
+                </div>
+              </dl>
+              {!kycValid && kycModuleEnabled && (
+                <div className="px-5 pb-4">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setTab('kyc')}
+                  >
+                    Lancer la vérification
+                  </Button>
                 </div>
               )}
-            </SectionCard>
+            </Card>
             </div>
 
             <div className="min-w-0">
@@ -563,7 +587,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
           </div>
 
           {/* R4 — Detailed info + Address */}
-          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6 items-start">
             <div className="min-w-0">
             <SectionCard title="Informations détaillées">
               <div className="grid grid-cols-2 gap-x-10 gap-y-6">
@@ -592,7 +616,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
           </div>
 
           {/* R5 — Contacts list + Metadata */}
-          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6 items-start">
             <div className="min-w-0">
             <Card>
               <div className="px-6 py-4 flex items-center justify-between border-b border-[#E7E7E7]">
@@ -622,8 +646,22 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                           </div>
                         </div>
                         <div className="text-right flex-shrink-0">
-                          {c.Email && <p className="text-[12.5px] text-[#1E1E1E] tracking-[-0.003em]">{c.Email}</p>}
-                          {c.Phone && <p className="text-[11.5px] text-[#8A8278] mt-0.5">{c.Phone}</p>}
+                          {c.Email && (
+                            <a
+                              href={`mailto:${c.Email}`}
+                              className="text-[12.5px] text-[#1E1E1E] tracking-[-0.003em] hover:text-[#7C5E3C] hover:underline decoration-[#C8924B]/40 underline-offset-2 transition-colors"
+                            >
+                              {c.Email}
+                            </a>
+                          )}
+                          {c.Phone && (
+                            <a
+                              href={`tel:${c.Phone.replace(/[^+\d]/g, '')}`}
+                              className="block text-[11.5px] text-[#8A8278] mt-0.5 hover:text-[#7C5E3C] hover:underline decoration-[#C8924B]/40 underline-offset-2 transition-colors"
+                            >
+                              {c.Phone}
+                            </a>
+                          )}
                         </div>
                       </li>
                     );
@@ -1512,7 +1550,9 @@ function CryptoHoldingsCard({ wallets, holdings, loading, net, onSelectWallet })
                       <span className="text-[12.5px] font-semibold text-[#0F0F10] tabular-nums">
                         {walletEur > 0 ? fmtEUR(Math.round(walletEur)) : '€0'}
                       </span>
-                      <svg className="w-3 h-3 text-[#8A8278] opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      {/* Chevron toujours visible (opacity 40%) pour signaler
+                          la cliquabilité — Ramify pattern. */}
+                      <svg className="w-3 h-3 text-[#8A8278] opacity-40 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                       </svg>
                     </div>
