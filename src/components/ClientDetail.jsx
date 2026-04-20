@@ -841,14 +841,15 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
             <Card>
               {wallets.map((w, i) => {
                 const n = net(w.network);
-                const active = selectedWallet?.id === w.id;
                 return (
                   <div
                     key={w.id}
-                    onClick={() => selectWallet(w)}
-                    className={`flex items-center gap-5 px-6 py-5 cursor-pointer transition-colors ${
-                      active ? 'bg-white' : 'hover:bg-white'
-                    } ${i < wallets.length - 1 ? 'border-b border-[#E7E7E7]' : ''}`}
+                    // Click = open detail drawer (right-slide) + select the wallet
+                    // in parent state so the Freeze panel below (and Transferts
+                    // tab) have the context they need. Unified UX with the
+                    // Profil tab wallet rows.
+                    onClick={() => { setWalletDrawerId(w.id); selectWallet(w); }}
+                    className="flex items-center gap-5 px-6 py-5 cursor-pointer transition-colors hover:bg-[#FDFBF6] active:bg-[#F9F8F5] border-b border-[#E7E7E7] last:border-b-0 group"
                   >
                     <div className="w-11 h-11 rounded-[10px] flex items-center justify-center bg-[#F5F3EE] border border-[#E7E7E7] flex-shrink-0">
                       <span className="font-mono text-[12px] font-medium text-[#0A0A0A]">{n.icon}</span>
@@ -865,7 +866,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                       <p className="text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em]">Réseau</p>
                       <p className="text-[13px] font-medium text-[#0A0A0A] mt-1 tracking-[-0.01em]">{n.name}</p>
                     </div>
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-[#8A8278] flex-shrink-0">
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-[#8A8278] flex-shrink-0 group-hover:text-[#1E1E1E] group-hover:translate-x-0.5 transition-all">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                       </svg>
@@ -876,76 +877,9 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
             </Card>
           )}
 
-          {selectedWallet && (
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-[10px] flex items-center justify-center bg-[#F5F3EE] border border-[#E7E7E7]">
-                    <span className="font-mono text-[13px] font-medium text-[#0A0A0A]">{net(selectedWallet.network).icon}</span>
-                  </div>
-                  <div>
-                    <h3 className="text-[18px] font-medium text-[#1E1E1E]">{selectedWallet.name || 'Wallet'}</h3>
-                    <p className="text-[12.5px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">{net(selectedWallet.network).name}</p>
-                  </div>
-                </div>
-                <Button
-                  variant="primary"
-                  onClick={() => setShowTransfer(true)}
-                  disabled={client.Custody_Eligible__c !== true && !kycValid}
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                  </svg>
-                  Envoyer
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="p-4 bg-white rounded-[12px] border border-[#E7E7E7]">
-                  <p className="text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em] mb-1.5">Adresse</p>
-                  <p className="text-[12px] font-mono text-[#0A0A0A] break-all leading-relaxed">{selectedWallet.address}</p>
-                </div>
-                <div className="p-4 bg-white rounded-[12px] border border-[#E7E7E7]">
-                  <p className="text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em] mb-1.5">Valeur nette</p>
-                  <p className="text-[22px] font-medium text-[#0A0A0A] tabular-nums tracking-[-0.025em]">
-                    {assets?.netWorth?.USD ? `$${assets.netWorth.USD.toLocaleString()}` : '—'}
-                  </p>
-                </div>
-                <div className="p-4 bg-white rounded-[12px] border border-[#E7E7E7]">
-                  <p className="text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em] mb-1.5">Actifs</p>
-                  <p className="text-[22px] font-medium text-[#0A0A0A] tabular-nums tracking-[-0.025em]">
-                    {assets?.assets?.length || 0}
-                  </p>
-                </div>
-              </div>
-
-              {assets?.assets?.length > 0 && (
-                <div>
-                  <p className="text-[11px] font-medium text-[#8A8278] uppercase tracking-[0.04em] mb-3">Portefeuille</p>
-                  <div className="space-y-2">
-                    {assets.assets.map((a, i) => (
-                      <div key={i} className="flex items-center justify-between py-3 px-4 bg-white rounded-[10px] border border-[#E7E7E7]">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-white border border-[#E7E7E7] flex items-center justify-center">
-                            <span className="text-[10px] font-medium font-mono">{a.symbol?.slice(0, 3)}</span>
-                          </div>
-                          <div>
-                            <p className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em]">{a.symbol}</p>
-                            <p className="text-[11px] text-[#5D5D5D]">{a.kind}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[14px] font-medium text-[#0A0A0A] tabular-nums tracking-[-0.015em]">{a.balance}</p>
-                          {a.quotes?.USD && <p className="text-[11px] text-[#5D5D5D] tabular-nums">${a.quotes.USD.toLocaleString()}</p>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </Card>
-          )}
-
+          {/* Freeze panel — reste en bas quand un wallet est sélectionné. On
+              garde hors drawer pour que le banquier puisse manipuler le
+              freeze tout en consultant l'ensemble de la liste. */}
           {selectedWallet && (
             <WalletFreezePanel
               walletId={selectedWallet.id}
@@ -1464,14 +1398,17 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                   </div>
                 </div>
 
-                {/* Actions — keyboard-focusable */}
+                {/* Actions — keyboard-focusable.
+                    • Historique → tab Transferts avec ce wallet sélectionné
+                    • Transfert → tab Transferts + ouvre modal transfert
+                    "Voir détails complets" retiré : le drawer EST le détail. */}
                 <div className="grid grid-cols-2 gap-2 pt-4 border-t border-[#E7E7E7]">
                   <Button
                     variant="secondary"
                     size="md"
-                    onClick={() => { setWalletDrawerId(null); setTab('wallets'); setSelectedWallet(w); }}
+                    onClick={() => { setWalletDrawerId(null); setTab('transfers'); setSelectedWallet(w); }}
                   >
-                    Voir détails complets
+                    Voir l'historique
                   </Button>
                   <Button
                     variant="primary"
