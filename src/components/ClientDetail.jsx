@@ -933,19 +933,9 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
             </Card>
           )}
 
-          {/* Freeze panel — reste en bas quand un wallet est sélectionné. On
-              garde hors drawer pour que le banquier puisse manipuler le
-              freeze tout en consultant l'ensemble de la liste. */}
-          {selectedWallet && (
-            <WalletFreezePanel
-              walletId={selectedWallet.id}
-              walletName={selectedWallet.name}
-              walletAddress={selectedWallet.address}
-              walletNetwork={selectedWallet.network}
-              salesforceAccountId={client.id}
-              clientName={client.name || client.Name}
-            />
-          )}
+          {/* Freeze panel déplacé dans le drawer de détail wallet
+              (cf. plus bas) — pour centraliser toutes les actions
+              par-wallet au même endroit. */}
 
           <WhitelistPanel client={client} />
         </div>
@@ -1581,6 +1571,18 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
           >
             {w && (
               <div className="space-y-5 animate-fade">
+                {/* Gel des avoirs — en tête pour que le banquier voie
+                    immédiatement si le wallet est bloqué. Per-wallet via
+                    walletId, conforme MiCA Art. 68 · LCB-FT. */}
+                <WalletFreezePanel
+                  walletId={w.id}
+                  walletName={w.name}
+                  walletAddress={w.address}
+                  walletNetwork={w.network}
+                  salesforceAccountId={client.id}
+                  clientName={client.name || client.Name}
+                />
+
                 {/* Live balance — big number same pattern as CryptoHoldingsCard */}
                 <div className="bg-[#F9F8F5] border border-[#E7E7E7] rounded-[8px] p-5">
                   <p className="text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.1em]">
