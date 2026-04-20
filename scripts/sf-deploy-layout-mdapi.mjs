@@ -10,7 +10,10 @@ import 'dotenv/config';
 import JSZip from 'jszip';
 
 const LOGIN_URL = process.env.SF_LOGIN_URL || 'https://login.salesforce.com';
-const LAYOUT_FULL_NAME = 'Account-Account (Sales) Layout';
+// Layout par défaut assigné au profil "Administrateur système" — c'est
+// celui que le banquier voit quand il ouvre une fiche Account dans
+// Lightning. Modifiable via argv[1] si besoin de patcher un autre layout.
+const LAYOUT_FULL_NAME = process.argv[2] || 'Account-Account Layout';
 
 async function getToken() {
   const params = new URLSearchParams({
