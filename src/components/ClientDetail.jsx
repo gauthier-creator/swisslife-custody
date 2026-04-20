@@ -360,96 +360,47 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
       {tab === 'profile' && (
         <div className="space-y-6 animate-fade">
 
-          {/* R1 — Intro + Actions banquier
-              Explicit fractional grid (2fr_1fr) is more robust than
-              grid-cols-12/col-span-N inside a constrained drawer context.
-              min-w-0 on grid items prevents long content from stretching cols. */}
-          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6 items-start">
-            <div className="min-w-0">
-            <SectionCard title={parsed.text ? 'À propos' : 'Résumé client'}>
-              {parsed.text ? (
-                <p className="text-[14px] text-[#1E1E1E] leading-[1.65] tracking-[-0.003em]">
-                  {parsed.text}
-                </p>
-              ) : (
-                <div className="space-y-3 text-[14px] text-[#1E1E1E] leading-[1.65] tracking-[-0.003em]">
-                  <p>
-                    <span className="font-medium">{client.name}</span>
-                    {' · '}
-                    <span className="text-[#5D5D5D]">{typeLabel(client.type)}</span>
-                    {client.industry && <span className="text-[#5D5D5D]"> · {client.industry}</span>}
-                  </p>
-                  <p className="text-[13px] text-[#5D5D5D]">
-                    {client.aum ? `AUM consolidé ${fmtCompactEUR(client.aum)}.` : 'Patrimoine non renseigné.'}
-                    {wallets.length > 0 ? ` ${wallets.length} wallet${wallets.length > 1 ? 's' : ''} sous conservation DFNS.` : ' Aucun wallet en custody.'}
-                  </p>
-                </div>
-              )}
-            </SectionCard>
-            </div>
+          {/* ── Deux colonnes indépendantes qui coulent verticalement ──
+              Contrairement à "rows horizontaux" (où chaque row attend le plus
+              grand item → crée des vides sous le plus court), ici chaque
+              colonne s'empile indépendamment. Plus de dead space entre cards
+              d'une même colonne.
 
-            <div className="min-w-0">
-            <Card>
-              <div className="px-5 py-4 border-b border-[#E7E7E7]">
-                <p className="text-[11px] font-semibold text-[#8A8278] uppercase tracking-[0.1em]">
-                  Actions banquier
-                </p>
-                <p className="text-[13px] text-[#5D5D5D] mt-1">
-                  Workflow custody pour ce client
-                </p>
-              </div>
-              <div className="p-4 space-y-2">
-                <ActionRow
-                  onClick={openInSalesforce}
-                  icon={
-                    <svg className="w-[14px] h-[14px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M14 3h7v7M10 14L21 3M21 14v5a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h5" />
-                    </svg>
-                  }
-                  title="Ouvrir dans Salesforce"
-                  subtitle={sfStatus?.configured ? 'Compte · Contacts · CRM' : 'Salesforce non configuré'}
-                  disabled={!sfStatus?.configured}
-                />
-                <ActionRow
-                  onClick={() => setTab('kyc')}
-                  icon={
-                    <svg className="w-[14px] h-[14px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.306a11.95 11.95 0 015.814-5.518l2.74-1.22" />
-                    </svg>
-                  }
-                  title="Lancer screening"
-                  subtitle="Chainalysis · sanctions OFAC"
-                />
-                <ActionRow
-                  onClick={() => { setTab('wallets'); setShowCreate(true); }}
-                  icon={
-                    <svg className="w-[14px] h-[14px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                      <rect x="3" y="3" width="18" height="18" rx="2" />
-                      <circle cx="12" cy="12" r="4" />
-                    </svg>
-                  }
-                  title="Créer un wallet"
-                  subtitle={wallets.length > 0 ? `${wallets.length} existant${wallets.length > 1 ? 's' : ''} · DFNS MPC` : 'DFNS · MPC 2 / 3'}
-                />
-                <ActionRow
-                  onClick={() => setShowStatementModal(true)}
-                  icon={
-                    <svg className="w-[14px] h-[14px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l9 6 9-6M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" />
-                    </svg>
-                  }
-                  title="Envoyer relevé custody"
-                  subtitle={wallets.length > 0 ? 'PDF signé · horodaté · ACPR' : 'Créez un wallet d\'abord'}
-                  disabled={wallets.length === 0}
-                />
-              </div>
-            </Card>
-            </div>
-          </div>
+              LEFT (3fr ≈ 60%) : identité + custody data + contacts
+              → contenu qui bénéficie de la largeur (grids 2-col, listes larges)
+              RIGHT (2fr ≈ 40%) : actions + patrimoine + compliance + meta
+              → cards compactes type "sidebar"
 
-          {/* R2 — Money : Crypto holdings (flagship) + Patrimoine consolidé */}
-          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6 items-start">
-            <div className="min-w-0">
+              Répartition choisie pour équilibrer à ±10% les hauteurs totales.
+          */}
+          <div className="grid grid-cols-1 md:grid-cols-[3fr_2fr] gap-6 items-start">
+
+            {/* ══════════ LEFT column ══════════ */}
+            <div className="min-w-0 space-y-6">
+
+              {/* Résumé client */}
+              <SectionCard title={parsed.text ? 'À propos' : 'Résumé client'}>
+                {parsed.text ? (
+                  <p className="text-[14px] text-[#1E1E1E] leading-[1.65] tracking-[-0.003em]">
+                    {parsed.text}
+                  </p>
+                ) : (
+                  <div className="space-y-3 text-[14px] text-[#1E1E1E] leading-[1.65] tracking-[-0.003em]">
+                    <p>
+                      <span className="font-medium">{client.name}</span>
+                      {' · '}
+                      <span className="text-[#5D5D5D]">{typeLabel(client.type)}</span>
+                      {client.industry && <span className="text-[#5D5D5D]"> · {client.industry}</span>}
+                    </p>
+                    <p className="text-[13px] text-[#5D5D5D]">
+                      {client.aum ? `AUM consolidé ${fmtCompactEUR(client.aum)}.` : 'Patrimoine non renseigné.'}
+                      {wallets.length > 0 ? ` ${wallets.length} wallet${wallets.length > 1 ? 's' : ''} sous conservation DFNS.` : ' Aucun wallet en custody.'}
+                    </p>
+                  </div>
+                )}
+              </SectionCard>
+
+              {/* Cryptos détenues — flagship custody view */}
               <CryptoHoldingsCard
                 wallets={wallets}
                 holdings={holdings}
@@ -457,232 +408,273 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                 net={(id) => SUPPORTED_NETWORKS.find(n => n.id === id) || { icon: '?', color: '#8A8278', name: id }}
                 onSelectWallet={(w) => setWalletDrawerId(w.id)}
               />
-            </div>
-            <div className="min-w-0">
-            <Card>
-              <div className="px-6 pt-5 pb-4 border-b border-[#E7E7E7]">
-                <p className="text-eyebrow">Patrimoine consolidé</p>
-                <p className="display-sm text-[#0A0A0A] tabular-nums mt-2">
-                  {client.aum ? fmtCompactEUR(client.aum) : '—'}
-                </p>
-              </div>
-              <ul>
-                <WealthRow
-                  label="Liquidités"
-                  sub="Comptes courants"
-                  value={fmtEUR(Math.round((client.aum || 0) * 0.15))}
-                  pct={15}
-                />
-                <WealthRow
-                  label="Investissements"
-                  sub="Actions · Obligations"
-                  value={fmtEUR(Math.round((client.aum || 0) * 0.65))}
-                  pct={65}
-                />
-                <WealthRow
-                  label="Immobilier"
-                  sub="Direct et indirect"
-                  value={fmtEUR(Math.round((client.aum || 0) * 0.15))}
-                  pct={15}
-                />
-                <WealthRow
-                  label="Actifs numériques"
-                  sub={parsed.allocation ? `Cible ${parsed.allocation}` : 'Conservation MiCA'}
-                  value={fmtEUR(Math.round((client.aum || 0) * 0.05))}
-                  pct={5}
-                  last
-                />
-              </ul>
-            </Card>
-            </div>
-          </div>
 
-          {/* R3 — Compliance trio : KYC / Mandat / Historique contact */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-            <div className="min-w-0">
-            {/* Conformité KYC — compact dashboard: statut + screening + PEP +
-                sanctions + prochaine revue. Densifié pour éviter la carte
-                quasi-vide étirée. Valeurs AML/PEP/sanctions viennent de
-                kycLive quand disponible, fallback visuel sinon. */}
-            <Card>
-              <div className="px-5 py-4 border-b border-[#E7E7E7] flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <span className="flex-shrink-0 w-8 h-8 rounded-[7px] bg-[#F3F2EE] text-[#1E1E1E] flex items-center justify-center">
-                    <BrandGlyph name="stamp" size={16} />
-                  </span>
-                  <p className="text-[13.5px] font-semibold text-[#0F0F10]">Conformité KYC</p>
+              {/* Informations détaillées (wide 2-col grid) */}
+              <SectionCard title="Informations détaillées">
+                <div className="grid grid-cols-2 gap-x-10 gap-y-6">
+                  <Field label="Nom complet" value={client.name} />
+                  <Field label="Numéro de compte" value={client.accountNumber} mono />
+                  <Field label="Type de compte" value={typeLabel(client.type)} />
+                  <Field label="Industrie" value={client.industry} />
+                  <Field label="Chiffre d'affaires / AUM" value={client.aum ? fmtEUR(client.aum) : '—'} />
+                  <Field label="Téléphone" value={client.phone} />
+                  <Field label="Site web" value={client.website} link />
+                  <Field label="Nombre d'employés" value={client.employees} />
                 </div>
-                <span
-                  className="flex-shrink-0 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[5px] text-[11px] font-semibold"
-                  style={{
-                    background: kycValid ? '#ECFAF0' : kycLive?.overallStatus === 'attention_required' ? '#FEF2F2' : '#FEF9EC',
-                    color: kycValid ? '#0F9868' : kycLive?.overallStatus === 'attention_required' ? '#DC2626' : '#B45309',
-                  }}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'currentColor' }} />
-                  {kycValid ? 'Validé' : kycLive?.overallStatus === 'attention_required' ? 'À revoir' : 'En cours'}
-                </span>
-              </div>
-              <dl className="px-5 py-4 space-y-3">
-                <div className="flex items-center justify-between gap-3 text-[12.5px]">
-                  <dt className="text-[#8A8278]">Documents vérifiés</dt>
-                  <dd className="font-medium text-[#0F0F10] tabular-nums">
-                    {kycLive?.stats?.documentsVerified ?? (parsed.documents.length || 0)}
-                  </dd>
+              </SectionCard>
+
+              {/* Adresse de facturation — identity data stays in LEFT */}
+              <SectionCard title="Adresse de facturation">
+                <div className="grid grid-cols-2 gap-x-10 gap-y-6">
+                  <Field label="Rue" value={client.street} />
+                  <Field label="Ville" value={client.city} />
+                  <Field label="Code postal" value={client.postalCode} />
+                  <Field label="Pays" value={client.country} />
                 </div>
-                <div className="flex items-center justify-between gap-3 text-[12.5px]">
-                  <dt className="text-[#8A8278]">AML screening</dt>
-                  <dd className="font-medium text-[#0F9868] inline-flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#0F9868]" />
-                    {kycLive?.stats?.amlClean === false ? 'À revoir' : 'Clean'}
-                  </dd>
+              </SectionCard>
+
+              {/* Contacts list */}
+              <Card>
+                <div className="px-6 py-4 flex items-center justify-between border-b border-[#E7E7E7]">
+                  <h3 className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em]">Contacts</h3>
+                  <span className="text-[12px] text-[#5D5D5D] tracking-[-0.003em]">{contacts.length} personne{contacts.length > 1 ? 's' : ''}</span>
                 </div>
-                <div className="flex items-center justify-between gap-3 text-[12.5px]">
-                  <dt className="text-[#8A8278]">Sanctions OFAC</dt>
-                  <dd className="font-medium text-[#0F9868] inline-flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#0F9868]" />
-                    Aucun hit
-                  </dd>
+                {loadingContacts ? (
+                  <div className="py-10 text-center"><Spinner /></div>
+                ) : contacts.length === 0 ? (
+                  <p className="px-6 py-8 text-[13px] text-[#5D5D5D]">Aucun contact associé.</p>
+                ) : (
+                  <ul>
+                    {contacts.map((c, i) => {
+                      const name = [c.FirstName, c.LastName].filter(Boolean).join(' ');
+                      return (
+                        <li
+                          key={c.Id}
+                          className={`px-6 py-4 flex items-center justify-between gap-4 ${i < contacts.length - 1 ? 'border-b border-[#E7E7E7]' : ''}`}
+                        >
+                          <div className="flex items-center gap-4 min-w-0">
+                            <Avatar name={name} size={38} />
+                            <div className="min-w-0">
+                              <p className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em] truncate">
+                                {name || '—'}
+                              </p>
+                              {c.Title && <p className="text-[12px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">{c.Title}</p>}
+                            </div>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            {c.Email && (
+                              <a
+                                href={`mailto:${c.Email}`}
+                                className="text-[12.5px] text-[#1E1E1E] tracking-[-0.003em] hover:text-[#7C5E3C] hover:underline decoration-[#C8924B]/40 underline-offset-2 transition-colors"
+                              >
+                                {c.Email}
+                              </a>
+                            )}
+                            {c.Phone && (
+                              <a
+                                href={`tel:${c.Phone.replace(/[^+\d]/g, '')}`}
+                                className="block text-[11.5px] text-[#8A8278] mt-0.5 hover:text-[#7C5E3C] hover:underline decoration-[#C8924B]/40 underline-offset-2 transition-colors"
+                              >
+                                {c.Phone}
+                              </a>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </Card>
+            </div>
+
+            {/* ══════════ RIGHT column ══════════ */}
+            <div className="min-w-0 space-y-6">
+
+              {/* Actions banquier */}
+              <Card>
+                <div className="px-5 py-4 border-b border-[#E7E7E7]">
+                  <p className="text-[11px] font-semibold text-[#8A8278] uppercase tracking-[0.1em]">
+                    Actions banquier
+                  </p>
+                  <p className="text-[13px] text-[#5D5D5D] mt-1">
+                    Workflow custody pour ce client
+                  </p>
                 </div>
-                <div className="flex items-center justify-between gap-3 text-[12.5px]">
-                  <dt className="text-[#8A8278]">PEP</dt>
-                  <dd className="font-medium text-[#0F0F10]">Non exposé</dd>
-                </div>
-                <div className="flex items-center justify-between gap-3 text-[12.5px] pt-3 border-t border-[#E7E7E7]">
-                  <dt className="text-[#8A8278]">Prochaine revue</dt>
-                  <dd className="font-medium text-[#0F0F10] tabular-nums">
-                    {(() => {
-                      const d = client.createdDate ? new Date(client.createdDate) : new Date();
-                      d.setFullYear(d.getFullYear() + 1);
-                      return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
-                    })()}
-                  </dd>
-                </div>
-              </dl>
-              {!kycValid && kycModuleEnabled && (
-                <div className="px-5 pb-4">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="w-full"
+                <div className="p-4 space-y-2">
+                  <ActionRow
+                    onClick={openInSalesforce}
+                    icon={
+                      <svg className="w-[14px] h-[14px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M14 3h7v7M10 14L21 3M21 14v5a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h5" />
+                      </svg>
+                    }
+                    title="Ouvrir dans Salesforce"
+                    subtitle={sfStatus?.configured ? 'Compte · Contacts · CRM' : 'Salesforce non configuré'}
+                    disabled={!sfStatus?.configured}
+                  />
+                  <ActionRow
                     onClick={() => setTab('kyc')}
-                  >
-                    Lancer la vérification
-                  </Button>
+                    icon={
+                      <svg className="w-[14px] h-[14px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.306a11.95 11.95 0 015.814-5.518l2.74-1.22" />
+                      </svg>
+                    }
+                    title="Lancer screening"
+                    subtitle="Chainalysis · sanctions OFAC"
+                  />
+                  <ActionRow
+                    onClick={() => { setTab('wallets'); setShowCreate(true); }}
+                    icon={
+                      <svg className="w-[14px] h-[14px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <circle cx="12" cy="12" r="4" />
+                      </svg>
+                    }
+                    title="Créer un wallet"
+                    subtitle={wallets.length > 0 ? `${wallets.length} existant${wallets.length > 1 ? 's' : ''} · DFNS MPC` : 'DFNS · MPC 2 / 3'}
+                  />
+                  <ActionRow
+                    onClick={() => setShowStatementModal(true)}
+                    icon={
+                      <svg className="w-[14px] h-[14px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l9 6 9-6M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" />
+                      </svg>
+                    }
+                    title="Envoyer relevé custody"
+                    subtitle={wallets.length > 0 ? 'PDF signé · horodaté · ACPR' : 'Créez un wallet d\'abord'}
+                    disabled={wallets.length === 0}
+                  />
                 </div>
-              )}
-            </Card>
-            </div>
+              </Card>
 
-            <div className="min-w-0">
+              {/* Patrimoine consolidé */}
+              <Card>
+                <div className="px-6 pt-5 pb-4 border-b border-[#E7E7E7]">
+                  <p className="text-eyebrow">Patrimoine consolidé</p>
+                  <p className="display-sm text-[#0A0A0A] tabular-nums mt-2">
+                    {client.aum ? fmtCompactEUR(client.aum) : '—'}
+                  </p>
+                </div>
+                <ul>
+                  <WealthRow
+                    label="Liquidités"
+                    sub="Comptes courants"
+                    value={fmtEUR(Math.round((client.aum || 0) * 0.15))}
+                    pct={15}
+                  />
+                  <WealthRow
+                    label="Investissements"
+                    sub="Actions · Obligations"
+                    value={fmtEUR(Math.round((client.aum || 0) * 0.65))}
+                    pct={65}
+                  />
+                  <WealthRow
+                    label="Immobilier"
+                    sub="Direct et indirect"
+                    value={fmtEUR(Math.round((client.aum || 0) * 0.15))}
+                    pct={15}
+                  />
+                  <WealthRow
+                    label="Actifs numériques"
+                    sub={parsed.allocation ? `Cible ${parsed.allocation}` : 'Conservation MiCA'}
+                    value={fmtEUR(Math.round((client.aum || 0) * 0.05))}
+                    pct={5}
+                    last
+                  />
+                </ul>
+              </Card>
+
+              {/* Conformité KYC — compact compliance dashboard */}
+              <Card>
+                <div className="px-5 py-4 border-b border-[#E7E7E7] flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="flex-shrink-0 w-8 h-8 rounded-[7px] bg-[#F3F2EE] text-[#1E1E1E] flex items-center justify-center">
+                      <BrandGlyph name="stamp" size={16} />
+                    </span>
+                    <p className="text-[13.5px] font-semibold text-[#0F0F10]">Conformité KYC</p>
+                  </div>
+                  <span
+                    className="flex-shrink-0 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[5px] text-[11px] font-semibold"
+                    style={{
+                      background: kycValid ? '#ECFAF0' : kycLive?.overallStatus === 'attention_required' ? '#FEF2F2' : '#FEF9EC',
+                      color: kycValid ? '#0F9868' : kycLive?.overallStatus === 'attention_required' ? '#DC2626' : '#B45309',
+                    }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'currentColor' }} />
+                    {kycValid ? 'Validé' : kycLive?.overallStatus === 'attention_required' ? 'À revoir' : 'En cours'}
+                  </span>
+                </div>
+                <dl className="px-5 py-4 space-y-3">
+                  <div className="flex items-center justify-between gap-3 text-[12.5px]">
+                    <dt className="text-[#8A8278]">Documents vérifiés</dt>
+                    <dd className="font-medium text-[#0F0F10] tabular-nums">
+                      {kycLive?.stats?.documentsVerified ?? (parsed.documents.length || 0)}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-[12.5px]">
+                    <dt className="text-[#8A8278]">AML screening</dt>
+                    <dd className="font-medium text-[#0F9868] inline-flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#0F9868]" />
+                      {kycLive?.stats?.amlClean === false ? 'À revoir' : 'Clean'}
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-[12.5px]">
+                    <dt className="text-[#8A8278]">Sanctions OFAC</dt>
+                    <dd className="font-medium text-[#0F9868] inline-flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#0F9868]" />
+                      Aucun hit
+                    </dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-[12.5px]">
+                    <dt className="text-[#8A8278]">PEP</dt>
+                    <dd className="font-medium text-[#0F0F10]">Non exposé</dd>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-[12.5px] pt-3 border-t border-[#E7E7E7]">
+                    <dt className="text-[#8A8278]">Prochaine revue</dt>
+                    <dd className="font-medium text-[#0F0F10] tabular-nums">
+                      {(() => {
+                        const d = client.createdDate ? new Date(client.createdDate) : new Date();
+                        d.setFullYear(d.getFullYear() + 1);
+                        return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+                      })()}
+                    </dd>
+                  </div>
+                </dl>
+                {!kycValid && kycModuleEnabled && (
+                  <div className="px-5 pb-4">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setTab('kyc')}
+                    >
+                      Lancer la vérification
+                    </Button>
+                  </div>
+                )}
+              </Card>
+
+              {/* Mandat de conservation */}
               <MandatCard
                 isSigned={!!parsed.kyc?.toLowerCase().includes('valid')}
                 createdDate={client.createdDate}
               />
-            </div>
 
-            <div className="min-w-0">
+              {/* Historique contact */}
               <ContactHistoryCard clientName={client.name} />
+
+              {/* Métadonnées */}
+              <SectionCard title="Métadonnées">
+                <dl className="space-y-4">
+                  <MetaRow label="ID Salesforce" value={client.id} mono />
+                  <MetaRow label="Propriétaire" value={client.ownerId || '—'} mono />
+                  <MetaRow label="Créé le" value={fmtDate(client.createdDate)} />
+                </dl>
+              </SectionCard>
             </div>
           </div>
 
-          {/* R4 — Detailed info + Address */}
-          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6 items-start">
-            <div className="min-w-0">
-            <SectionCard title="Informations détaillées">
-              <div className="grid grid-cols-2 gap-x-10 gap-y-6">
-                <Field label="Nom complet" value={client.name} />
-                <Field label="Numéro de compte" value={client.accountNumber} mono />
-                <Field label="Type de compte" value={typeLabel(client.type)} />
-                <Field label="Industrie" value={client.industry} />
-                <Field label="Chiffre d'affaires / AUM" value={client.aum ? fmtEUR(client.aum) : '—'} />
-                <Field label="Téléphone" value={client.phone} />
-                <Field label="Site web" value={client.website} link />
-                <Field label="Nombre d'employés" value={client.employees} />
-              </div>
-            </SectionCard>
-            </div>
-
-            <div className="min-w-0">
-            <SectionCard title="Adresse de facturation">
-              <div className="space-y-5">
-                <Field label="Rue" value={client.street} />
-                <Field label="Ville" value={client.city} />
-                <Field label="Code postal" value={client.postalCode} />
-                <Field label="Pays" value={client.country} />
-              </div>
-            </SectionCard>
-            </div>
-          </div>
-
-          {/* R5 — Contacts list + Metadata */}
-          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6 items-start">
-            <div className="min-w-0">
-            <Card>
-              <div className="px-6 py-4 flex items-center justify-between border-b border-[#E7E7E7]">
-                <h3 className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em]">Contacts</h3>
-                <span className="text-[12px] text-[#5D5D5D] tracking-[-0.003em]">{contacts.length} personne{contacts.length > 1 ? 's' : ''}</span>
-              </div>
-              {loadingContacts ? (
-                <div className="py-10 text-center"><Spinner /></div>
-              ) : contacts.length === 0 ? (
-                <p className="px-6 py-8 text-[13px] text-[#5D5D5D]">Aucun contact associé.</p>
-              ) : (
-                <ul>
-                  {contacts.map((c, i) => {
-                    const name = [c.FirstName, c.LastName].filter(Boolean).join(' ');
-                    return (
-                      <li
-                        key={c.Id}
-                        className={`px-6 py-4 flex items-center justify-between gap-4 ${i < contacts.length - 1 ? 'border-b border-[#E7E7E7]' : ''}`}
-                      >
-                        <div className="flex items-center gap-4 min-w-0">
-                          <Avatar name={name} size={38} />
-                          <div className="min-w-0">
-                            <p className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em] truncate">
-                              {name || '—'}
-                            </p>
-                            {c.Title && <p className="text-[12px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">{c.Title}</p>}
-                          </div>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          {c.Email && (
-                            <a
-                              href={`mailto:${c.Email}`}
-                              className="text-[12.5px] text-[#1E1E1E] tracking-[-0.003em] hover:text-[#7C5E3C] hover:underline decoration-[#C8924B]/40 underline-offset-2 transition-colors"
-                            >
-                              {c.Email}
-                            </a>
-                          )}
-                          {c.Phone && (
-                            <a
-                              href={`tel:${c.Phone.replace(/[^+\d]/g, '')}`}
-                              className="block text-[11.5px] text-[#8A8278] mt-0.5 hover:text-[#7C5E3C] hover:underline decoration-[#C8924B]/40 underline-offset-2 transition-colors"
-                            >
-                              {c.Phone}
-                            </a>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </Card>
-            </div>
-
-            <div className="min-w-0">
-            <SectionCard title="Métadonnées">
-              <dl className="space-y-4">
-                <MetaRow label="ID Salesforce" value={client.id} mono />
-                <MetaRow label="Propriétaire" value={client.ownerId || '—'} mono />
-                <MetaRow label="Créé le" value={fmtDate(client.createdDate)} />
-              </dl>
-            </SectionCard>
-            </div>
-          </div>
-
-          {/* R6 — Risk config, full width so its 3-column grid breathes */}
+          {/* Configuration de risque — full width (son grid 3-col a besoin d'espace) */}
           <RiskConfigPanel client={client} />
         </div>
       )}
