@@ -949,7 +949,7 @@ export function Modal({ isOpen, onClose, title, subtitle, children, maxWidth = '
 
 // ─── Drawer ───────────────────────────────────────────
 // Right-side slide-in panel (Ramify-style) — list stays visible behind it.
-// size: 'sm' (440) · 'md' (560) · 'lg' (720) · 'xl' (880) · 'half' (55vw)
+// size: 'sm' (440) · 'md' (560) · 'lg' (720) · 'xl' (1080) · 'half' (65vw)
 // ESC closes · backdrop click closes · body scroll locked while open.
 export function Drawer({
   isOpen,
@@ -981,8 +981,8 @@ export function Drawer({
     sm:   'w-[440px]',
     md:   'w-[560px]',
     lg:   'w-[720px]',
-    xl:   'w-[880px]',
-    half: 'w-[min(55vw,1000px)]',
+    xl:   'w-[1080px]',
+    half: 'w-[min(65vw,1200px)]',
   }[size] || 'w-[720px]';
 
   return (

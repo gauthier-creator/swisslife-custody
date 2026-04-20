@@ -360,12 +360,13 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
       {tab === 'profile' && (
         <div className="space-y-6 animate-fade">
 
-          {/* R1 — Intro + Actions banquier */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <SectionCard
-              title={parsed.text ? 'À propos' : 'Résumé client'}
-              className="lg:col-span-8"
-            >
+          {/* R1 — Intro + Actions banquier
+              Explicit fractional grid (2fr_1fr) is more robust than
+              grid-cols-12/col-span-N inside a constrained drawer context.
+              min-w-0 on grid items prevents long content from stretching cols. */}
+          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6">
+            <div className="min-w-0">
+            <SectionCard title={parsed.text ? 'À propos' : 'Résumé client'}>
               {parsed.text ? (
                 <p className="text-[14px] text-[#1E1E1E] leading-[1.65] tracking-[-0.003em]">
                   {parsed.text}
@@ -385,8 +386,10 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                 </div>
               )}
             </SectionCard>
+            </div>
 
-            <Card className="lg:col-span-4">
+            <div className="min-w-0">
+            <Card>
               <div className="px-5 py-4 border-b border-[#E7E7E7]">
                 <p className="text-[11px] font-semibold text-[#8A8278] uppercase tracking-[0.1em]">
                   Actions banquier
@@ -441,11 +444,12 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                 />
               </div>
             </Card>
+            </div>
           </div>
 
           {/* R2 — Money : Crypto holdings (flagship) + Patrimoine consolidé */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <div className="lg:col-span-8">
+          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6">
+            <div className="min-w-0">
               <CryptoHoldingsCard
                 wallets={wallets}
                 holdings={holdings}
@@ -454,7 +458,8 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                 onSelectWallet={(w) => setWalletDrawerId(w.id)}
               />
             </div>
-            <Card className="lg:col-span-4">
+            <div className="min-w-0">
+            <Card>
               <div className="px-6 pt-5 pb-4 border-b border-[#E7E7E7]">
                 <p className="text-eyebrow">Patrimoine consolidé</p>
                 <p className="display-sm text-[#0A0A0A] tabular-nums mt-2">
@@ -489,11 +494,13 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                 />
               </ul>
             </Card>
+            </div>
           </div>
 
           {/* R3 — Compliance trio : KYC / Mandat / Historique contact */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <SectionCard title="Conformité KYC" className="lg:col-span-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="min-w-0">
+            <SectionCard title="Conformité KYC">
               <div className="flex items-start gap-3">
                 <div
                   className="w-2 h-2 rounded-full mt-[8px] flex-shrink-0"
@@ -541,22 +548,24 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                 </div>
               )}
             </SectionCard>
+            </div>
 
-            <div className="lg:col-span-4">
+            <div className="min-w-0">
               <MandatCard
                 isSigned={!!parsed.kyc?.toLowerCase().includes('valid')}
                 createdDate={client.createdDate}
               />
             </div>
 
-            <div className="lg:col-span-4">
+            <div className="min-w-0">
               <ContactHistoryCard clientName={client.name} />
             </div>
           </div>
 
           {/* R4 — Detailed info + Address */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <SectionCard title="Informations détaillées" className="lg:col-span-8">
+          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6">
+            <div className="min-w-0">
+            <SectionCard title="Informations détaillées">
               <div className="grid grid-cols-2 gap-x-10 gap-y-6">
                 <Field label="Nom complet" value={client.name} />
                 <Field label="Numéro de compte" value={client.accountNumber} mono />
@@ -568,8 +577,10 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                 <Field label="Nombre d'employés" value={client.employees} />
               </div>
             </SectionCard>
+            </div>
 
-            <SectionCard title="Adresse de facturation" className="lg:col-span-4">
+            <div className="min-w-0">
+            <SectionCard title="Adresse de facturation">
               <div className="space-y-5">
                 <Field label="Rue" value={client.street} />
                 <Field label="Ville" value={client.city} />
@@ -577,11 +588,13 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                 <Field label="Pays" value={client.country} />
               </div>
             </SectionCard>
+            </div>
           </div>
 
           {/* R5 — Contacts list + Metadata */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <Card className="lg:col-span-8">
+          <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-6">
+            <div className="min-w-0">
+            <Card>
               <div className="px-6 py-4 flex items-center justify-between border-b border-[#E7E7E7]">
                 <h3 className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em]">Contacts</h3>
                 <span className="text-[12px] text-[#5D5D5D] tracking-[-0.003em]">{contacts.length} personne{contacts.length > 1 ? 's' : ''}</span>
@@ -618,14 +631,17 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                 </ul>
               )}
             </Card>
+            </div>
 
-            <SectionCard title="Métadonnées" className="lg:col-span-4">
+            <div className="min-w-0">
+            <SectionCard title="Métadonnées">
               <dl className="space-y-4">
                 <MetaRow label="ID Salesforce" value={client.id} mono />
                 <MetaRow label="Propriétaire" value={client.ownerId || '—'} mono />
                 <MetaRow label="Créé le" value={fmtDate(client.createdDate)} />
               </dl>
             </SectionCard>
+            </div>
           </div>
 
           {/* R6 — Risk config, full width so its 3-column grid breathes */}
