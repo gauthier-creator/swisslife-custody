@@ -5,9 +5,7 @@ import {
   SkeletonCircle, Skeleton, useCountUp,
   PageHeader, StatusDot, Timestamp, SignatureMark, FleuronRule,
   Metric, MetricRow,
-  SubSection, LinkList, LinkListItem,
 } from './shared';
-import { BrandGlyph } from './BrandGlyphs';
 import {
   ProductCard, ProductCarousel,
   SceneVault, SceneArch, SceneWaves, SceneDocument, SceneKeys,
@@ -76,24 +74,6 @@ export default function ClientList({ onSelectClient, onNavigate }) {
       <PageHeader
         icon={<IconClients size={18} />}
         title="Clients"
-        trailing={
-          <div className="relative">
-            <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-[15px] h-[15px] text-[#8A8278] pointer-events-none"
-              fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.2-5.2m2.2-5.3a7.5 7.5 0 11-15 0 7.5 7.5 0 0115 0z" />
-            </svg>
-            <input
-              type="text"
-              value={search}
-              onChange={handleSearch}
-              placeholder="Rechercher un client…"
-              aria-label="Rechercher un client"
-              className="h-9 pl-9 pr-3 w-[260px] text-[13px] bg-white border border-[#E7E7E7] rounded-[6px] outline-none focus-visible:border-[#7C5E3C] focus-visible:ring-[3px] focus-visible:ring-[rgba(124,94,60,0.12)] placeholder:text-[#8A8278] transition-[border-color,box-shadow] duration-150"
-            />
-          </div>
-        }
       />
 
       {/* ── Ramify Accueil pattern — 2-column grid, different sizes:
@@ -315,9 +295,12 @@ export default function ClientList({ onSelectClient, onNavigate }) {
         </ProductCarousel>
       )}
 
-      {/* ── Section title for the client register ──────── */}
+      {/* ── Section title for the client register ────────
+         La barre de recherche vit ici, juste au-dessus de la liste —
+         plus près de l'action (scroll la liste + filtrer) que dans le
+         PageHeader global. Timestamp déplacé en dessous du titre en petit. */}
       {!loading && clients.length > 0 && (
-        <div className="flex items-end justify-between gap-6 pt-2">
+        <div className="flex items-end justify-between gap-6 pt-2 flex-wrap">
           <div>
             <h2 className="text-[18px] font-semibold text-[#0F0F10]" style={{ letterSpacing: '-0.014em' }}>
               Registre clients
@@ -326,7 +309,25 @@ export default function ClientList({ onSelectClient, onNavigate }) {
               {clients.length} actif{clients.length > 1 ? 's' : ''} · {uhnwiCount} UHNWI · {institutionalCount} institutionnel{institutionalCount > 1 ? 's' : ''}
             </p>
           </div>
-          <Timestamp label="Mis à jour" />
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <Timestamp label="Mis à jour" />
+            <div className="relative">
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-[15px] h-[15px] text-[#8A8278] pointer-events-none"
+                fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.2-5.2m2.2-5.3a7.5 7.5 0 11-15 0 7.5 7.5 0 0115 0z" />
+              </svg>
+              <input
+                type="text"
+                value={search}
+                onChange={handleSearch}
+                placeholder="Rechercher un client…"
+                aria-label="Rechercher un client"
+                className="h-9 pl-9 pr-3 w-[280px] text-[13px] bg-white border border-[#E7E7E7] rounded-[6px] outline-none focus-visible:border-[#7C5E3C] focus-visible:ring-[3px] focus-visible:ring-[rgba(124,94,60,0.12)] placeholder:text-[#8A8278] transition-[border-color,box-shadow] duration-150"
+              />
+            </div>
+          </div>
         </div>
       )}
 
@@ -432,73 +433,11 @@ export default function ClientList({ onSelectClient, onNavigate }) {
         </div>
       )}
 
-      {/* ── Ramify-style sous-section: Ressources & compliance ────
-         Inline list without card wrapper — section title + LinkList.
-         Mixes internal shortcuts (compliance cockpit, audit export) and
-         external resources (ACPR / MiCA guides). Each row is a LinkListItem
-         with a bespoke BrandGlyph icon on the left, title + subtitle middle,
-         hover chevron right. */}
-      {!loading && clients.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-10 gap-y-2 pt-6">
-          <SubSection
-            title="Ressources compliance"
-            subtitle="Documentation opérationnelle mise à jour en continu"
-          >
-            <LinkList>
-              <LinkListItem
-                icon={<BrandGlyph name="scroll" size={16} />}
-                title="Guide ACPR · Custody d'actifs numériques"
-                subtitle="Questionnaire LCB-FT · obligations CASP"
-                onClick={() => window.open('https://acpr.banque-france.fr', '_blank', 'noopener')}
-                tone="cream"
-              />
-              <LinkListItem
-                icon={<BrandGlyph name="hex" size={16} />}
-                title="Checklist MiCA Art. 60 & 75"
-                subtitle="Ségrégation des actifs · politique de conservation"
-                onClick={() => onNavigate?.('policies')}
-                tone="cream"
-              />
-              <LinkListItem
-                icon={<BrandGlyph name="eye" size={16} />}
-                title="Rapport Tracfin mensuel"
-                subtitle="Déclarations SAR / STR déposées"
-                onClick={() => onNavigate?.('compliance')}
-                tone="peach"
-              />
-            </LinkList>
-          </SubSection>
-
-          <SubSection
-            title="Accompagnement"
-            subtitle="Chat direct avec les équipes opérationnelles"
-          >
-            <LinkList>
-              <LinkListItem
-                icon={<BrandGlyph name="infinity" size={16} />}
-                title="Cellule RCSI"
-                subtitle="Support conformité 24 / 7 via messagerie interne"
-                onClick={() => onNavigate?.('compliance')}
-                tone="blue"
-              />
-              <LinkListItem
-                icon={<BrandGlyph name="key" size={16} />}
-                title="Support DFNS · Clés MPC"
-                subtitle="Rotation · cérémonie de clé · audit crypto"
-                onClick={() => onNavigate?.('wallets')}
-                tone="cream"
-              />
-              <LinkListItem
-                icon={<BrandGlyph name="crest" size={16} />}
-                title="Juridique SwissLife"
-                subtitle="Contrats-cadres · mandats · clauses MiCA"
-                href="mailto:juridique@swisslife-banque-privee.fr"
-                tone="cream"
-              />
-            </LinkList>
-          </SubSection>
-        </div>
-      )}
+      {/* Section "Ressources compliance & Accompagnement" retirée :
+          liens/liens externes décoratifs qui n'apportaient pas de valeur
+          actionnable. À remplacer plus tard par des raccourcis vers des
+          workflows réels (ex: générer rapport Tracfin ERMES du mois,
+          planifier cérémonie de clé MPC, etc.) quand ils seront câblés. */}
 
       {/* ── Editorial signature footer ─────────────────── */}
       <footer className="pt-10 mt-4 border-t border-[#E7E7E7] space-y-4">
