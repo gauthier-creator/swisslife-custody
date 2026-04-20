@@ -9,7 +9,7 @@ import UBOPanel from './UBOPanel';
 import WalletFreezePanel from './WalletFreezePanel';
 import CustodyEligibilityPanel from './CustodyEligibilityPanel';
 import { SUPPORTED_NETWORKS } from '../config/constants';
-import { createApproval, checkTransferRisk, checkWalletFreeze } from '../services/complianceApi';
+import { createApproval, checkTransferRisk, checkWalletFreeze, screenAddress } from '../services/complianceApi';
 import { getKycStatus } from '../services/kycService';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -64,6 +64,12 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
   const [holdings, setHoldings] = useState(null);
   const [holdingsLoading, setHoldingsLoading] = useState(false);
   const [walletDrawerId, setWalletDrawerId] = useState(null);
+  // Screening runtime state — Chainalysis multi-address flow.
+  // results: [{ address, network, status: 'pending'|'clean'|'flagged'|'error', hits, error }]
+  const [screeningOpen, setScreeningOpen] = useState(false);
+  const [screeningResults, setScreeningResults] = useState([]);
+  const [screeningRunning, setScreeningRunning] = useState(false);
+  const [lastScreeningAt, setLastScreeningAt] = useState(null);
   const { user, isAdmin } = useAuth();
 
   const reloadClient = async () => {
@@ -89,6 +95,46 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
     const base = sfStatus?.instanceUrl || 'https://login.salesforce.com';
     const url = `${base}/lightning/r/Account/${client.id}/view`;
     window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  // Run Chainalysis sanctions screening against all the client's wallet
+  // addresses. Shows live per-address progress in a modal, auto-opens
+  // compliance alerts server-side on any hit (Tornado Cash, Lazarus, …).
+  const runSanctionsScreening = async () => {
+    if (!wallets.length) return;
+    const addresses = wallets
+      .filter(w => w.address)
+      .map(w => ({ address: w.address, network: w.network, name: w.name, walletId: w.id }));
+    if (addresses.length === 0) return;
+    setScreeningOpen(true);
+    setScreeningRunning(true);
+    // Seed all rows as pending so the user sees the full list immediately
+    setScreeningResults(addresses.map(a => ({ ...a, status: 'pending' })));
+    for (let i = 0; i < addresses.length; i++) {
+      const row = addresses[i];
+      try {
+        const result = await screenAddress({
+          address: row.address,
+          chain: row.network,
+          walletId: row.walletId,
+          context: 'client_profile_bulk_screening',
+        });
+        const hitItem = result?.results?.find(r => r.address === row.address);
+        setScreeningResults(prev => prev.map((x, idx) => idx === i
+          ? { ...x,
+              status: hitItem?.flagged ? 'flagged' : 'clean',
+              hits: hitItem?.identifications || [],
+              provider: result?.provider,
+            }
+          : x));
+      } catch (err) {
+        setScreeningResults(prev => prev.map((x, idx) => idx === i
+          ? { ...x, status: 'error', error: err.message || 'Échec du screening' }
+          : x));
+      }
+    }
+    setScreeningRunning(false);
+    setLastScreeningAt(new Date().toISOString());
   };
 
   const loadKycStatus = async () => {
@@ -513,14 +559,15 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                     disabled={!sfStatus?.configured}
                   />
                   <ActionRow
-                    onClick={() => setTab('kyc')}
+                    onClick={runSanctionsScreening}
                     icon={
                       <svg className="w-[14px] h-[14px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.306a11.95 11.95 0 015.814-5.518l2.74-1.22" />
                       </svg>
                     }
-                    title="Lancer screening"
-                    subtitle="Chainalysis · sanctions OFAC"
+                    title={screeningRunning ? 'Screening en cours…' : 'Lancer screening'}
+                    subtitle={wallets.length > 0 ? `Chainalysis · ${wallets.length} adresse${wallets.length > 1 ? 's' : ''}` : 'Aucun wallet à screener'}
+                    disabled={wallets.length === 0 || screeningRunning}
                   />
                   <ActionRow
                     onClick={() => { setTab('wallets'); setShowCreate(true); }}
@@ -1079,6 +1126,122 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
             <Button variant="primary" onClick={handleTransfer} disabled={sending || !transfer.to || !transfer.amount}>
               {sending ? 'Envoi…' : 'Soumettre pour approbation'}
             </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ═══ Screening Modal — Chainalysis sanctions check ═══
+         Fires on the "Lancer screening" ActionRow. Screens every
+         client wallet address sequentially against OFAC/EU/UN/UK
+         sanctions lists (Chainalysis Public API). Each row flips from
+         pending → clean (green) or flagged (red) with real-time UI.
+         Any flagged address auto-opens a compliance_alert server-side. */}
+      <Modal
+        isOpen={screeningOpen}
+        onClose={() => !screeningRunning && setScreeningOpen(false)}
+        title="Screening Chainalysis"
+        subtitle="Contrôle OFAC · UE · UN · HMT de toutes les adresses wallets du client."
+        maxWidth="max-w-2xl"
+      >
+        <div className="space-y-5">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-[8px] bg-[#FAFAFA] border border-[#E7E7E7]">
+            <div className="flex-shrink-0 w-9 h-9 rounded-[8px] bg-white border border-[#E7E7E7] flex items-center justify-center">
+              <svg className="w-4 h-4 text-[#1E1E1E]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-semibold text-[#0F0F10]">
+                {screeningRunning
+                  ? `Screening en cours · ${screeningResults.filter(r => r.status !== 'pending').length} / ${screeningResults.length}`
+                  : screeningResults.some(r => r.status === 'flagged')
+                    ? `⚠ ${screeningResults.filter(r => r.status === 'flagged').length} hit${screeningResults.filter(r => r.status === 'flagged').length > 1 ? 's' : ''} — alerte compliance ouverte`
+                    : screeningResults.length > 0
+                      ? 'Aucune adresse sanctionnée — le client peut transférer'
+                      : 'Prêt à lancer le screening'}
+              </p>
+              <p className="text-[11.5px] text-[#8A8278] mt-0.5">
+                Listes consultées : OFAC SDN · EU Consolidated · UK HMT · UN Security Council · Règlement 2015/847
+              </p>
+            </div>
+          </div>
+
+          <ul className="space-y-2">
+            {screeningResults.map((row, i) => {
+              const n = SUPPORTED_NETWORKS.find(x => x.id === row.network) || { icon: '?', color: '#8A8278', name: row.network };
+              return (
+                <li
+                  key={i}
+                  className={`px-4 py-3 rounded-[8px] border flex items-center gap-3 transition-colors ${
+                    row.status === 'flagged' ? 'border-[#DC2626] bg-[#FEF2F2]'
+                    : row.status === 'clean' ? 'border-[#E7E7E7] bg-white'
+                    : row.status === 'error' ? 'border-[#CA8A04] bg-[#FEF9EC]'
+                    : 'border-[#E7E7E7] bg-[#FAFAFA]'
+                  }`}
+                >
+                  <span
+                    className="w-6 h-6 rounded-[5px] flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
+                    style={{ backgroundColor: n.color }}
+                  >
+                    {n.icon}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[12.5px] font-medium text-[#0F0F10] truncate">{row.name || n.name}</p>
+                    <p className="text-[11px] text-[#8A8278] font-mono truncate">{row.address}</p>
+                    {row.status === 'flagged' && row.hits?.length > 0 && (
+                      <p className="text-[11.5px] text-[#DC2626] font-medium mt-1 truncate">
+                        {row.hits.map(h => h.name).join(' · ')}
+                      </p>
+                    )}
+                    {row.status === 'error' && (
+                      <p className="text-[11.5px] text-[#B45309] mt-1 truncate">{row.error}</p>
+                    )}
+                  </div>
+                  <div className="flex-shrink-0">
+                    {row.status === 'pending' && <Spinner size="w-3.5 h-3.5" />}
+                    {row.status === 'clean' && (
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[5px] bg-[#ECFAF0] text-[#0F9868] text-[11px] font-semibold">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Clean
+                      </span>
+                    )}
+                    {row.status === 'flagged' && (
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[5px] bg-[#DC2626] text-white text-[11px] font-semibold">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M4.062 19.94a2 2 0 001.732 1.06h12.412a2 2 0 001.732-1.06l-6.206-10.746a2 2 0 00-3.464 0L4.062 19.94z" />
+                        </svg>
+                        Sanctionné
+                      </span>
+                    )}
+                    {row.status === 'error' && (
+                      <span className="text-[11px] text-[#B45309] font-semibold">Erreur</span>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
+          <div className="flex items-center justify-between pt-4 border-t border-[#E7E7E7]">
+            <p className="text-[11px] text-[#8A8278]">
+              {lastScreeningAt && `Dernier contrôle · ${new Date(lastScreeningAt).toLocaleString('fr-FR')}`}
+            </p>
+            <div className="flex gap-2">
+              {!screeningRunning && screeningResults.some(r => r.status === 'flagged') && (
+                <Button variant="secondary" onClick={() => setTab('compliance')}>
+                  Voir alertes compliance
+                </Button>
+              )}
+              <Button
+                variant="primary"
+                onClick={() => setScreeningOpen(false)}
+                disabled={screeningRunning}
+              >
+                {screeningRunning ? 'Patientez…' : 'Fermer'}
+              </Button>
+            </div>
           </div>
         </div>
       </Modal>

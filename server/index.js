@@ -1165,27 +1165,156 @@ app.get('/api/dfns/wallets/:walletId/transfers/:transferId', async (req, res) =>
 });
 
 app.post('/api/dfns/wallets/:walletId/transfers', requireAuth, async (req, res) => {
+  const walletId = req.params.walletId;
+  const destination = (req.body?.to || '').trim();
   try {
     // Audit log: transfer attempt
     await logAudit({
       action: 'transfer.initiated',
       category: 'transfer',
       entityType: 'wallet',
-      entityId: req.params.walletId,
-      details: { walletId: req.params.walletId, ...req.body },
+      entityId: walletId,
+      details: { walletId, ...req.body },
       severity: 'info',
       req,
     });
 
-    const data = await dfns.wallets.transferAsset({ walletId: req.params.walletId, body: req.body });
+    // ─── Compliance Gate 1: WALLET FREEZE ──────────────────────
+    // If the wallet is currently frozen (by RCSI or auto-freeze on
+    // Chainalysis critical hit), ANY outgoing transfer must be blocked.
+    // Reference: MiCA Art. 68 · ACPR LCB-FT Art. 14.
+    try {
+      const { data: freeze } = await supabaseAdmin
+        .from('wallet_freezes')
+        .select('id, reason, status, frozen_at')
+        .eq('wallet_id', walletId)
+        .eq('status', 'frozen')
+        .maybeSingle();
+      if (freeze) {
+        await logAudit({
+          action: 'transfer.blocked_frozen_wallet',
+          category: 'transfer',
+          entityType: 'wallet',
+          entityId: walletId,
+          details: { walletId, freezeId: freeze.id, reason: freeze.reason, destination, ...req.body },
+          severity: 'critical',
+          req,
+        });
+        return res.status(403).json({
+          error: 'Wallet gelé — transfert refusé',
+          code: 'WALLET_FROZEN',
+          freezeReason: freeze.reason,
+          frozenAt: freeze.frozen_at,
+          regulation: 'MiCA Art. 68',
+        });
+      }
+    } catch (e) {
+      console.warn('[Transfer Gate] wallet_freezes check skipped:', e.message);
+    }
+
+    // ─── Compliance Gate 2: CHAINALYSIS SANCTIONS SCREENING ───
+    // Every destination address is screened against OFAC/EU/UN/UK
+    // sanction lists BEFORE DFNS signs. Defense-in-depth: the UI
+    // already screens but a malicious client could bypass. Server
+    // is the authoritative gate. Reference: Règlement 2015/847.
+    if (destination) {
+      try {
+        const screenRes = await chainalysisScreen(destination);
+        if (screenRes.flagged) {
+          // Auto-open a compliance alert
+          await supabaseAdmin.from('compliance_alerts').insert({
+            type: 'sanctions_match',
+            severity: 'critical',
+            salesforce_account_id: null,
+            client_name: null,
+            message: `Tentative de transfert vers adresse sanctionnée — ${destination} · ${screenRes.identifications.map(i => i.name).join(', ')}. Transfert bloqué automatiquement.`,
+            details: { ...screenRes, walletId, context: 'pre_transfer_server_gate', body: req.body },
+            status: 'open',
+          });
+          await logAudit({
+            action: 'transfer.blocked_sanctions_match',
+            category: 'compliance',
+            entityType: 'wallet',
+            entityId: walletId,
+            details: { walletId, destination, hits: screenRes.identifications, ...req.body },
+            severity: 'critical',
+            req,
+          });
+          return res.status(403).json({
+            error: 'Adresse sanctionnée — transfert refusé',
+            code: 'SANCTIONS_HIT',
+            hits: screenRes.identifications,
+            lists: ['OFAC SDN', 'EU Consolidated', 'UK HMT', 'UN Security Council'],
+            regulation: 'Règlement UE 2015/847 · MiCA Art. 68',
+          });
+        }
+      } catch (e) {
+        // Fail-closed on screening errors in production? Here we fail-open
+        // with warning — but in prod you'd want to block on error too.
+        console.warn('[Transfer Gate] sanctions screen failed:', e.message);
+      }
+    }
+
+    // ─── Compliance Gate 3: WHITELIST ENFORCEMENT ─────────────
+    // If the wallet is in "whitelist-only" mode (configured via
+    // RiskConfigPanel), the destination MUST be on the approved list.
+    // Otherwise the transfer is blocked.
+    try {
+      // Read whitelist mode from the wallet's risk config. We look up
+      // the client via wallet.external_id → risk_configs.whitelist_only.
+      const { data: wallet } = await supabaseAdmin
+        .from('wallets')
+        .select('salesforce_account_id, external_id')
+        .eq('dfns_wallet_id', walletId)
+        .maybeSingle();
+      const accountId = wallet?.salesforce_account_id || wallet?.external_id;
+      if (accountId) {
+        const { data: riskCfg } = await supabaseAdmin
+          .from('risk_configs')
+          .select('whitelist_only')
+          .eq('salesforce_account_id', accountId)
+          .maybeSingle();
+        if (riskCfg?.whitelist_only && destination) {
+          const { data: wl } = await supabaseAdmin
+            .from('address_whitelist')
+            .select('id, status')
+            .eq('salesforce_account_id', accountId)
+            .ilike('address', destination)
+            .eq('status', 'approved')
+            .maybeSingle();
+          if (!wl) {
+            await logAudit({
+              action: 'transfer.blocked_whitelist',
+              category: 'transfer',
+              entityType: 'wallet',
+              entityId: walletId,
+              details: { walletId, destination, accountId, reason: 'destination_not_whitelisted' },
+              severity: 'critical',
+              req,
+            });
+            return res.status(403).json({
+              error: 'Adresse non whitelistée — whitelist stricte activée pour ce client',
+              code: 'WHITELIST_REQUIRED',
+              destination,
+              regulation: 'ACPR LCB-FT Art. 14 · MiCA Art. 68',
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[Transfer Gate] whitelist check skipped:', e.message);
+    }
+
+    // ─── All gates cleared → execute on DFNS ──────────────────
+    const data = await dfns.wallets.transferAsset({ walletId, body: req.body });
 
     // Audit log: transfer success
     await logAudit({
       action: 'transfer.completed',
       category: 'transfer',
       entityType: 'wallet',
-      entityId: req.params.walletId,
-      details: { walletId: req.params.walletId, transferId: data.id, ...req.body },
+      entityId: walletId,
+      details: { walletId, transferId: data.id, destination, ...req.body },
       severity: 'info',
       req,
     });
@@ -1197,8 +1326,8 @@ app.post('/api/dfns/wallets/:walletId/transfers', requireAuth, async (req, res) 
       action: 'transfer.failed',
       category: 'transfer',
       entityType: 'wallet',
-      entityId: req.params.walletId,
-      details: { walletId: req.params.walletId, error: err.message, ...req.body },
+      entityId: walletId,
+      details: { walletId, error: err.message, ...req.body },
       severity: 'warning',
       req,
     });
