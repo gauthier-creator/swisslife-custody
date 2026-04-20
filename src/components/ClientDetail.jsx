@@ -5,7 +5,6 @@ import WhitelistPanel from './WhitelistPanel';
 import RiskConfigPanel from './RiskConfigPanel';
 import KYCFlow from './KYCFlow';
 import DelegationPanel from './DelegationPanel';
-import UBOPanel from './UBOPanel';
 import WalletFreezePanel from './WalletFreezePanel';
 import CustodyEligibilityPanel from './CustodyEligibilityPanel';
 import { SUPPORTED_NETWORKS } from '../config/constants';
@@ -443,7 +442,9 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
     ...(kycModuleEnabled ? [{ id: 'kyc', label: 'KYC / KYB' }] : []),
     { id: 'wallets', label: `Wallets ${wallets.length > 0 ? `(${wallets.length})` : ''}`.trim() },
     { id: 'delegations', label: 'Délégations' },
-    ...(client.type !== 'Customer - Direct' ? [{ id: 'ubo', label: 'UBO' }] : []),
+    // Onglet UBO retiré : les bénéficiaires effectifs sont gérés
+    // directement dans Salesforce (Contact.Custody_Is_UBO__c) — pas
+    // de duplication d'interface. Voir sf-bootstrap-ubo-fields.mjs.
     { id: 'transfers', label: 'Transferts' },
     { id: 'history', label: 'Historique' },
   ];
@@ -847,12 +848,7 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
         </div>
       )}
 
-      {/* ══════════ UBO ══════════ */}
-      {tab === 'ubo' && (
-        <div className="animate-fade">
-          <UBOPanel salesforceAccountId={client.id} clientName={client.name} />
-        </div>
-      )}
+      {/* UBO tab retiré — gestion dans Salesforce Contact (bug #5) */}
 
       {/* ══════════ WALLETS ══════════ */}
       {tab === 'wallets' && (
