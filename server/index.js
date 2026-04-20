@@ -3339,9 +3339,13 @@ app.post('/api/kyc/aml-screen', async (req, res) => {
         complyCubeClientId = ccClient.id;
       }
 
+      // ComplyCube a déprécié 'screening_check' (2024+). Les nouveaux types :
+      //   · standard_screening_check  — OFAC/EU/UN/UK HMT + PEP de base
+      //   · extensive_screening_check — + adverse media + RCA (Relatives & Close Associates)
+      // Pour la démo custody bank, Standard suffit (AMLD5 + Tracfin).
       const check = await complyCubeRequest('POST', '/checks', {
         clientId: complyCubeClientId,
-        type: 'screening_check',
+        type: process.env.COMPLYCUBE_SCREENING_TYPE || 'standard_screening_check',
       });
 
       screenResult = {
@@ -3352,7 +3356,10 @@ app.post('/api/kyc/aml-screen', async (req, res) => {
       };
     }
 
-    // Save to Supabase
+    // Save to Supabase — check_type = 'screening_check' en valeur générique
+    // (le filtre UI cherche ce label pour compter les AML screens). Le type
+    // ComplyCube réel (standard_screening_check / extensive_screening_check)
+    // est conservé dans screenResult.result.provider_type pour traçabilité audit.
     const { data: kycCheck, error: dbError } = await supabaseAdmin
       .from('kyc_checks')
       .insert({
