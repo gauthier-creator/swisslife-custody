@@ -101,9 +101,13 @@ export default function ClientList({ onSelectClient, onNavigate }) {
            RIGHT narrow (4/12) = "Accompagnement compliance" officer card
        */}
       {!loading && clients.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          {/* LEFT — Activité du livre */}
-          <div className="lg:col-span-8 bg-white border border-[#E7E7E7] rounded-[10px] p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+          {/* LEFT — Activité du livre.
+              Structure densifiée pour équilibrer avec la card Cellule RCSI
+              (qui a un hero gradient + CTA) et éviter le vide en bas :
+              ① bandeau 4 KPI · ② répartition du livre (stacked bar + légende)
+              → un banquier voit son livre en un coup d'œil. */}
+          <div className="lg:col-span-8 bg-white border border-[#E7E7E7] rounded-[10px] p-6 flex flex-col">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-[16px] font-semibold text-[#0F0F10]" style={{ letterSpacing: '-0.012em' }}>
                 Activité du livre
@@ -130,6 +134,72 @@ export default function ClientList({ onSelectClient, onNavigate }) {
                 </div>
               ))}
             </div>
+
+            {/* ② Répartition du livre — stacked bar + legend.
+                AUM réparti par segment de clientèle. Aide le banquier à voir
+                où est la concentration (trop d'UHNWI ? corporate stagne ?). */}
+            {(() => {
+              const uhnwiAum = clients.filter(c => c.type === 'Customer - Direct').reduce((s, c) => s + (Number(c.aum) || 0), 0);
+              const corpAum  = clients.filter(c => c.type === 'Other' || c.type === 'Institutional').reduce((s, c) => s + (Number(c.aum) || 0), 0);
+              const hnwiAum  = Math.max(0, totalAum - uhnwiAum - corpAum);
+              const tot = totalAum || 1;
+              const segs = [
+                { k: 'UHNWI',         aum: uhnwiAum, color: '#7C5E3C' }, // bronze (primary segment)
+                { k: 'HNWI',          aum: hnwiAum,  color: '#C8924B' }, // gold
+                { k: 'Corporate',     aum: corpAum,  color: '#1E1E1E' }, // charcoal
+              ];
+              return (
+                <div className="mt-6 pt-5 border-t border-[#E7E7E7]">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-[11px] font-semibold text-[#8A8278] uppercase tracking-[0.08em]">
+                      Répartition du livre par segment
+                    </p>
+                    <p className="text-[11.5px] text-[#8A8278] tabular-nums">
+                      {fmtCompactEUR(totalAum)} au total
+                    </p>
+                  </div>
+                  <div className="flex h-2 rounded-[3px] overflow-hidden bg-[#F3F2EE]">
+                    {segs.map((s, i) => (
+                      <div
+                        key={s.k}
+                        className="h-full transition-all duration-700"
+                        style={{
+                          width: `${Math.max(2, (s.aum / tot) * 100)}%`,
+                          background: s.color,
+                          transitionDelay: `${i * 80}ms`,
+                        }}
+                        title={`${s.k}: ${fmtCompactEUR(s.aum)} (${Math.round((s.aum / tot) * 100)}%)`}
+                      />
+                    ))}
+                  </div>
+                  <ul className="mt-3 grid grid-cols-3 gap-4">
+                    {segs.map((s) => {
+                      const count =
+                        s.k === 'UHNWI' ? uhnwiCount
+                        : s.k === 'Corporate' ? institutionalCount
+                        : Math.max(0, clients.length - uhnwiCount - institutionalCount);
+                      return (
+                        <li key={s.k} className="min-w-0">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-2 h-2 rounded-[2px] flex-shrink-0" style={{ background: s.color }} />
+                            <span className="text-[12px] font-semibold text-[#0F0F10] truncate">{s.k}</span>
+                            <span className="text-[11px] text-[#8A8278] tabular-nums">· {count}</span>
+                          </div>
+                          <div className="mt-1 flex items-baseline gap-2">
+                            <span className="text-[15px] font-semibold text-[#0F0F10] tabular-nums">
+                              {fmtCompactEUR(s.aum)}
+                            </span>
+                            <span className="text-[11px] text-[#8A8278] tabular-nums">
+                              {Math.round((s.aum / tot) * 100)}%
+                            </span>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              );
+            })()}
           </div>
 
           {/* RIGHT — Accompagnement compliance (Ramify pattern: officer photo + CTA) */}
