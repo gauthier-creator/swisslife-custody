@@ -413,7 +413,10 @@ export default function ComplianceDashboard() {
       {/* ── Header ─────────────────────────────────────── */}
       <PageHeader
         icon={<IconCompliance size={18} />}
-        title="Compliance"
+        eyebrow="LCB-FT · ACPR · Tracfin"
+        title="Poste"
+        accent="compliance"
+        subtitle="Approbations 4-yeux, screening Chainalysis, alertes AML et déclarations de soupçon consolidés en temps réel."
         trailing={
           stats.openAlerts === 0 && stats.pendingApprovals === 0
             ? (

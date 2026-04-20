@@ -83,7 +83,10 @@ export default function PolicyList() {
       {/* ── Header ─────────────────────────────────────── */}
       <PageHeader
         icon={<IconPolicies size={18} />}
-        title="Policies"
+        eyebrow="Gouvernance · DFNS Policy Engine"
+        title="Politiques"
+        accent="MPC"
+        subtitle="Règles de signature appliquées avant chaque transaction : seuils, allowlist, quatre-yeux et alertes Chainalysis."
         trailing={
           <Button variant="primary" onClick={() => setShowCreate(true)}>
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>

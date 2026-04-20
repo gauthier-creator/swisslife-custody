@@ -63,7 +63,10 @@ export default function WalletList() {
       {/* ── Header ─────────────────────────────────────── */}
       <PageHeader
         icon={<IconWallets size={18} />}
+        eyebrow="Custody MPC · DFNS"
         title="Wallets"
+        accent="opérationnels"
+        subtitle="Parc MPC provisionné par DFNS. Chaque wallet est signé par consensus multi-parties sur 3 réseaux."
         trailing={
           <div className="relative">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-[15px] h-[15px] text-[#8A8278] pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.8}>

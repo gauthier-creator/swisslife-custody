@@ -5,7 +5,7 @@ import { testDfnsConnection } from '../services/dfnsApi';
 import { getSalesforceStatus } from '../services/salesforceApi';
 import { API_BASE } from '../config/constants';
 import {
-  Spinner, Badge, Card, Button, PageHeader, SectionCard, StatusDot,
+  Spinner, Badge, Card, Button, PageHeader, SectionHeader, SectionCard, StatusDot,
   Metric, MetricRow, Table, tdCls, tdMuted, trCls, FooterDisclosure,
 } from './shared';
 import { IconConfig } from './icons';
@@ -49,8 +49,11 @@ export default function ConfigPage({ onConfigured }) {
       {/* ── Editorial header ──────────────────────────── */}
       <PageHeader
         icon={<IconConfig size={22} />}
-        title="Configuration"
-        trailing={<StatusDot tone="bronze" label="Admin · Accès restreint" />}
+        eyebrow="Administration · Accès restreint"
+        title="Paramètres"
+        accent="système"
+        subtitle="Intégrations tierces, habilitations banquiers et variables d'environnement."
+        trailing={<StatusDot tone="bronze" label="Admin" />}
       />
 
       {/* ── Integration cards ─────────────────────────── */}
@@ -195,10 +198,13 @@ function ComplianceSettings() {
 
   return (
     <div className="animate-slide-up stagger-3">
-      <div className="flex items-baseline gap-3 mb-5">
-        <h2 className="display-sm text-[#0A0A0A]">Paramètres <span className="font-display italic text-[#7C5E3C]">compliance</span></h2>
-        <span className="text-eyebrow">AMLD5 · Tracfin · LBA</span>
-      </div>
+      <SectionHeader
+        eyebrow="AMLD5 · Tracfin · LBA"
+        title="Paramètres"
+        accent="compliance"
+        description="Modules KYC et conservation documentaire — conformité RGPD et archivage 5 ans."
+        className="mb-5"
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* KYC Module toggle */}
@@ -314,10 +320,13 @@ function UserManagement() {
 
   return (
     <div className="animate-slide-up stagger-4">
-      <div className="flex items-baseline gap-3 mb-5">
-        <h2 className="display-sm text-[#0A0A0A]">Utilisateurs <span className="font-display italic text-[#7C5E3C]">habilités</span></h2>
-        <span className="text-eyebrow">Habilitation · Accès</span>
-      </div>
+      <SectionHeader
+        eyebrow="Habilitation · Accès"
+        title="Utilisateurs"
+        accent="habilités"
+        description="Gestion des rôles banquier / admin. Chaque habilitation est tracée dans le journal d'audit."
+        className="mb-5"
+      />
 
       {!loading && users.length > 0 && (
         <div className="mb-5">

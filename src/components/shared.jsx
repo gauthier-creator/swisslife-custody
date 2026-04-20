@@ -1207,37 +1207,140 @@ export function LinkList({ children, className = '' }) {
 }
 
 // ─── PageHeader ───────────────────────────────────────
-// Clean product header (Ramify-inspired): icon + title on one line
-// with optional trailing actions and an optional notification banner below.
-// Props: icon (SVG node) · title · trailing · banner ({ avatar, text, subtext, cta, onCtaClick })
-// Legacy props (eyebrow/accent/description) are accepted but ignored in favor
-// of the simpler Ramify aesthetic.
-export function PageHeader({ icon, duoIcon, title, eyebrow, trailing, banner, className = '' }) {
-  // Ramify pattern: tiny icon + compact title (22px, semibold, muted ink).
-  // No eyebrow, no banner in this header — each page owns its first content
-  // block. Height matches a single row so headers never feel "banner-ed".
+// Editorial SwissLife page header — unified across ALL pages so the product
+// feels like one publication, not five dashboards glued together.
+//
+// Structure (top to bottom):
+//   ① Eyebrow row — bronze dot · UPPERCASE micro-caption + icon + trailing actions
+//   ② Hero title — Fraunces serif (display-sm 28px) · optional italic bronze
+//      accent word that carries the emotion ("Portefeuille clients" where
+//      "clients" is italic bronze)
+//   ③ Subtitle — 13.5px Hanken muted ink, tight leading, 60ch max
+//   ④ Hairline divider — anchors the header to the page grid
+//
+// Props:
+//   title     — required — main word(s) in near-black serif
+//   accent    — optional — trailing word rendered italic bronze (Fraunces)
+//   eyebrow   — optional — small-caps bronze caption (section context)
+//   subtitle  — optional — one short sentence below the title
+//   icon      — optional — lives in the eyebrow row, not next to title
+//   trailing  — optional — flush right, vertically centered on eyebrow row
+//   banner    — optional — PageBanner rendered under the hairline
+//
+// Legacy signature (title + icon + trailing only) keeps working —
+// the editorial treatment kicks in gracefully when the new props show up.
+export function PageHeader({
+  icon,
+  duoIcon,
+  title,
+  accent,
+  eyebrow,
+  subtitle,
+  trailing,
+  banner,
+  className = '',
+}) {
   const iconNode = icon
     ? <span className="flex-shrink-0 text-[#5D5D5D]">{icon}</span>
     : duoIcon
       ? <DuoIcon name={duoIcon.name} tone={duoIcon.tone || 'bronze'} size={18} />
       : null;
 
+  const hasEyebrowRow = !!(iconNode || eyebrow || trailing);
+
   return (
-    <header className={`flex items-center justify-between gap-6 flex-wrap ${className}`}>
-      <div className="flex items-center gap-2 min-w-0">
-        {iconNode}
-        <h1
-          className="text-[22px] font-semibold text-[#0F0F10] leading-[1.2] truncate"
-          style={{ letterSpacing: '-0.016em' }}
+    <header className={`animate-fade ${className}`}>
+      {/* ① eyebrow row ─ icon · small-caps · trailing actions */}
+      {hasEyebrowRow && (
+        <div className="flex items-center justify-between gap-6 flex-wrap mb-5">
+          <div className="flex items-center gap-2.5 min-w-0">
+            {iconNode}
+            {eyebrow && (
+              <p className="text-[10.5px] font-medium text-[#8A8278] uppercase tracking-[0.12em] flex items-center gap-2">
+                <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
+                {eyebrow}
+              </p>
+            )}
+          </div>
+          {trailing && (
+            <div className="flex-shrink-0 flex items-center gap-2">{trailing}</div>
+          )}
+        </div>
+      )}
+
+      {/* ② hero title — serif display with optional italic bronze accent */}
+      <h1
+        className="display-sm text-[#0A0A0A] leading-[1.08]"
+        style={{ letterSpacing: '-0.025em' }}
+      >
+        {title}
+        {accent && (
+          <>
+            {' '}
+            <span className="font-display italic text-[#7C5E3C]" style={{ fontWeight: 400 }}>
+              {accent}
+            </span>
+          </>
+        )}
+      </h1>
+
+      {/* ③ subtitle — one-sentence context */}
+      {subtitle && (
+        <p className="text-[13.5px] text-[#5D5D5D] mt-2 tracking-[-0.003em] max-w-[60ch] leading-[1.45]">
+          {subtitle}
+        </p>
+      )}
+
+      {/* ④ optional announcement banner */}
+      {banner && (
+        <div className="mt-5">
+          <PageBanner {...banner} />
+        </div>
+      )}
+    </header>
+  );
+}
+
+// ─── SectionHeader ────────────────────────────────────
+// Intra-page section heading — the tier below PageHeader.
+// Uses the same editorial rhythm but smaller scale. Keeps the bronze dot
+// eyebrow consistent with WalletFreezePanel / DelegationPanel.
+//
+// Props: eyebrow · title · accent · description · trailing
+export function SectionHeader({ eyebrow, title, accent, description, trailing, className = '' }) {
+  return (
+    <div className={`flex items-end justify-between gap-6 flex-wrap ${className}`}>
+      <div className="min-w-0">
+        {eyebrow && (
+          <p className="text-[10.5px] font-medium text-[#8A8278] uppercase tracking-[0.12em] mb-2 flex items-center gap-2">
+            <span className="w-1 h-1 rounded-full bg-[#C8924B]" />
+            {eyebrow}
+          </p>
+        )}
+        <h2
+          className="font-display text-[22px] text-[#0A0A0A] leading-[1.1]"
+          style={{ letterSpacing: '-0.022em', fontWeight: 500 }}
         >
           {title}
-        </h1>
+          {accent && (
+            <>
+              {' '}
+              <span className="italic text-[#7C5E3C]" style={{ fontWeight: 400 }}>
+                {accent}
+              </span>
+            </>
+          )}
+        </h2>
+        {description && (
+          <p className="text-[13px] text-[#5D5D5D] mt-1.5 tracking-[-0.003em] max-w-[56ch] leading-[1.45]">
+            {description}
+          </p>
+        )}
       </div>
       {trailing && (
         <div className="flex-shrink-0 flex items-center gap-2">{trailing}</div>
       )}
-      {banner && <div className="w-full"><PageBanner {...banner} /></div>}
-    </header>
+    </div>
   );
 }
 

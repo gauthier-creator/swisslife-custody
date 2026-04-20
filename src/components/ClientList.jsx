@@ -73,7 +73,10 @@ export default function ClientList({ onSelectClient, onNavigate }) {
       {/* ── Header ─────────────────────────────────────── */}
       <PageHeader
         icon={<IconClients size={18} />}
-        title="Clients"
+        eyebrow="Patrimoine · Salesforce"
+        title="Portefeuille"
+        accent="clients"
+        subtitle="Vue consolidée des mandats actifs. AUM, segmentation et posture compliance en un coup d'œil."
       />
 
       {/* ── Ramify Accueil pattern — 2-column grid, different sizes:
