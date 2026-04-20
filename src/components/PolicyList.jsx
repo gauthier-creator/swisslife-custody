@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { listPolicies, createPolicy } from '../services/dfnsApi';
+import { listPolicies, createPolicy, archivePolicy } from '../services/dfnsApi';
 import {
-  Badge, Modal, Spinner, EmptyState, inputCls, selectCls, labelCls,
+  Badge, Modal, Spinner, EmptyState, useToast, ToastContainer,
+  inputCls, selectCls, labelCls,
   PageHeader, Metric, MetricRow, Card, Button, FooterDisclosure, StatusDot,
 } from './shared';
 import { MarbleHero } from './ProductCards';
@@ -30,7 +31,10 @@ export default function PolicyList() {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [archiveTarget, setArchiveTarget] = useState(null); // policy obj to confirm archiving
+  const [archiving, setArchiving] = useState(false);
   const [form, setForm] = useState({ name: '', description: '', activityKind: 'Wallets:Sign', rule: 'Block', amountLimit: '' });
+  const { toasts, toast } = useToast();
 
   useEffect(() => { load(); }, []);
 
@@ -75,11 +79,26 @@ export default function PolicyList() {
     setCreating(false);
   };
 
+  const handleArchive = async () => {
+    if (!archiveTarget) return;
+    setArchiving(true);
+    try {
+      await archivePolicy(archiveTarget.id);
+      toast('Policy archivée · transferts réautorisés');
+      setArchiveTarget(null);
+      await load();
+    } catch (err) {
+      toast(err.message || 'Erreur lors de l\'archivage', 'error');
+    }
+    setArchiving(false);
+  };
+
   const activeCount = policies.filter(p => p.status === 'Active').length;
   const pendingCount = policies.filter(p => p.status === 'Pending').length;
 
   return (
     <div className="space-y-10">
+      <ToastContainer toasts={toasts} />
       {/* ── Header ─────────────────────────────────────── */}
       <PageHeader
         icon={<IconPolicies size={18} />}
@@ -138,7 +157,12 @@ export default function PolicyList() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
           <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-up stagger-3 content-start">
             {policies.map((pol, i) => (
-              <PolicyCard key={pol.id} pol={pol} index={i} />
+              <PolicyCard
+                key={pol.id}
+                pol={pol}
+                index={i}
+                onArchive={() => setArchiveTarget(pol)}
+              />
             ))}
           </div>
 
@@ -310,13 +334,48 @@ export default function PolicyList() {
         </div>
       </Modal>
 
+      {/* ── Archive confirmation modal ──────────────────── */}
+      <Modal
+        isOpen={!!archiveTarget}
+        onClose={() => setArchiveTarget(null)}
+        title="Archiver cette policy ?"
+        subtitle="DFNS ne supprime pas — la policy passe en statut Archived. Les futurs transferts ne seront plus filtrés par cette règle. Action tracée dans le journal d'audit."
+      >
+        <div className="space-y-5">
+          {archiveTarget && (
+            <div className="px-4 py-3 bg-[#F9F8F5] border border-[#E7E7E7] rounded-[8px] space-y-2 text-[12.5px]">
+              <div className="flex items-center gap-2">
+                <span className="text-[10.5px] font-medium text-[#8A8278] uppercase tracking-[0.1em] w-20">Nom</span>
+                <span className="text-[#0A0A0A] font-semibold">{archiveTarget.name}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10.5px] font-medium text-[#8A8278] uppercase tracking-[0.1em] w-20">Activité</span>
+                <span className="text-[#0A0A0A]">{activityLabel(archiveTarget.activityKind)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10.5px] font-medium text-[#8A8278] uppercase tracking-[0.1em] w-20">Règle</span>
+                <span className="text-[#0A0A0A]">
+                  {archiveTarget.rule?.kind} · action {archiveTarget.action?.kind}
+                </span>
+              </div>
+            </div>
+          )}
+          <div className="flex justify-end gap-2 pt-5 border-t border-[#E7E7E7]">
+            <Button variant="ghost" onClick={() => setArchiveTarget(null)}>Annuler</Button>
+            <Button variant="primary" onClick={handleArchive} disabled={archiving}>
+              {archiving ? 'Archivage…' : 'Confirmer l\'archivage'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       <FooterDisclosure right="DFNS Governance · Quatre yeux · Journal d'audit" />
     </div>
   );
 }
 
 /* ─── Refined policy card ─── */
-function PolicyCard({ pol, index }) {
+function PolicyCard({ pol, index, onArchive }) {
   const active = pol.status === 'Active';
   return (
     <Card
@@ -339,12 +398,23 @@ function PolicyCard({ pol, index }) {
             )}
           </div>
         </div>
-        <Badge
-          variant={active ? 'success' : pol.status === 'Pending' ? 'warning' : 'default'}
-          dot
-        >
-          {active ? 'Active' : pol.status === 'Pending' ? 'En attente' : pol.status || '—'}
-        </Badge>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Badge
+            variant={active ? 'success' : pol.status === 'Pending' ? 'warning' : 'default'}
+            dot
+          >
+            {active ? 'Active' : pol.status === 'Pending' ? 'En attente' : pol.status || '—'}
+          </Badge>
+          {active && onArchive && (
+            <button
+              onClick={onArchive}
+              className="inline-flex items-center h-7 px-2.5 rounded-full text-[11.5px] font-medium text-[#DC2626] border border-[rgba(220,38,38,0.22)] bg-white hover:bg-[#FEF2F2] hover:border-[rgba(220,38,38,0.4)] transition-colors tracking-[-0.003em]"
+              title="Archiver cette policy DFNS"
+            >
+              Archiver
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Meta rows */}

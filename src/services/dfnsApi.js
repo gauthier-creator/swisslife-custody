@@ -125,6 +125,19 @@ export async function createPolicy(policy) {
   return res.json();
 }
 
+// Archive a DFNS policy — DFNS doesn't hard-delete, just moves to
+// Archived status. Useful to retire a policy that was blocking
+// transfers aggressively (e.g. AlwaysTrigger + Block catch-all).
+export async function archivePolicy(policyId) {
+  const authHeaders = await getAuthHeaders();
+  const res = await fetch(`${API_BASE}/api/dfns/policies/${policyId}`, {
+    method: 'DELETE',
+    headers: authHeaders,
+  });
+  if (!res.ok) throw await dfnsError(res, 'Echec de l\'archivage de la policy');
+  return res.json();
+}
+
 // ============================================================
 // Test connection
 // ============================================================

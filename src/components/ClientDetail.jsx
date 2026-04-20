@@ -1201,32 +1201,53 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
               </div>
             </div>
 
-            {/* Chainalysis screening result */}
-            {transferScreening && (
-              <div className={`px-4 py-3 rounded-[8px] border flex items-start gap-3 ${
-                transferScreening.flagged
-                  ? 'bg-[#FEF2F2] border-[rgba(220,38,38,0.2)]'
-                  : 'bg-[#ECFAF0] border-[rgba(15,152,104,0.2)]'
-              }`}>
-                <span className={`w-1.5 h-1.5 rounded-full mt-[7px] flex-shrink-0 ${
-                  transferScreening.flagged ? 'bg-[#DC2626]' : 'bg-[#0F9868]'
-                }`} />
-                <div className="flex-1 min-w-0">
-                  <p className={`text-[12.5px] font-semibold ${
-                    transferScreening.flagged ? 'text-[#991B1B]' : 'text-[#0F7548]'
-                  }`}>
-                    {transferScreening.flagged
-                      ? `⚠ Adresse sanctionnée — ${transferScreening.results?.[0]?.identifications?.[0]?.name || 'OFAC hit'}`
-                      : 'Chainalysis · clean sur OFAC · EU · UN · UK HMT'}
-                  </p>
-                  <p className="text-[11px] text-[#8A8278] mt-0.5">
-                    {transferScreening.flagged
-                      ? 'Transfert sera refusé automatiquement au niveau serveur (Règlement UE 2015/847).'
-                      : 'Aucun match dans les bases de sanctions internationales.'}
-                  </p>
+            {/* Chainalysis screening result — badge LIVE / sandbox pour que
+                le banquier voie clairement si c'est la vraie API ou la liste
+                OFAC curée de démo. `mode` vient du serveur (live|sandbox). */}
+            {transferScreening && (() => {
+              const topResult = transferScreening.results?.[0];
+              const mode = topResult?.mode || (String(transferScreening.provider || '').includes('sandbox') ? 'sandbox' : 'live');
+              const isLive = mode === 'live';
+              return (
+                <div className={`px-4 py-3 rounded-[8px] border ${
+                  transferScreening.flagged
+                    ? 'bg-[#FEF2F2] border-[rgba(220,38,38,0.2)]'
+                    : 'bg-[#ECFAF0] border-[rgba(15,152,104,0.2)]'
+                }`}>
+                  <div className="flex items-start gap-3">
+                    <span className={`w-1.5 h-1.5 rounded-full mt-[7px] flex-shrink-0 ${
+                      transferScreening.flagged ? 'bg-[#DC2626]' : 'bg-[#0F9868]'
+                    }`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className={`text-[12.5px] font-semibold ${
+                          transferScreening.flagged ? 'text-[#991B1B]' : 'text-[#0F7548]'
+                        }`}>
+                          {transferScreening.flagged
+                            ? `⚠ Adresse sanctionnée — ${topResult?.identifications?.[0]?.name || 'OFAC hit'}`
+                            : 'Adresse clean · OFAC · EU · UN · UK HMT'}
+                        </p>
+                        <span className={`inline-flex items-center gap-1 px-1.5 h-[18px] rounded-[3px] text-[9.5px] font-semibold tracking-[0.06em] uppercase ${
+                          isLive
+                            ? 'bg-[#0A0A0A] text-white'
+                            : 'bg-[#F5EEE0] text-[#7C5E3C]'
+                        }`}>
+                          <span className={`w-1 h-1 rounded-full ${isLive ? 'bg-[#6DE49F]' : 'bg-[#C8924B]'}`} />
+                          {isLive ? 'LIVE' : 'DEMO'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-[#8A8278] mt-0.5">
+                        {transferScreening.flagged
+                          ? 'Transfert bloqué au niveau serveur (Règlement UE 2015/847).'
+                          : isLive
+                            ? `Chainalysis Public Sanctions API · ${topResult?.identifications?.length || 0} match`
+                            : 'Liste OFAC curée (mode démo — ajouter CHAINALYSIS_API_KEY pour LIVE).'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Risk warnings / blocks */}
             {transferRisk?.blocks?.length > 0 && (

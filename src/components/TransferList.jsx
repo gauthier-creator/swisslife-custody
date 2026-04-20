@@ -530,8 +530,23 @@ function ScreeningCard({ screening, result, error }) {
             </svg>
           )}
         </div>
-        <div className="min-w-0">
-          <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#8A8278]">{result.provider}</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[#8A8278]">
+              {String(result.provider || '').replace(' · mode sandbox', '')}
+            </p>
+            {(() => {
+              const isLive = topHit?.mode === 'live' || (!String(result.provider || '').includes('sandbox'));
+              return (
+                <span className={`inline-flex items-center gap-1 px-1.5 h-[18px] rounded-[3px] text-[9.5px] font-semibold tracking-[0.06em] uppercase ${
+                  isLive ? 'bg-[#0A0A0A] text-white' : 'bg-[#F5EEE0] text-[#7C5E3C]'
+                }`}>
+                  <span className={`w-1 h-1 rounded-full ${isLive ? 'bg-[#6DE49F]' : 'bg-[#C8924B]'}`} />
+                  {isLive ? 'LIVE' : 'DEMO'}
+                </span>
+              );
+            })()}
+          </div>
           <p className={`text-[13.5px] font-medium tracking-[-0.006em] mt-0.5 ${flagged ? 'text-[#991B1B]' : 'text-[#0A0A0A]'}`}>
             {flagged
               ? `Adresse sanctionnée — transfert bloqué`

@@ -1692,6 +1692,30 @@ app.post('/api/dfns/policies', async (req, res) => {
   }
 });
 
+// DELETE /api/dfns/policies/:policyId — Archive a DFNS policy.
+// Required so we can retire overly aggressive test policies
+// (typically AlwaysTrigger + Block which blanket-refuse every transfer).
+// DFNS doesn't hard-delete — archivePolicy moves it to 'Archived' status.
+app.delete('/api/dfns/policies/:policyId', requireAdmin, async (req, res) => {
+  try {
+    const data = await dfns.policies.archivePolicy({ policyId: req.params.policyId });
+    await logAudit({
+      userEmail: req.user?.email,
+      action: 'dfns.policy_archived',
+      category: 'policy',
+      entityType: 'dfns_policy',
+      entityId: req.params.policyId,
+      details: { policyId: req.params.policyId },
+      severity: 'warning',
+      req,
+    });
+    res.json(data);
+  } catch (err) {
+    console.error('archivePolicy error:', err.message);
+    res.status((err.httpStatus > 99 && err.httpStatus < 1000) ? err.httpStatus : 500).json({ error: err.message });
+  }
+});
+
 // Test Dfns
 app.get('/api/dfns/test', async (req, res) => {
   try {
