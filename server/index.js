@@ -1259,6 +1259,8 @@ app.post('/api/dfns/wallets/:walletId/transfers', requireAuth, async (req, res) 
     // If the wallet is in "whitelist-only" mode (configured via
     // RiskConfigPanel), the destination MUST be on the approved list.
     // Otherwise the transfer is blocked.
+    let resolvedAccountId = null;
+    let riskCfgRow = null;
     try {
       // Read whitelist mode from the wallet's risk config. We look up
       // the client via wallet.external_id → risk_configs.whitelist_only.
@@ -1267,18 +1269,19 @@ app.post('/api/dfns/wallets/:walletId/transfers', requireAuth, async (req, res) 
         .select('salesforce_account_id, external_id')
         .eq('dfns_wallet_id', walletId)
         .maybeSingle();
-      const accountId = wallet?.salesforce_account_id || wallet?.external_id;
-      if (accountId) {
+      resolvedAccountId = wallet?.salesforce_account_id || wallet?.external_id || null;
+      if (resolvedAccountId) {
         const { data: riskCfg } = await supabaseAdmin
           .from('risk_configs')
-          .select('whitelist_only')
-          .eq('salesforce_account_id', accountId)
+          .select('whitelist_only, approval_threshold, max_single_transfer')
+          .eq('salesforce_account_id', resolvedAccountId)
           .maybeSingle();
+        riskCfgRow = riskCfg || null;
         if (riskCfg?.whitelist_only && destination) {
           const { data: wl } = await supabaseAdmin
             .from('address_whitelist')
             .select('id, status')
-            .eq('salesforce_account_id', accountId)
+            .eq('salesforce_account_id', resolvedAccountId)
             .ilike('address', destination)
             .eq('status', 'approved')
             .maybeSingle();
@@ -1288,7 +1291,7 @@ app.post('/api/dfns/wallets/:walletId/transfers', requireAuth, async (req, res) 
               category: 'transfer',
               entityType: 'wallet',
               entityId: walletId,
-              details: { walletId, destination, accountId, reason: 'destination_not_whitelisted' },
+              details: { walletId, destination, accountId: resolvedAccountId, reason: 'destination_not_whitelisted' },
               severity: 'critical',
               req,
             });
@@ -1305,8 +1308,133 @@ app.post('/api/dfns/wallets/:walletId/transfers', requireAuth, async (req, res) 
       console.warn('[Transfer Gate] whitelist check skipped:', e.message);
     }
 
+    // ─── Compliance Gate 4: QUATRE-YEUX + HARD CAPS ─────────────
+    // ACPR LCB-FT Art. 14 — operations sensibles (= transferts de
+    // crypto-actifs au-delà d'un seuil) requièrent deux approbateurs
+    // distincts. Le seuil est configuré par client via
+    // risk_configs.approval_threshold (en EUR équivalent).
+    //
+    // 1. Convertit le montant crypto en EUR équivalent (lookup simple
+    //    sur prix spot — en prod, utilise un oracle ou Chainalysis
+    //    market data).
+    // 2. Si amount_eur > max_single_transfer → 403 HARD_CAP (refusable
+    //    même avec quatre-yeux, c'est un hard cap).
+    // 3. Si amount_eur >= approval_threshold → exige un
+    //    req.body.approvalId qui référence un transfer_approvals
+    //    row avec status='approved', matching wallet + destination +
+    //    amount, et approved_by ≠ requested_by (double signature).
+    // 4. Sur succès DFNS, marque l'approval comme 'executed' pour
+    //    empêcher le replay.
+    let matchedApproval = null;
+    try {
+      const PRICES_EUR = { BTC: 58000, ETH: 2950, SOL: 135, USDC: 0.92, USDT: 0.92, POL: 0.38, MATIC: 0.38, SepoliaETH: 0, TEST_MATIC: 0 };
+      const rawAmount = Number(req.body?.amount || 0);
+      const symbol = (req.body?.assetSymbol || req.body?.kind || '').toUpperCase();
+      const price = PRICES_EUR[symbol] ?? 0;
+      const amountEur = rawAmount * price;
+
+      const hardCap = Number(riskCfgRow?.max_single_transfer || 0);
+      const approvalThreshold = Number(riskCfgRow?.approval_threshold || 0);
+
+      // Hard cap: refus même avec quatre-yeux
+      if (hardCap > 0 && amountEur > hardCap) {
+        await logAudit({
+          action: 'transfer.blocked_hard_cap',
+          category: 'transfer',
+          entityType: 'wallet',
+          entityId: walletId,
+          details: { walletId, destination, amount: rawAmount, amountEur, hardCap, accountId: resolvedAccountId },
+          severity: 'critical',
+          req,
+        });
+        return res.status(403).json({
+          error: `Plafond unique dépassé — ${amountEur.toFixed(0)}€ > ${hardCap}€`,
+          code: 'HARD_CAP_EXCEEDED',
+          amountEur,
+          hardCap,
+          regulation: 'ACPR Conformité LCB-FT',
+        });
+      }
+
+      // Quatre-yeux: requis au-dessus du seuil
+      if (approvalThreshold > 0 && amountEur >= approvalThreshold) {
+        const approvalId = req.body?.approvalId;
+        if (!approvalId) {
+          await logAudit({
+            action: 'transfer.blocked_four_eyes_missing',
+            category: 'transfer',
+            entityType: 'wallet',
+            entityId: walletId,
+            details: { walletId, destination, amount: rawAmount, amountEur, threshold: approvalThreshold },
+            severity: 'warning',
+            req,
+          });
+          return res.status(403).json({
+            error: `Quatre-yeux requis — ${amountEur.toFixed(0)}€ ≥ seuil ${approvalThreshold}€. Soumettez le transfert à approbation d'abord.`,
+            code: 'FOUR_EYES_REQUIRED',
+            amountEur,
+            threshold: approvalThreshold,
+            regulation: 'ACPR LCB-FT Art. 14',
+          });
+        }
+
+        // Fetch & validate the approval
+        const { data: approval, error: apprErr } = await supabaseAdmin
+          .from('transfer_approvals')
+          .select('*')
+          .eq('id', approvalId)
+          .maybeSingle();
+        if (apprErr || !approval) {
+          return res.status(403).json({
+            error: 'Approbation introuvable',
+            code: 'FOUR_EYES_INVALID',
+          });
+        }
+        if (approval.status !== 'approved') {
+          return res.status(403).json({
+            error: `Approbation non validée — statut actuel: ${approval.status}`,
+            code: 'FOUR_EYES_NOT_APPROVED',
+            status: approval.status,
+          });
+        }
+        // Match verification: wallet + destination + amount must align
+        const matches =
+          approval.wallet_id === walletId &&
+          (approval.to_address || '').toLowerCase() === destination.toLowerCase() &&
+          Number(approval.amount) === rawAmount;
+        if (!matches) {
+          return res.status(403).json({
+            error: 'Approbation ne correspond pas au transfert (wallet / destination / montant)',
+            code: 'FOUR_EYES_MISMATCH',
+          });
+        }
+        // Double signature: approver ≠ requester
+        if (approval.approved_by && approval.requested_by && approval.approved_by === approval.requested_by) {
+          return res.status(403).json({
+            error: 'Approbateur identique au demandeur — règle quatre-yeux violée',
+            code: 'FOUR_EYES_SAME_USER',
+          });
+        }
+        matchedApproval = approval;
+      }
+    } catch (e) {
+      console.warn('[Transfer Gate] four-eyes check error:', e.message);
+    }
+
     // ─── All gates cleared → execute on DFNS ──────────────────
     const data = await dfns.wallets.transferAsset({ walletId, body: req.body });
+
+    // Mark the approval as executed to prevent replay
+    if (matchedApproval) {
+      try {
+        await supabaseAdmin
+          .from('transfer_approvals')
+          .update({ status: 'executed', executed_at: new Date().toISOString(), dfns_transfer_id: data?.id || null })
+          .eq('id', matchedApproval.id);
+      } catch (e) {
+        console.warn('[Transfer Gate] failed to mark approval executed:', e.message);
+      }
+    }
 
     // Audit log: transfer success
     await logAudit({

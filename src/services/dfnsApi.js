@@ -11,13 +11,21 @@ async function getAuthHeaders() {
   return headers;
 }
 
-// Better error extraction from DFNS responses
+// Better error extraction from DFNS responses.
+// Preserves server error code + regulation + extra fields on err.data
+// so the UI can branch on FOUR_EYES_REQUIRED / SANCTIONS_HIT / etc.
 async function dfnsError(res, fallback) {
   try {
     const data = await res.json();
-    return new Error(data.error || data.message || data.details || fallback);
+    const err = new Error(data.error || data.message || data.details || fallback);
+    err.status = res.status;
+    err.code = data.code || null;
+    err.data = data;
+    return err;
   } catch {
-    return new Error(fallback);
+    const err = new Error(fallback);
+    err.status = res.status;
+    return err;
   }
 }
 
@@ -62,10 +70,16 @@ export async function getWalletHistory(walletId) {
   return res.json();
 }
 
-export async function transferAsset(walletId, { kind, to, amount, contract }) {
+export async function transferAsset(walletId, { kind, to, amount, contract, assetSymbol, approvalId }) {
   const authHeaders = await getAuthHeaders();
   const body = { kind, to, amount };
   if (contract) body.contract = contract;
+  // assetSymbol is used server-side to convert crypto amount to EUR for
+  // the approval_threshold / hard_cap compliance checks.
+  if (assetSymbol) body.assetSymbol = assetSymbol;
+  // approvalId references an approved transfer_approvals row and is
+  // required when the transfer value exceeds the client's 4-eyes threshold.
+  if (approvalId) body.approvalId = approvalId;
   const res = await fetch(`${API_BASE}/api/dfns/wallets/${walletId}/transfers`, {
     method: 'POST',
     headers: authHeaders,

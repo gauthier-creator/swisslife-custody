@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { listWallets, listTransfers, getWalletHistory, transferAsset } from '../services/dfnsApi';
-import { screenAddress } from '../services/complianceApi';
+import { screenAddress, createApproval } from '../services/complianceApi';
 import { getNetwork, getExplorerUrl } from '../utils/networks';
 import { truncateAddress, timeAgo } from '../utils/format';
 import {
@@ -364,12 +364,49 @@ function TransferModal({ isOpen, onClose, wallets, toast, onSuccess }) {
     }
     setSending(true);
     try {
-      await transferAsset(walletId, { kind, to, amount, contract: kind === 'Erc20' ? contract : undefined });
+      // assetSymbol guessed from kind : native transfers use the network's
+      // base asset, ERC-20 needs an explicit symbol (user may pick later).
+      const currentWallet = wallets.find(w => w.id === walletId);
+      const netSymbol = { Ethereum: 'ETH', EthereumSepolia: 'ETH', Bitcoin: 'BTC', Solana: 'SOL', Polygon: 'POL' }[currentWallet?.network] || null;
+      const assetSymbol = kind === 'Erc20' ? (contract ? 'USDC' : netSymbol) : netSymbol;
+      await transferAsset(walletId, {
+        kind, to, amount,
+        contract: kind === 'Erc20' ? contract : undefined,
+        assetSymbol,
+      });
       toast?.('Transfert initié — en attente de vérification compliance');
       onClose();
       onSuccess?.();
     } catch (err) {
-      toast?.('Erreur : ' + err.message);
+      // ── Four-eyes: server asks for an approval request ───────
+      if (err.code === 'FOUR_EYES_REQUIRED') {
+        try {
+          const currentWallet = wallets.find(w => w.id === walletId);
+          const approval = await createApproval({
+            walletId,
+            to,
+            amount,
+            assetSymbol: kind === 'Erc20' ? 'ERC20' : (currentWallet?.network || ''),
+            network: currentWallet?.network || '',
+            note: `Transfert ${amount} vers ${to.slice(0, 12)}… — seuil quatre-yeux ${err.data?.threshold || '?'}€ déclenché (${(err.data?.amountEur || 0).toFixed(0)}€).`,
+          });
+          toast?.(`Demande d'approbation créée · ID ${approval.id?.slice(0, 8)}… — en attente d'un second approbateur (ACPR LCB-FT Art. 14)`);
+          onClose();
+          onSuccess?.();
+        } catch (createErr) {
+          toast?.('Échec création demande d\'approbation : ' + createErr.message);
+        }
+      } else if (err.code === 'SANCTIONS_HIT') {
+        toast?.('Transfert bloqué — adresse sanctionnée (' + (err.data?.hits?.[0]?.name || 'OFAC') + ')');
+      } else if (err.code === 'WALLET_FROZEN') {
+        toast?.('Wallet gelé — ' + (err.data?.freezeReason || 'transfert refusé'));
+      } else if (err.code === 'WHITELIST_REQUIRED') {
+        toast?.('Whitelist stricte — cette adresse doit d\'abord être approuvée par le RCSI');
+      } else if (err.code === 'HARD_CAP_EXCEEDED') {
+        toast?.(`Plafond dépassé — max ${err.data?.hardCap}€ par transfert`);
+      } else {
+        toast?.('Erreur : ' + err.message);
+      }
     }
     setSending(false);
   };
