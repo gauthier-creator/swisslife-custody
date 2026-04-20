@@ -1432,9 +1432,9 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                         return (
                           <li key={i} className="px-4 py-3 flex items-center gap-3">
                             <span className="w-2 h-2 rounded-[2px] flex-shrink-0" style={{ background: colorForAsset(a.symbol) }} />
-                            <span className="text-[13px] text-[#0F0F10] font-semibold w-16">{a.symbol}</span>
-                            <span className="text-[12.5px] text-[#5D5D5D] tabular-nums flex-1">{bal.toFixed(bal > 1 ? 2 : 6)}</span>
-                            <span className="text-[13px] text-[#0F0F10] font-medium tabular-nums">
+                            <span className="text-[13px] text-[#0F0F10] font-semibold min-w-[80px] max-w-[110px] truncate flex-shrink-0" title={a.symbol}>{a.symbol}</span>
+                            <span className="text-[12.5px] text-[#5D5D5D] tabular-nums flex-1 min-w-0 truncate">{bal.toFixed(bal > 1 ? 2 : 6)}</span>
+                            <span className="text-[13px] text-[#0F0F10] font-medium tabular-nums flex-shrink-0">
                               {eur > 0 ? fmtEUR(Math.round(eur)) : '—'}
                             </span>
                           </li>
@@ -1684,12 +1684,15 @@ function CryptoHoldingsCard({ wallets, holdings, loading, net, onSelectWallet })
                 style={{ '--i': i }}
               >
                 <span className="w-2 h-2 rounded-[2px] flex-shrink-0 transition-transform group-hover:scale-110" style={{ background: colorForAsset(a.symbol) }} />
-                <span className="text-[#0F0F10] font-semibold w-14 flex-shrink-0">{a.symbol}</span>
-                <span className="text-[#5D5D5D] tabular-nums flex-1 truncate">{a.balance.toFixed(a.balance > 1 ? 2 : 6)}</span>
-                <span className="text-[#0F0F10] font-medium tabular-nums">
+                {/* min-w-[72px] + truncate + title : accommode SepoliaETH,
+                    EthereumGoerli, BitcoinTestnet sans overflow sur la
+                    colonne balance, et tooltip si vraiment trop long. */}
+                <span className="text-[#0F0F10] font-semibold min-w-[72px] max-w-[96px] truncate flex-shrink-0" title={a.symbol}>{a.symbol}</span>
+                <span className="text-[#5D5D5D] tabular-nums flex-1 min-w-0 truncate">{a.balance.toFixed(a.balance > 1 ? 2 : 6)}</span>
+                <span className="text-[#0F0F10] font-medium tabular-nums flex-shrink-0">
                   {a.valueEur > 0 ? fmtEUR(Math.round(a.valueEur)) : '—'}
                 </span>
-                <span className="text-[#8A8278] tabular-nums w-10 text-right">
+                <span className="text-[#8A8278] tabular-nums w-10 text-right flex-shrink-0">
                   {a.valueEur > 0 ? `${Math.round(a.percentage)}%` : ''}
                 </span>
               </li>
