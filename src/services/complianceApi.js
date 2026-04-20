@@ -181,14 +181,21 @@ export async function exportKycStatus() {
 export async function fetchRiskConfig(accountId) {
   const res = await fetch(`${API_BASE}/api/compliance/risk/${accountId}`, { headers });
   if (!res.ok) { if (res.status === 404) return null; throw new Error('Failed to fetch risk config'); }
-  return res.json();
+  const payload = await res.json();
+  // Le serveur wrap dans { data: {...} | null } — on déballe côté client
+  // pour que le composant reçoive l'objet directement.
+  return payload?.data !== undefined ? payload.data : payload;
 }
 
 export async function saveRiskConfig(accountId, config) {
+  const authHeaders = await getHeaders();
   const res = await fetch(`${API_BASE}/api/compliance/risk/${accountId}`, {
-    method: 'PUT', headers, body: JSON.stringify(config),
+    method: 'PUT', headers: authHeaders, body: JSON.stringify(config),
   });
-  if (!res.ok) throw new Error('Failed to save risk config');
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.error || `Failed to save risk config (${res.status})`);
+  }
   return res.json();
 }
 

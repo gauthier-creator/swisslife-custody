@@ -1451,7 +1451,7 @@ app.post('/api/dfns/wallets/:walletId/transfers', requireAuth, async (req, res) 
     // resolvedAccountId + riskCfgRow hoisted to the top of the handler.
     try {
       // Read whitelist mode from the wallet's risk config. We look up
-      // the client via wallet.external_id → risk_configs.whitelist_only.
+      // the client via wallet.external_id → client_risk_config.
       const { data: wallet } = await supabaseAdmin
         .from('wallets')
         .select('salesforce_account_id, external_id')
@@ -1460,8 +1460,8 @@ app.post('/api/dfns/wallets/:walletId/transfers', requireAuth, async (req, res) 
       resolvedAccountId = wallet?.salesforce_account_id || wallet?.external_id || null;
       if (resolvedAccountId) {
         const { data: riskCfg } = await supabaseAdmin
-          .from('risk_configs')
-          .select('whitelist_only, approval_threshold, max_single_transfer')
+          .from('client_risk_config')
+          .select('whitelist_only, requires_approval_above, max_single_transfer')
           .eq('salesforce_account_id', resolvedAccountId)
           .maybeSingle();
         riskCfgRow = riskCfg || null;
@@ -1525,7 +1525,7 @@ app.post('/api/dfns/wallets/:walletId/transfers', requireAuth, async (req, res) 
       const amountEur = rawAmount * price;
 
       const hardCap = Number(riskCfgRow?.max_single_transfer || 0);
-      const approvalThreshold = Number(riskCfgRow?.approval_threshold || 0);
+      const approvalThreshold = Number(riskCfgRow?.requires_approval_above || 0);
 
       // Hard cap: refus même avec quatre-yeux
       if (hardCap > 0 && amountEur > hardCap) {
@@ -2698,43 +2698,59 @@ app.get('/api/compliance/risk/:accountId', async (req, res) => {
   }
 });
 
-// PUT /api/compliance/risk/:accountId — Create/update risk config (upsert)
+// PUT /api/compliance/risk/:accountId — Create/update risk config (upsert).
+//
+// Contrat client ↔ serveur : snake_case matching la table client_risk_config.
+// Le client envoie déjà les noms de colonnes DB (voir RiskConfigPanel.startEdit).
+// Champs acceptés : risk_level, max_single_transfer, max_daily_volume,
+// requires_approval_above, whitelist_only, allowed_networks, pep_status,
+// fatca_status, last_review_date, next_review_date, notes.
+//
+// `updated_by_email` n'existe pas dans la table — on trace l'email uniquement
+// dans l'audit log.
 app.put('/api/compliance/risk/:accountId', async (req, res) => {
   try {
-    const {
-      dailyTransferLimit, singleTransferLimit, requireWhitelist,
-      requireApprovalAbove, allowedNetworks, riskLevel,
-      updatedBy, updatedByEmail,
-    } = req.body;
+    const body = req.body || {};
+
+    // Le client UI utilise `approval_threshold` comme alias historique de
+    // `requires_approval_above`. On accepte les deux pour robustesse.
+    const requiresApprovalAbove = body.requires_approval_above ?? body.approval_threshold ?? null;
+
+    // Coerce les nombres — le client envoie soit string soit number selon l'input.
+    const num = (v) => (v === '' || v === null || v === undefined ? null : Number(v));
+
+    const payload = {
+      salesforce_account_id: req.params.accountId,
+      risk_level:              body.risk_level || 'standard',
+      max_single_transfer:     num(body.max_single_transfer),
+      max_daily_volume:        num(body.max_daily_volume),
+      requires_approval_above: num(requiresApprovalAbove),
+      whitelist_only:          body.whitelist_only ?? false,
+      allowed_networks:        Array.isArray(body.allowed_networks) ? body.allowed_networks : null,
+      pep_status:              body.pep_status ?? false,
+      fatca_status:            body.fatca_status || 'pending',
+      last_review_date:        body.last_review_date || null,
+      next_review_date:        body.next_review_date || null,
+      notes:                   body.notes ?? null,
+      updated_at: new Date().toISOString(),
+    };
 
     const { data, error } = await supabaseAdmin
       .from('client_risk_config')
-      .upsert({
-        salesforce_account_id: req.params.accountId,
-        daily_transfer_limit: dailyTransferLimit ?? null,
-        single_transfer_limit: singleTransferLimit ?? null,
-        require_whitelist: requireWhitelist ?? true,
-        require_approval_above: requireApprovalAbove ?? null,
-        allowed_networks: allowedNetworks || null,
-        risk_level: riskLevel || 'standard',
-        updated_by: updatedBy || null,
-        updated_by_email: updatedByEmail || null,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'salesforce_account_id' })
+      .upsert(payload, { onConflict: 'salesforce_account_id' })
       .select()
       .single();
 
     if (error) throw error;
 
     await logAudit({
-      userId: updatedBy,
-      userEmail: updatedByEmail,
+      userEmail: req.user?.email,
       action: 'risk.config_updated',
       category: 'risk',
       entityType: 'risk_config',
       entityId: data.id,
       salesforceAccountId: req.params.accountId,
-      details: { dailyTransferLimit, singleTransferLimit, requireWhitelist, requireApprovalAbove, riskLevel },
+      details: payload,
       severity: 'info',
       req,
     });

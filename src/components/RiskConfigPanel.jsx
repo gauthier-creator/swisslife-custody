@@ -33,7 +33,7 @@ const DEFAULT_CONFIG = {
   risk_level: 'standard',
   max_single_transfer: 50000,
   max_daily_volume: 200000,
-  approval_threshold: 25000,
+  requires_approval_above: 25000,
   whitelist_only: false,
   allowed_networks: ['Ethereum', 'EthereumSepolia', 'Bitcoin'],
   pep_status: false,
@@ -82,6 +82,7 @@ export default function RiskConfigPanel({ client }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   useEffect(() => { load(); }, [client.id]);
 
@@ -98,23 +99,26 @@ export default function RiskConfigPanel({ client }) {
   };
 
   const handleCreate = async () => {
+    setErrorMsg(null);
     setSaving(true);
     try {
       const data = await saveRiskConfig(client.id, DEFAULT_CONFIG);
       setConfig(data);
     } catch (err) {
       console.error('saveRiskConfig error:', err);
-      alert('Erreur : ' + err.message);
+      setErrorMsg(err.message || 'Erreur lors de la création de la configuration');
     }
     setSaving(false);
   };
 
   const startEdit = () => {
+    // La colonne DB canonique est `requires_approval_above` — on accepte
+    // l'alias `approval_threshold` pour rétrocompat (ancien code UI).
     setDraft({
       risk_level: config.risk_level || 'standard',
       max_single_transfer: config.max_single_transfer || 0,
       max_daily_volume: config.max_daily_volume || 0,
-      approval_threshold: config.approval_threshold || 0,
+      requires_approval_above: config.requires_approval_above ?? config.approval_threshold ?? 0,
       whitelist_only: config.whitelist_only || false,
       allowed_networks: config.allowed_networks || [],
       pep_status: config.pep_status || false,
@@ -122,10 +126,12 @@ export default function RiskConfigPanel({ client }) {
       last_review_date: config.last_review_date || '',
       next_review_date: config.next_review_date || '',
     });
+    setErrorMsg(null);
     setEditing(true);
   };
 
   const handleSave = async () => {
+    setErrorMsg(null);
     setSaving(true);
     try {
       const data = await saveRiskConfig(client.id, draft);
@@ -134,7 +140,7 @@ export default function RiskConfigPanel({ client }) {
       setDraft(null);
     } catch (err) {
       console.error('saveRiskConfig error:', err);
-      alert('Erreur : ' + err.message);
+      setErrorMsg(err.message || 'Erreur lors de la sauvegarde');
     }
     setSaving(false);
   };
@@ -256,13 +262,13 @@ export default function RiskConfigPanel({ client }) {
             {editing ? (
               <input
                 type="number"
-                value={draft.approval_threshold}
-                onChange={e => setDraft(d => ({ ...d, approval_threshold: Number(e.target.value) }))}
+                value={draft.requires_approval_above}
+                onChange={e => setDraft(d => ({ ...d, requires_approval_above: Number(e.target.value) }))}
                 className={inputCls}
               />
             ) : (
               <p className="text-[14px] font-medium text-[#0A0A0A] tabular-nums tracking-[-0.01em]">
-                {fmtEUR(config.approval_threshold)}
+                {fmtEUR(config.requires_approval_above ?? config.approval_threshold)}
               </p>
             )}
           </Field>
@@ -408,13 +414,20 @@ export default function RiskConfigPanel({ client }) {
           </Field>
         </div>
 
+        {/* Error banner — inline au lieu du alert() natif */}
+        {errorMsg && (
+          <div className="mt-4 px-4 py-3 bg-[#FEF2F2] border border-[rgba(220,38,38,0.22)] rounded-[8px]">
+            <p className="text-[12.5px] text-[#991B1B] tracking-[-0.003em]">{errorMsg}</p>
+          </div>
+        )}
+
         {/* Edit actions */}
         {editing && (
           <div className="flex items-center justify-end gap-2 pt-4 border-t border-[#E7E7E7]">
             <Button
               variant="ghost"
               size="md"
-              onClick={() => { setEditing(false); setDraft(null); }}
+              onClick={() => { setEditing(false); setDraft(null); setErrorMsg(null); }}
               disabled={saving}
             >
               Annuler
