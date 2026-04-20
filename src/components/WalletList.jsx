@@ -82,12 +82,14 @@ export default function WalletList() {
       />
 
       {/* 2-column asymmetric block — unique to WalletList:
-           LEFT 8/12: Network distribution with horizontal stacked bar
-           RIGHT 4/12: Infrastructure MPC status (Live + threshold + last signature) */}
+           LEFT 8/12: Network distribution + top wallet highlight
+           RIGHT 4/12: Infrastructure MPC status + activity meta
+           items-stretch (default) so both cards balance via their rich content,
+           not via empty-space stretching. */}
       {!loading && wallets.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
           {/* LEFT — Distribution réseau */}
-          <div className="lg:col-span-8 bg-white border border-[#E7E7E7] rounded-[10px] p-6">
+          <div className="lg:col-span-8 bg-white border border-[#E7E7E7] rounded-[10px] p-6 flex flex-col">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-[15px] font-semibold text-[#0F0F10]" style={{ letterSpacing: '-0.012em' }}>
                 Distribution par réseau
@@ -126,6 +128,53 @@ export default function WalletList() {
                 );
               })}
             </div>
+
+            {/* Second data strip — fills dead space with useful activity snapshot.
+                3 compact tiles: dominant network, most recent provisioning,
+                activation rate. Matches RIGHT card's visual density. */}
+            {(() => {
+              const sortedNetworks = Object.entries(byNetwork).sort(([, a], [, b]) => b.length - a.length);
+              const dominant = sortedNetworks[0];
+              const recentWallet = [...wallets].sort((a, b) => {
+                const da = a.dateCreated ? new Date(a.dateCreated).getTime() : 0;
+                const db = b.dateCreated ? new Date(b.dateCreated).getTime() : 0;
+                return db - da;
+              })[0];
+              const activationRate = wallets.length ? Math.round((activeCount / wallets.length) * 100) : 0;
+              return (
+                <div className="mt-5 pt-4 border-t border-[#E7E7E7] grid grid-cols-3 gap-4">
+                  <div className="min-w-0">
+                    <p className="text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.08em]">Réseau principal</p>
+                    {dominant && (
+                      <div className="mt-1.5 flex items-center gap-2 min-w-0">
+                        <span
+                          className="w-4 h-4 rounded-[4px] flex items-center justify-center text-white text-[8px] font-bold flex-shrink-0"
+                          style={{ backgroundColor: net(dominant[0]).color }}
+                        >
+                          {net(dominant[0]).icon}
+                        </span>
+                        <span className="text-[13px] font-semibold text-[#0F0F10] truncate">{net(dominant[0]).name}</span>
+                        <span className="text-[11px] text-[#8A8278] tabular-nums flex-shrink-0">· {Math.round((dominant[1].length / wallets.length) * 100)}%</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.08em]">Dernier provisionnement</p>
+                    <p className="mt-1.5 text-[13px] font-semibold text-[#0F0F10] tabular-nums truncate">
+                      {recentWallet?.dateCreated
+                        ? new Date(recentWallet.dateCreated).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
+                        : '—'}
+                    </p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10.5px] font-semibold text-[#8A8278] uppercase tracking-[0.08em]">Taux d'activation</p>
+                    <p className="mt-1.5 text-[13px] font-semibold text-[#0F9868] tabular-nums">
+                      {activationRate}% <span className="text-[11px] text-[#8A8278] font-normal">· MPC actif</span>
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* RIGHT — Infrastructure status */}
@@ -145,6 +194,14 @@ export default function WalletList() {
               <div className="flex items-center justify-between">
                 <span className="text-[13px] text-[#5D5D5D]">Réseaux actifs</span>
                 <span className="text-[13px] text-[#0F0F10] font-semibold tabular-nums">{networkCount}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] text-[#5D5D5D]">Rotation clé</span>
+                <span className="text-[13px] text-[#0F0F10] font-semibold tabular-nums">Trimestrielle</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] text-[#5D5D5D]">Backup shards</span>
+                <span className="text-[13px] text-[#0F0F10] font-semibold tabular-nums">Coffre-fort</span>
               </div>
             </div>
             <div className="flex items-center gap-2 pt-4 mt-auto border-t border-[#E7E7E7]">

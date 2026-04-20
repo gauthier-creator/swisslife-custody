@@ -116,14 +116,17 @@ export default function PolicyList() {
           />
         </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-          <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-up stagger-3">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+          <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-2 gap-4 animate-slide-up stagger-3 content-start">
             {policies.map((pol, i) => (
               <PolicyCard key={pol.id} pol={pol} index={i} />
             ))}
           </div>
 
-          {/* Sidebar — Quatre-yeux governance at a glance */}
+          {/* Sidebar — Quatre-yeux governance at a glance.
+              items-start sur le grid parent : la sidebar ne s'étire plus
+              au-delà de sa hauteur naturelle quand la grille policies est
+              courte (1-2 policies). */}
           <aside className="lg:col-span-4 space-y-4">
             <div className="bg-white border border-[#E7E7E7] rounded-[10px] p-5">
               <p className="text-[11px] font-semibold text-[#8A8278] uppercase tracking-[0.1em] mb-3">
@@ -148,6 +151,48 @@ export default function PolicyList() {
                   <span className="text-[12.5px] text-[#0F9868] font-semibold tabular-nums">98%</span>
                 </div>
               </div>
+            </div>
+
+            {/* Policy distribution — stacked bar + legend. Shows active vs
+                pending vs inactive policies — immediate governance health. */}
+            <div className="bg-white border border-[#E7E7E7] rounded-[10px] p-5">
+              <p className="text-[11px] font-semibold text-[#8A8278] uppercase tracking-[0.1em] mb-3">
+                Répartition des politiques
+              </p>
+              {(() => {
+                const inactiveCount = policies.length - activeCount - pendingCount;
+                const total = Math.max(1, policies.length);
+                const segs = [
+                  { k: 'Actives',    n: activeCount,    color: '#0F9868' },
+                  { k: 'En attente', n: pendingCount,   color: '#CA8A04' },
+                  { k: 'Inactives',  n: inactiveCount,  color: '#D1D5DB' },
+                ];
+                return (
+                  <>
+                    <div className="flex h-2 rounded-[3px] overflow-hidden bg-[#F3F2EE]">
+                      {segs.map(s => (
+                        <div
+                          key={s.k}
+                          className="h-full transition-all"
+                          style={{ width: `${(s.n / total) * 100}%`, background: s.color, minWidth: s.n > 0 ? '4px' : 0 }}
+                          title={`${s.k}: ${s.n}`}
+                        />
+                      ))}
+                    </div>
+                    <ul className="mt-3 space-y-2">
+                      {segs.map(s => (
+                        <li key={s.k} className="flex items-center justify-between text-[12.5px]">
+                          <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-[2px]" style={{ background: s.color }} />
+                            <span className="text-[#1E1E1E]">{s.k}</span>
+                          </span>
+                          <span className="text-[#0F0F10] font-semibold tabular-nums">{s.n}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                );
+              })()}
             </div>
 
             <div className="bg-white border border-[#E7E7E7] rounded-[10px] p-5">
