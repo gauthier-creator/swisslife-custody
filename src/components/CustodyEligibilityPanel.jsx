@@ -105,6 +105,10 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
 
   // Run ComplyCube AML screening (sanctions · PEP · adverse media)
   const runScreening = async () => {
+    if (!client?.id) {
+      setScreeningError('Client sans identifiant Salesforce — impossible de lancer le screening.');
+      return;
+    }
     setScreening(true);
     setScreeningError(null);
     setScreeningResult(null);
@@ -115,9 +119,15 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
         initiatedByEmail: currentEmail,
       });
       setScreeningResult(check);
-      // Salesforce is patched server-side — refresh the parent so badges update
-      if (onUpdate) await onUpdate();
+      // Salesforce is patched server-side — refresh the parent so badges update.
+      // Wrap in try/catch so a SFDC refresh failure doesn't hide the successful
+      // screening result from the user.
+      if (onUpdate) {
+        try { await onUpdate(); }
+        catch (e) { console.warn('[Screening] onUpdate refresh failed:', e.message); }
+      }
     } catch (err) {
+      console.error('[Screening] call failed:', err);
       setScreeningError(err.message || 'Echec du screening');
     } finally {
       setScreening(false);
@@ -210,17 +220,18 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
               client.Custody_Sanctions_Clear__c ? 'Clear' :
               screeningResult && screeningResult.status === 'failed' ? 'Alerte' : 'Non vérifié'}
           </Badge>
-          {isAdmin && (
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={runScreening}
-              disabled={screening}
-            >
-              {screening && <Spinner />}
-              {client.Custody_Sanctions_Clear__c ? 'Relancer' : 'Lancer le screening'}
-            </Button>
-          )}
+          {/* Screening ouvert à tous les banquiers : c'est une lecture OFAC
+              non destructive. L'isAdmin gate était une erreur — les RM
+              doivent pouvoir vérifier eux-mêmes leurs clients. */}
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={runScreening}
+            disabled={screening}
+          >
+            {screening && <Spinner />}
+            {client.Custody_Sanctions_Clear__c ? 'Relancer' : 'Lancer le screening'}
+          </Button>
         </div>
       ),
       meta: (screeningResult || screeningError) && (

@@ -30,7 +30,7 @@ export default function PolicyList() {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '', activityKind: 'Wallets:Sign', rule: 'AlwaysRequireApproval' });
+  const [form, setForm] = useState({ name: '', description: '', activityKind: 'Wallets:Sign', rule: 'Block', amountLimit: '' });
 
   useEffect(() => { load(); }, []);
 
@@ -46,16 +46,32 @@ export default function PolicyList() {
   const handleCreate = async () => {
     setCreating(true);
     try {
+      // Build a DFNS-valid CreatePolicyBody.
+      // DFNS Policy Engine expects :
+      //   - rule.kind   ∈ { AlwaysTrigger, TransactionAmountLimit, TransactionRecipientWhitelist, … }
+      //   - action.kind ∈ { RequestApproval, Block }
+      // For RequestApproval, approvalGroups must list at least 1 DFNS userId
+      // (sandbox strict). Pour la démo on utilise uniquement Block — les
+      // approbations multi-acteurs passent par notre système interne
+      // transfer_approvals qui ne nécessite pas de userId DFNS.
+      const ruleKind = form.amountLimit && Number(form.amountLimit) > 0
+        ? { kind: 'TransactionAmountLimit', configuration: { limit: Number(form.amountLimit), currency: 'USD' } }
+        : { kind: 'AlwaysTrigger', configuration: {} };
+
       await createPolicy({
         name: form.name,
-        description: form.description,
         activityKind: form.activityKind,
-        rule: { kind: form.rule, configuration: {} },
+        rule: ruleKind,
+        action: { kind: 'Block' },
+        filters: {},
       });
       await load();
       setShowCreate(false);
-      setForm({ name: '', description: '', activityKind: 'Wallets:Sign', rule: 'AlwaysRequireApproval' });
-    } catch (err) { alert(err.message); }
+      setForm({ name: '', description: '', activityKind: 'Wallets:Sign', rule: 'Block', amountLimit: '' });
+    } catch (err) {
+      console.error('createPolicy error:', err);
+      alert('Création impossible — ' + (err.message || 'erreur DFNS Policy Engine'));
+    }
     setCreating(false);
   };
 
@@ -256,12 +272,30 @@ export default function PolicyList() {
               </select>
             </div>
             <div>
-              <label className={labelCls}>Règle</label>
-              <select className={selectCls} value={form.rule} onChange={e => setForm(p => ({ ...p, rule: e.target.value }))}>
-                <option value="AlwaysRequireApproval">Toujours approuver</option>
-                <option value="RequestApproval">Conditionnel</option>
-              </select>
+              <label className={labelCls}>Action DFNS</label>
+              <div className="h-9 px-3 flex items-center rounded-[6px] bg-[#F3F2EE] border border-[#E7E7E7] text-[12.5px] text-[#5D5D5D]">
+                Block — rejet automatique au niveau MPC
+              </div>
             </div>
+          </div>
+          <div>
+            <label className={labelCls}>Seuil de déclenchement (USD · optionnel)</label>
+            <input
+              type="number"
+              className={inputCls}
+              placeholder="Ex. 10000 — laisser vide = toujours déclencher"
+              value={form.amountLimit}
+              onChange={e => setForm(p => ({ ...p, amountLimit: e.target.value }))}
+            />
+            <p className="text-[11px] text-[#8A8278] mt-1.5">
+              Si renseigné, la politique ne se déclenche qu'au-delà de ce montant (TransactionAmountLimit). Sinon : AlwaysTrigger.
+            </p>
+          </div>
+          <div className="px-3 py-2.5 rounded-[6px] bg-[#FDFBF6] border border-[#E7E7E7]">
+            <p className="text-[11.5px] text-[#5D5D5D] leading-[1.55]">
+              <span className="font-semibold text-[#1E1E1E]">Quatre-yeux avec approbateurs</span> : utilisez le module
+              <span className="font-semibold text-[#7C5E3C]"> Compliance &gt; Approbations</span> (seuil configurable par client via RiskConfig) — ne nécessite pas d'enregistrer d'approbateurs DFNS.
+            </p>
           </div>
           <div className="flex justify-end gap-2 pt-5 border-t border-[#E7E7E7]">
             <Button variant="ghost" onClick={() => setShowCreate(false)}>Annuler</Button>
