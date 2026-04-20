@@ -163,11 +163,28 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
   };
 
   // Fallback prices used only if Chainlink RPC is unreachable AND the
-  // server fallback itself fails. Testnets stay at 0.
+  // server fallback itself fails. Testnets sont alias de mainnet pour
+  // la démo (SepoliaETH ≈ ETH, TEST_MATIC ≈ POL) — donnent un solde
+  // parlant au banquier au lieu de "€0" trompeur.
   const FALLBACK_PRICES_EUR = {
     BTC: 58000, ETH: 2950, SOL: 135,
     USDC: 0.92, USDT: 0.92, DAI: 0.92,
-    SepoliaETH: 0, EthereumGoerli: 0, BitcoinTestnet: 0, POL: 0.35, MATIC: 0.35,
+    POL: 0.35, MATIC: 0.35,
+    // Testnet aliases — mêmes valeurs que leur mainnet équivalent
+    SepoliaETH: 2950, EthereumGoerli: 2950, HoleskyETH: 2950,
+    TEST_MATIC: 0.35, BitcoinTestnet: 58000,
+  };
+  // Normalise un symbole testnet vers son équivalent mainnet pour le
+  // lookup Chainlink (miroir de l'alias server-side).
+  const normalizeSymbol = (sym) => {
+    const s = (sym || '').toUpperCase();
+    const aliases = {
+      SEPOLIAETH: 'ETH', ETHEREUMGOERLI: 'ETH', HOLESKYETH: 'ETH',
+      TEST_MATIC: 'POL', TESTMATIC: 'POL',
+      BITCOINTESTNET: 'BTC', TBTC: 'BTC',
+      SOLANADEVNET: 'SOL',
+    };
+    return aliases[s] || s;
   };
   const humanBalance = (a) => {
     const raw = parseFloat(a.balance || 0);
@@ -177,9 +194,15 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
   };
   const resolvePriceEur = (symbol, oraclePrices) => {
     const s = (symbol || '').toUpperCase();
+    // 1. Try the raw symbol in case it was fetched directly
     const live = oraclePrices?.[s]?.priceEur;
     if (typeof live === 'number' && live > 0) return live;
-    return FALLBACK_PRICES_EUR[symbol] ?? FALLBACK_PRICES_EUR[s] ?? 0;
+    // 2. Testnet → map to mainnet equivalent pour Chainlink lookup
+    const normalized = normalizeSymbol(s);
+    const liveNormalized = oraclePrices?.[normalized]?.priceEur;
+    if (typeof liveNormalized === 'number' && liveNormalized > 0) return liveNormalized;
+    // 3. Static fallback
+    return FALLBACK_PRICES_EUR[symbol] ?? FALLBACK_PRICES_EUR[s] ?? FALLBACK_PRICES_EUR[normalized] ?? 0;
   };
 
   const loadHoldings = async (wlts) => {
@@ -1655,12 +1678,20 @@ function CryptoHoldingsCard({ wallets, holdings, loading, net, onSelectWallet })
             // Local price lookup — this component is outside ClientDetail's
             // closure so we can't use resolvePriceEur. Read directly from
             // holdings.oracle.prices (passed via prop) with static fallback.
+            // Testnets (SepoliaETH, TEST_MATIC…) aliased to mainnet equivalent.
             const priceFor = (symbol) => {
               const s = (symbol || '').toUpperCase();
-              const live = holdings?.oracle?.prices?.[s]?.priceEur;
+              const aliases = {
+                SEPOLIAETH: 'ETH', ETHEREUMGOERLI: 'ETH', HOLESKYETH: 'ETH',
+                TEST_MATIC: 'POL', TESTMATIC: 'POL',
+                BITCOINTESTNET: 'BTC', TBTC: 'BTC', SOLANADEVNET: 'SOL',
+              };
+              const norm = aliases[s] || s;
+              const live = holdings?.oracle?.prices?.[s]?.priceEur
+                         || holdings?.oracle?.prices?.[norm]?.priceEur;
               if (typeof live === 'number' && live > 0) return live;
-              const fb = { BTC: 58000, ETH: 2950, SOL: 135, USDC: 0.92, USDT: 0.92, LINK: 13 };
-              return fb[s] ?? 0;
+              const fb = { BTC: 58000, ETH: 2950, SOL: 135, USDC: 0.92, USDT: 0.92, LINK: 13, POL: 0.35 };
+              return fb[norm] ?? fb[s] ?? 0;
             };
             const walletEur = assets.reduce((s, a) => {
               const bal = (a.decimals > 6 ? parseFloat(a.balance || 0) / Math.pow(10, a.decimals) : parseFloat(a.balance || 0));

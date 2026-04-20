@@ -119,22 +119,62 @@ async function fetchFeed(pair) {
 // Converts via USD feed + EUR/USD inversion.
 // Returns 0 for unknown symbols (caller should treat as "not valued").
 export async function getCryptoPriceEur(symbol) {
-  const s = (symbol || '').toUpperCase();
+  if (!symbol) return { price: 0, source: 'unsupported', pair: null };
+  const s = String(symbol).toUpperCase();
 
-  // Direct EUR conversions — testnet symbols valued at 0
-  if (!s || s.includes('TEST') || s.includes('SEPOLIA')) return { price: 0, source: 'testnet', pair: null };
+  // Testnet aliases — pour la démo on valorise les testnets comme leur
+  // équivalent mainnet (SepoliaETH ≈ ETH, TEST_MATIC ≈ POL).
+  // Ça permet au banquier de voir un solde parlant (quelques €k) au lieu
+  // de "€0" qui cacherait la réalité de la position custody.
+  // En prod, ces symboles n'existent plus (testnets remplacés par mainnet).
+  const testnetAliases = {
+    SEPOLIAETH: 'ETH',
+    ETHEREUMGOERLI: 'ETH',
+    HOLESKYETH: 'ETH',
+    TEST_MATIC: 'POL',
+    TESTMATIC: 'POL',
+    BITCOINTESTNET: 'BTC',
+    TBTC: 'BTC',
+    SOLANADEVNET: 'SOL',
+  };
+  const resolvedSymbol = testnetAliases[s] || s;
+
   // Stablecoins pegged to USD
   const stableMap = { USDC: 'USDC/USD', USDT: 'USDT/USD' };
   // Major crypto with direct USD feed
   const usdMap = {
     BTC: 'BTC/USD', ETH: 'ETH/USD', SOL: 'SOL/USD',
     LINK: 'LINK/USD', XAU: 'XAU/USD',
-    // Aliases DFNS/networks
-    POL: null, MATIC: null,  // Polygon — pas de feed mainnet ETH direct
-    ADA: null,                // Cardano — pas de feed
+  };
+  // Static USD prices — pour les actifs sans feed Chainlink mainnet
+  // (Polygon POL/MATIC, Cardano, Avalanche…). Encore converti via EUR/USD
+  // feed pour rester dans la même logique pricing.
+  const STATIC_USD_PRICES = {
+    POL: 0.38, MATIC: 0.38, ADA: 0.58, AVAX: 38, DOGE: 0.18,
   };
 
-  let usdPair = usdMap[s] || stableMap[s];
+  let usdPair = usdMap[resolvedSymbol] || stableMap[resolvedSymbol];
+
+  // Static pricing path : pas de feed Chainlink → convertir via EUR/USD seul
+  if (!usdPair && STATIC_USD_PRICES[resolvedSymbol] != null) {
+    try {
+      const eurUsdData = await fetchFeed('EUR/USD');
+      const priceUsd = STATIC_USD_PRICES[resolvedSymbol];
+      const priceEur = eurUsdData.price > 0 ? priceUsd / eurUsdData.price : 0;
+      return {
+        symbol: s,
+        priceEur,
+        priceUsd,
+        eurUsdRate: eurUsdData.price,
+        source: 'static',
+        pair: `${resolvedSymbol}/USD (static)`,
+      };
+    } catch (err) {
+      console.warn(`[Chainlink] static price EUR/USD fetch failed for ${resolvedSymbol}:`, err.message);
+      return { symbol: s, priceEur: STATIC_USD_PRICES[resolvedSymbol] / 1.08, priceUsd: STATIC_USD_PRICES[resolvedSymbol], source: 'static-fallback' };
+    }
+  }
+
   if (!usdPair) return { price: 0, source: 'unsupported', pair: null, symbol: s };
 
   try {
