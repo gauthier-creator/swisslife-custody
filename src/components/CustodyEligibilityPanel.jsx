@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Badge, Card, Modal, Spinner, Button, textareaCls, labelCls } from './shared';
 import { getSalesforceStatus } from '../services/salesforceApi';
-import { runAmlScreening } from '../services/kycService';
+import { runAmlScreening, screenPlan, screenEntity, screenFinalize } from '../services/kycService';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE } from '../config/constants';
 import { supabase } from '../lib/supabase';
@@ -48,6 +48,10 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
   const [screening, setScreening] = useState(false);
   const [screeningResult, setScreeningResult] = useState(null);
   const [screeningError, setScreeningError] = useState(null);
+  // Queue de screening progressif — une entrée par entité à contrôler
+  // (société + contacts). Chaque entrée : { ...entity, status, result }.
+  // status ∈ 'pending' | 'running' | 'complete' | 'failed' | 'error'.
+  const [screeningQueue, setScreeningQueue] = useState([]);
 
   const isEligible = client.Custody_Eligible__c === true;
 
@@ -103,7 +107,11 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
     });
   };
 
-  // Run ComplyCube AML screening (sanctions · PEP · adverse media)
+  // Run ComplyCube AML screening — flow progressif :
+  //   ① Fetch le plan (société + tous les contacts SFDC si personne morale)
+  //   ② Itère sur chaque entité → appel /screen-entity → update UI en live
+  //   ③ Finalize (agrège verdicts + patche Custody_Sanctions_Clear__c)
+  // Le banquier voit chaque entité passer de 'pending' → 'running' → 'clean'/'attention'.
   const runScreening = async () => {
     if (!client?.id) {
       setScreeningError('Client sans identifiant Salesforce — impossible de lancer le screening.');
@@ -112,17 +120,57 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
     setScreening(true);
     setScreeningError(null);
     setScreeningResult(null);
+
     try {
-      const check = await runAmlScreening({
+      // ① Récupère le plan
+      const plan = await screenPlan({
         salesforceAccountId: client.id,
         clientName: client.name,
-        accountType: client.type,                    // ← auto-détection person/company
-        initiatedByEmail: currentEmail,
+        accountType: client.type,
       });
-      setScreeningResult(check);
-      // Salesforce is patched server-side — refresh the parent so badges update.
-      // Wrap in try/catch so a SFDC refresh failure doesn't hide the successful
-      // screening result from the user.
+      const initialQueue = plan.entities.map(e => ({ ...e, status: 'pending', result: null }));
+      setScreeningQueue(initialQueue);
+
+      // ② Boucle séquentielle — update l'état entre chaque appel pour re-render
+      const checkIds = [];
+      for (let i = 0; i < initialQueue.length; i++) {
+        const entity = initialQueue[i];
+        // Passe en 'running'
+        setScreeningQueue(prev => prev.map((e, idx) => idx === i ? { ...e, status: 'running' } : e));
+        try {
+          const result = await screenEntity(entity, {
+            salesforceAccountId: client.id,
+            clientName: client.name,
+            initiatedByEmail: currentEmail,
+          });
+          if (result?.id) checkIds.push(result.id);
+          setScreeningQueue(prev => prev.map((e, idx) => idx === i ? { ...e, status: result.status, result } : e));
+        } catch (err) {
+          setScreeningQueue(prev => prev.map((e, idx) => idx === i ? { ...e, status: 'error', result: { error: err.message } } : e));
+        }
+      }
+
+      // ③ Finalize (verdict agrégé + patch SFDC)
+      let finalizeResult = null;
+      if (checkIds.length) {
+        try {
+          finalizeResult = await screenFinalize({
+            salesforceAccountId: client.id,
+            checkIds,
+            initiatedByEmail: currentEmail,
+          });
+        } catch (err) {
+          console.warn('[Screening] finalize failed:', err.message);
+        }
+      }
+
+      // Verdict global pour l'affichage legacy
+      setScreeningResult({
+        status: finalizeResult?.allClean ? 'complete' : 'failed',
+        aggregatedStatus: finalizeResult?.aggregatedStatus,
+        entities: initialQueue.length,
+      });
+
       if (onUpdate) {
         try { await onUpdate(); }
         catch (e) { console.warn('[Screening] onUpdate refresh failed:', e.message); }
@@ -240,8 +288,29 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
             </Button>
           </div>
         ),
-        meta: (screeningResult || screeningError) && (
-          <ScreeningReport check={screeningResult} error={screeningError} />
+        meta: (screeningQueue.length > 0 || screeningError) && (
+          <div className="space-y-3">
+            {screeningQueue.length > 0 && (
+              <div className="bg-[#FAFAF8] border border-[#E7E7E7] rounded-[8px] p-4">
+                <p className="text-[10.5px] font-medium text-[#8A8278] uppercase tracking-[0.12em] mb-2.5">
+                  {screening ? 'Analyse en cours' : 'Résultats du screening'}
+                  <span className="ml-2 tabular-nums text-[#7C5E3C]">
+                    {screeningQueue.filter(e => e.status === 'complete' || e.status === 'failed' || e.status === 'error').length} / {screeningQueue.length}
+                  </span>
+                </p>
+                <ul className="space-y-1.5">
+                  {screeningQueue.map((e, i) => (
+                    <ScreeningQueueRow key={`${e.kind}-${e.entityId || 'main'}-${i}`} entity={e} />
+                  ))}
+                </ul>
+              </div>
+            )}
+            {screeningError && (
+              <div className="px-4 py-3 bg-[#FEF2F2] border border-[rgba(220,38,38,0.2)] rounded-[8px]">
+                <p className="text-[12.5px] text-[#991B1B]">{screeningError}</p>
+              </div>
+            )}
+          </div>
         ),
       };
     })(),
@@ -363,6 +432,7 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
           screening={screening}
           screeningResult={screeningResult}
           screeningError={screeningError}
+          screeningQueue={screeningQueue}
         />
       ) : (
         <Card>
@@ -638,7 +708,7 @@ function AdequacyQuestion({ n, question, value, onChange }) {
    + 1 ligne de description + CTA SFDC + pill 'éligible depuis'), 3 rangées
    horizontales pour contrat / adéquation / AML. Pas de gradient, pas de
    hero géant, pas de metadata list. Juste propre. */
-function EligibleDossierCard({ client, salesforceDeepLink, openInSalesforce, runScreening, screening, screeningResult, screeningError }) {
+function EligibleDossierCard({ client, salesforceDeepLink, openInSalesforce, runScreening, screening, screeningResult, screeningError, screeningQueue = [] }) {
   const [files, setFiles] = useState([]);
   const [loadingFiles, setLoadingFiles] = useState(true);
 
@@ -746,12 +816,88 @@ function EligibleDossierCard({ client, salesforceDeepLink, openInSalesforce, run
           </button>
         </li>
       </ul>
+      {/* Queue de screening progressif — s'affiche pendant et après
+          l'exécution. Une rangée par entité avec icône d'état évolutive. */}
+      {screeningQueue.length > 0 && (
+        <div className="px-7 py-4 border-t border-[#E7E7E7] bg-[#FAFAF8]">
+          <p className="text-[10.5px] font-medium text-[#8A8278] uppercase tracking-[0.12em] mb-3">
+            {screening ? 'Analyse en cours' : 'Résultats du screening'}
+            <span className="ml-2 tabular-nums text-[#7C5E3C]">
+              {screeningQueue.filter(e => e.status === 'complete' || e.status === 'failed' || e.status === 'error').length} / {screeningQueue.length}
+            </span>
+          </p>
+          <ul className="space-y-1.5">
+            {screeningQueue.map((e, i) => (
+              <ScreeningQueueRow key={`${e.kind}-${e.entityId || 'main'}-${i}`} entity={e} />
+            ))}
+          </ul>
+        </div>
+      )}
       {screeningError && (
         <div className="mx-7 mb-5 px-4 py-3 bg-[#FEF2F2] border border-[rgba(220,38,38,0.2)] rounded-[8px]">
           <p className="text-[12.5px] text-[#991B1B]">{screeningError}</p>
         </div>
       )}
     </Card>
+  );
+}
+
+/* Sub · ScreeningQueueRow — une ligne par entité dans la queue.
+   Icône d'état (● pending, spinner running, ✓ clean, ⚠ attention).
+   Nom + rôle à gauche, statut à droite. */
+function ScreeningQueueRow({ entity }) {
+  const { status, displayName, role, kind, result } = entity;
+  const isDone  = status === 'complete' || status === 'failed' || status === 'error';
+  const isClean = status === 'complete';
+  const isWarn  = status === 'failed';
+  const isErr   = status === 'error';
+  const bg = isClean ? '#ECFDF5' : isWarn ? '#FEF2F2' : isErr ? '#FEF2F2' : status === 'running' ? '#FDFBF6' : '#F5F3EE';
+  const fg = isClean ? '#0F9868' : isWarn ? '#DC2626' : isErr ? '#991B1B' : status === 'running' ? '#7C5E3C' : '#8A8278';
+  const badge = isClean ? 'Clean' : isWarn ? 'Attention' : isErr ? 'Erreur' : status === 'running' ? 'Analyse…' : 'En attente';
+
+  return (
+    <li className="flex items-center gap-3 py-1.5 px-2 -mx-2 rounded-[6px] hover:bg-white transition-colors">
+      <span className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: bg, color: fg }}>
+        {isClean && (
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        )}
+        {isWarn && (
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        )}
+        {isErr && (
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        )}
+        {status === 'running' && (
+          <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+            <path d="M12 2a10 10 0 0110 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+          </svg>
+        )}
+        {status === 'pending' && (
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'currentColor' }} />
+        )}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[12.5px] font-medium text-[#0A0A0A] tracking-[-0.003em] truncate">
+          {kind === 'company' && <span className="text-[#8A8278] text-[10.5px] mr-1.5 uppercase tracking-[0.1em]">Société</span>}
+          {displayName}
+        </p>
+        {role && (
+          <p className="text-[11px] text-[#8A8278] tracking-[-0.003em] truncate">{role}</p>
+        )}
+      </div>
+      <span className={`flex-shrink-0 text-[11px] font-semibold uppercase tracking-[0.06em] tabular-nums ${
+        isClean ? 'text-[#0F9868]' : isWarn ? 'text-[#991B1B]' : isErr ? 'text-[#991B1B]' : status === 'running' ? 'text-[#7C5E3C]' : 'text-[#8A8278]'
+      }`}>
+        {badge}
+      </span>
+    </li>
   );
 }
 

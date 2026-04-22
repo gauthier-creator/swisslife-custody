@@ -93,6 +93,38 @@ export function screenContact({ salesforceAccountId, contactId, firstName, lastN
   return jsonPost('/api/kyc/screen-contact', { salesforceAccountId, contactId, firstName, lastName, email, role, initiatedByEmail });
 }
 
+// ─── Screening progressif (plan + entité-par-entité + finalize) ──────
+// L'UI appelle screenPlan() pour récupérer la liste des entités à contrôler,
+// puis screenEntity() dans une boucle pour avoir un feedback live par entité,
+// puis screenFinalize() pour agréger le verdict et patcher SFDC.
+
+// Récupère le plan (liste des entités à screener) — ne consomme AUCUN
+// appel ComplyCube, c'est juste une préparation.
+export function screenPlan({ salesforceAccountId, clientName, accountType }) {
+  return jsonPost('/api/kyc/screen-plan', { salesforceAccountId, clientName, accountType });
+}
+
+// Screene UNE entité du plan. Retourne le kyc_check persisté.
+export function screenEntity(entity, { salesforceAccountId, clientName, initiatedByEmail }) {
+  return jsonPost('/api/kyc/screen-entity', {
+    salesforceAccountId,
+    clientName,
+    kind: entity.kind,
+    entityId: entity.entityId,
+    displayName: entity.displayName,
+    firstName: entity.firstName,
+    lastName: entity.lastName,
+    email: entity.email,
+    role: entity.role,
+    initiatedByEmail,
+  });
+}
+
+// Agrège les verdicts et patche SFDC Custody_Sanctions_Clear__c.
+export function screenFinalize({ salesforceAccountId, checkIds, initiatedByEmail }) {
+  return jsonPost('/api/kyc/screen-finalize', { salesforceAccountId, checkIds, initiatedByEmail });
+}
+
 // Get full KYC status for a client (all checks + overall status)
 export function getKycStatus(salesforceAccountId) {
   return jsonGet(`/api/kyc/status/${salesforceAccountId}`);
