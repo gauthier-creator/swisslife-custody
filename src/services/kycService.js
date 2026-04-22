@@ -105,6 +105,8 @@ export function screenPlan({ salesforceAccountId, clientName, accountType }) {
 }
 
 // Screene UNE entité du plan. Retourne le kyc_check persisté.
+// Transmet tous les champs enrichis (DOB, nationalité, SIREN, LEI, pays)
+// que l'endpoint /screen-plan a renseignés depuis Salesforce.
 export function screenEntity(entity, { salesforceAccountId, clientName, initiatedByEmail }) {
   return jsonPost('/api/kyc/screen-entity', {
     salesforceAccountId,
@@ -116,6 +118,13 @@ export function screenEntity(entity, { salesforceAccountId, clientName, initiate
     lastName: entity.lastName,
     email: entity.email,
     role: entity.role,
+    // Person enriched
+    dob: entity.dob,
+    nationality: entity.nationality,
+    // Company enriched
+    registrationNumber: entity.registrationNumber,
+    incorporationCountry: entity.incorporationCountry,
+    entityType: entity.entityType,
     initiatedByEmail,
   });
 }

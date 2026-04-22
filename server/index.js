@@ -3671,9 +3671,20 @@ function detectClientTypeFromAccount(accountType) {
 //
 //   entity = { type: 'person'|'company', name, id? (SFDC entity id), role? }
 //
-// Used by the main /aml-screen (iterates on company + contacts) and by
-// /screen-contact (single contact).
-async function runSingleScreening({ type, displayName, firstName, lastName, email, entityId, reusableClientId }) {
+// Enriched payload :
+//   · person  → personDetails  { firstName, lastName, dob (YYYY-MM-DD), nationality (ISO2) }
+//   · company → companyDetails { name, registrationNumber (SIREN), country (ISO2), entityType }
+//
+// DOB + nationality réduisent drastiquement les faux positifs sur les
+// noms communs (ex. "Jean Martin" sans DOB match ~50 entrées PEP).
+// SIREN permet au contrôle compagnie de ne matcher que la bonne entité.
+async function runSingleScreening({
+  type, displayName, firstName, lastName, email, entityId, reusableClientId,
+  // Person fields
+  dob, nationality,
+  // Company fields
+  registrationNumber, incorporationCountry, entityType,
+}) {
   if (KYC_DEMO_MODE) {
     const outcome = demoAmlOutcome(displayName);
     return {
@@ -3687,20 +3698,33 @@ async function runSingleScreening({ type, displayName, firstName, lastName, emai
 
   let complyCubeClientId = reusableClientId;
   if (!complyCubeClientId) {
-    const body = type === 'company'
-      ? {
-          type: 'company',
-          email: email || `${entityId || 'corp'}@custody.swisslife.com`,
-          companyDetails: { name: displayName },
-        }
-      : {
-          type: 'person',
-          email: email || `${entityId || 'indiv'}@custody.swisslife.com`,
-          personDetails: {
-            firstName: firstName || (displayName || '').split(' ')[0] || 'Client',
-            lastName:  lastName  || (displayName || '').split(' ').slice(1).join(' ') || entityId || 'SwissLife',
-          },
-        };
+    // Construit personDetails / companyDetails avec tous les champs
+    // disponibles — plus c'est riche, plus ComplyCube filtre fin
+    // (moins de faux positifs sur noms communs).
+    let body;
+    if (type === 'company') {
+      const companyDetails = { name: displayName };
+      if (registrationNumber) companyDetails.registrationNumber = registrationNumber;
+      if (incorporationCountry) companyDetails.incorporationCountry = incorporationCountry;
+      if (entityType) companyDetails.entityType = entityType;
+      body = {
+        type: 'company',
+        email: email || `${entityId || 'corp'}@custody.swisslife.com`,
+        companyDetails,
+      };
+    } else {
+      const personDetails = {
+        firstName: firstName || (displayName || '').split(' ')[0] || 'Client',
+        lastName:  lastName  || (displayName || '').split(' ').slice(1).join(' ') || entityId || 'SwissLife',
+      };
+      if (dob) personDetails.dob = dob;                          // YYYY-MM-DD
+      if (nationality) personDetails.nationality = nationality;  // ISO 3166-1 alpha-2
+      body = {
+        type: 'person',
+        email: email || `${entityId || 'indiv'}@custody.swisslife.com`,
+        personDetails,
+      };
+    }
     const ccClient = await complyCubeRequest('POST', '/clients', body);
     complyCubeClientId = ccClient.id;
   }
@@ -3728,7 +3752,9 @@ async function fetchAccountContacts(salesforceAccountId) {
   if (!SF_CONFIGURED) return [];
   try {
     const { accessToken, instanceUrl } = await getSalesforceToken();
-    const soql = `SELECT Id, FirstName, LastName, Email, Title FROM Contact WHERE AccountId = '${salesforceAccountId}' LIMIT 50`;
+    // Fetch enrichi avec DOB (Birthdate standard) + nationalité (custom)
+    // pour le screening ComplyCube.
+    const soql = `SELECT Id, FirstName, LastName, Email, Title, Birthdate, Custody_Nationality__c, MailingCountry FROM Contact WHERE AccountId = '${salesforceAccountId}' LIMIT 50`;
     const r = await fetch(`${instanceUrl}/services/data/v59.0/query/?q=${encodeURIComponent(soql)}`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
@@ -3739,6 +3765,54 @@ async function fetchAccountContacts(salesforceAccountId) {
     console.warn('[AML] Failed to fetch contacts for', salesforceAccountId, err.message);
     return [];
   }
+}
+
+// Récupère les champs d'identité d'une Account (personne morale ou particulier).
+// Pour une morale : SIREN/LEI, pays d'incorporation, forme juridique.
+// Pour un particulier (Customer - Direct avec contact rattaché) : on fallback
+// sur le premier contact lié pour DOB + nationalité.
+async function fetchAccountIdentity(salesforceAccountId) {
+  if (!SF_CONFIGURED) return {};
+  try {
+    const { accessToken, instanceUrl } = await getSalesforceToken();
+    const fields = [
+      'Id', 'Name', 'Type', 'BillingCountry',
+      'Custody_SIREN__c', 'Custody_LEI__c',
+      'Custody_Incorporation_Country__c', 'Custody_Entity_Type__c',
+    ];
+    const soql = `SELECT ${fields.join(', ')} FROM Account WHERE Id = '${salesforceAccountId}' LIMIT 1`;
+    const r = await fetch(`${instanceUrl}/services/data/v59.0/query/?q=${encodeURIComponent(soql)}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!r.ok) return {};
+    const data = await r.json();
+    return data.records?.[0] || {};
+  } catch (err) {
+    console.warn('[AML] Failed to fetch account identity', salesforceAccountId, err.message);
+    return {};
+  }
+}
+
+// Convertit "France" → "FR" · "Germany" → "DE". Nettoie pour ISO 3166-1 alpha-2.
+function toIsoCountry(str) {
+  if (!str) return null;
+  const s = String(str).trim();
+  if (/^[A-Z]{2}$/.test(s)) return s;                      // déjà ISO2
+  const map = {
+    'france': 'FR', 'french republic': 'FR',
+    'germany': 'DE', 'allemagne': 'DE',
+    'united kingdom': 'GB', 'royaume-uni': 'GB', 'uk': 'GB',
+    'united states': 'US', 'états-unis': 'US', 'etats-unis': 'US', 'usa': 'US',
+    'switzerland': 'CH', 'suisse': 'CH',
+    'luxembourg': 'LU',
+    'belgium': 'BE', 'belgique': 'BE',
+    'italy': 'IT', 'italie': 'IT',
+    'spain': 'ES', 'espagne': 'ES',
+    'netherlands': 'NL', 'pays-bas': 'NL',
+    'portugal': 'PT',
+    'ireland': 'IE', 'irlande': 'IE',
+  };
+  return map[s.toLowerCase()] || null;
 }
 
 // POST /api/kyc/screen-plan — Construit la liste des entités à screener.
@@ -3761,16 +3835,29 @@ app.post('/api/kyc/screen-plan', async (req, res) => {
     const detectedType = detectClientTypeFromAccount(accountType);
     const entities = [];
 
-    // ① Entité principale (société ou particulier)
-    entities.push({
+    // Fetch les données d'identité enrichies depuis SFDC
+    const accountData = await fetchAccountIdentity(salesforceAccountId);
+
+    // ① Entité principale (société ou particulier) — payload enrichi
+    const mainEntity = {
       kind: detectedType,
-      entityId: null,                                // null = check "principal" sur Account
+      entityId: null,
       displayName: clientName,
       role: detectedType === 'company' ? 'Raison sociale' : 'Personne physique',
       email: null,
-    });
+    };
+    if (detectedType === 'company') {
+      mainEntity.registrationNumber = accountData.Custody_SIREN__c || accountData.Custody_LEI__c || null;
+      mainEntity.incorporationCountry = accountData.Custody_Incorporation_Country__c
+        || toIsoCountry(accountData.BillingCountry)
+        || null;
+      const et = accountData.Custody_Entity_Type__c;
+      // Mapping picklist SFDC → entityType ComplyCube (OtherEntityType par défaut)
+      mainEntity.entityType = et && ['SA','SAS','SARL','EURL','SNC','SCI','SCA'].includes(et) ? et : 'OtherEntityType';
+    }
+    entities.push(mainEntity);
 
-    // ② Si personne morale → tous les contacts liés à l'Account
+    // ② Si personne morale → tous les contacts liés à l'Account (avec DOB + nationalité)
     if (detectedType === 'company') {
       const contacts = await fetchAccountContacts(salesforceAccountId);
       for (const c of contacts) {
@@ -3784,11 +3871,18 @@ app.post('/api/kyc/screen-plan', async (req, res) => {
           email: c.Email || null,
           firstName: c.FirstName || null,
           lastName: c.LastName || null,
+          dob: c.Birthdate || null,                              // YYYY-MM-DD (SFDC Date)
+          nationality: c.Custody_Nationality__c || toIsoCountry(c.MailingCountry) || null,
         });
       }
     }
 
-    res.json({ detectedType, entities });
+    res.json({ detectedType, entities, accountIdentity: {
+      siren: accountData.Custody_SIREN__c || null,
+      lei:   accountData.Custody_LEI__c || null,
+      incorporationCountry: accountData.Custody_Incorporation_Country__c || null,
+      entityType: accountData.Custody_Entity_Type__c || null,
+    }});
   } catch (err) {
     console.error('screen-plan error:', err.message);
     res.status(500).json({ error: err.message });
@@ -3804,6 +3898,10 @@ app.post('/api/kyc/screen-entity', async (req, res) => {
     const {
       salesforceAccountId, clientName, kind, entityId, displayName,
       firstName, lastName, email, role, initiatedByEmail,
+      // Person enriched fields
+      dob, nationality,
+      // Company enriched fields
+      registrationNumber, incorporationCountry, entityType,
     } = req.body;
     if (!salesforceAccountId) return res.status(400).json({ error: 'salesforceAccountId is required' });
     if (!kind) return res.status(400).json({ error: 'kind is required' });
@@ -3831,6 +3929,11 @@ app.post('/api/kyc/screen-entity', async (req, res) => {
       email,
       entityId: entityId || salesforceAccountId,
       reusableClientId,
+      dob,
+      nationality,
+      registrationNumber,
+      incorporationCountry,
+      entityType,
     });
 
     // Persist

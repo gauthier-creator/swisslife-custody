@@ -888,9 +888,32 @@ function ScreeningQueueRow({ entity }) {
           {kind === 'company' && <span className="text-[#8A8278] text-[10.5px] mr-1.5 uppercase tracking-[0.1em]">Société</span>}
           {displayName}
         </p>
-        {role && (
-          <p className="text-[11px] text-[#8A8278] tracking-[-0.003em] truncate">{role}</p>
-        )}
+        <div className="flex items-center gap-2 flex-wrap mt-0.5">
+          {role && (
+            <span className="text-[11px] text-[#8A8278] tracking-[-0.003em] truncate">{role}</span>
+          )}
+          {/* Badges de confiance — montre que la donnée KYC est envoyée à ComplyCube */}
+          {kind === 'company' && entity.registrationNumber && (
+            <span className="inline-flex items-center h-4 px-1.5 rounded-[3px] bg-[#F5F3EE] text-[9px] font-semibold text-[#7C5E3C] uppercase tracking-[0.06em] tabular-nums">
+              SIREN {entity.registrationNumber}
+            </span>
+          )}
+          {kind === 'person' && entity.dob && (
+            <span className="inline-flex items-center h-4 px-1.5 rounded-[3px] bg-[#F5F3EE] text-[9px] font-semibold text-[#7C5E3C] uppercase tracking-[0.06em] tabular-nums">
+              né {new Date(entity.dob).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}
+            </span>
+          )}
+          {entity.nationality && (
+            <span className="inline-flex items-center h-4 px-1.5 rounded-[3px] bg-[#F5F3EE] text-[9px] font-semibold text-[#7C5E3C] uppercase tracking-[0.06em]">
+              {entity.nationality}
+            </span>
+          )}
+          {kind === 'company' && entity.incorporationCountry && !entity.registrationNumber && (
+            <span className="inline-flex items-center h-4 px-1.5 rounded-[3px] bg-[#F5F3EE] text-[9px] font-semibold text-[#7C5E3C] uppercase tracking-[0.06em]">
+              {entity.incorporationCountry}
+            </span>
+          )}
+        </div>
       </div>
       <span className={`flex-shrink-0 text-[11px] font-semibold uppercase tracking-[0.06em] tabular-nums ${
         isClean ? 'text-[#0F9868]' : isWarn ? 'text-[#991B1B]' : isErr ? 'text-[#991B1B]' : status === 'running' ? 'text-[#7C5E3C]' : 'text-[#8A8278]'
