@@ -116,6 +116,7 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
       const check = await runAmlScreening({
         salesforceAccountId: client.id,
         clientName: client.name,
+        accountType: client.type,                    // ← auto-détection person/company
         initiatedByEmail: currentEmail,
       });
       setScreeningResult(check);

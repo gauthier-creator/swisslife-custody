@@ -10,7 +10,7 @@ import CustodyEligibilityPanel from './CustodyEligibilityPanel';
 import { SUPPORTED_NETWORKS } from '../config/constants';
 import { createApproval, checkTransferRisk, checkWalletFreeze, screenAddress, fetchApprovals, fetchAuditLog } from '../services/complianceApi';
 import { fetchOraclePrices } from '../services/oracleApi';
-import { getKycStatus } from '../services/kycService';
+import { getKycStatus, screenContact } from '../services/kycService';
 import { useAuth } from '../context/AuthContext';
 import {
   fmtEUR, fmtCompactEUR, Badge, Card, Modal, Spinner, EmptyState, Button,
@@ -74,6 +74,9 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
   const [sending, setSending] = useState(false);
   const [contacts, setContacts] = useState([]);
   const [loadingContacts, setLoadingContacts] = useState(true);
+  // État des screenings AML par contact — { [contactId]: { screening, result, error } }
+  // screening = true pendant la requête, result = { status, outcome } quand terminé.
+  const [contactScreenings, setContactScreenings] = useState({});
   const [error, setError] = useState(null);
   const [kycLive, setKycLive] = useState(null);
   const [kycModuleEnabled, setKycModuleEnabled] = useState(false);
@@ -311,6 +314,35 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
     try { const data = await fetchContacts(client.id); setContacts(data); }
     catch { setContacts([]); }
     setLoadingContacts(false);
+  };
+
+  // Lance un screening AML sur un Contact SFDC individuel (représentant
+  // légal, signataire, UBO). Stocke le résultat en état local pour un
+  // feedback inline. Le serveur persiste le check dans kyc_checks avec
+  // entity_id = contactId + entity_role pour la traçabilité audit.
+  const handleScreenContact = async (contact) => {
+    const id = contact.Id;
+    setContactScreenings(prev => ({ ...prev, [id]: { screening: true } }));
+    try {
+      const result = await screenContact({
+        salesforceAccountId: client.id,
+        contactId: id,
+        firstName: contact.FirstName,
+        lastName: contact.LastName,
+        email: contact.Email,
+        role: contact.Title,
+        initiatedByEmail: user?.email,
+      });
+      setContactScreenings(prev => ({
+        ...prev,
+        [id]: { screening: false, result },
+      }));
+    } catch (err) {
+      setContactScreenings(prev => ({
+        ...prev,
+        [id]: { screening: false, error: err.message || 'Échec du screening' },
+      }));
+    }
   };
 
   const handleCreate = async () => {
@@ -626,6 +658,14 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                   <ul>
                     {contacts.map((c, i) => {
                       const name = [c.FirstName, c.LastName].filter(Boolean).join(' ');
+                      const scr = contactScreenings[c.Id];
+                      // Dérive un petit badge selon l'état de screening
+                      const scrStatus = scr?.result?.status;
+                      const scrBadge = scr?.error
+                        ? { label: 'Erreur', tone: 'error' }
+                        : scrStatus === 'complete' ? { label: 'Clean', tone: 'success' }
+                        : scrStatus === 'failed'   ? { label: 'Attention', tone: 'warning' }
+                        : null;
                       return (
                         <li
                           key={c.Id}
@@ -634,29 +674,35 @@ export default function ClientDetail({ client: initialClient, onBack, embedded =
                           <div className="flex items-center gap-4 min-w-0">
                             <Avatar name={name} size={38} />
                             <div className="min-w-0">
-                              <p className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em] truncate">
+                              <p className="text-[14px] font-medium text-[#0A0A0A] tracking-[-0.01em] truncate flex items-center gap-2">
                                 {name || '—'}
+                                {scrBadge && (
+                                  <Badge variant={scrBadge.tone} size="sm" dot>{scrBadge.label}</Badge>
+                                )}
                               </p>
                               {c.Title && <p className="text-[12px] text-[#5D5D5D] mt-0.5 tracking-[-0.003em]">{c.Title}</p>}
+                              {c.Email && (
+                                <a
+                                  href={`mailto:${c.Email}`}
+                                  className="text-[11.5px] text-[#8A8278] tracking-[-0.003em] hover:text-[#7C5E3C] transition-colors mt-0.5 inline-block"
+                                >
+                                  {c.Email}
+                                </a>
+                              )}
                             </div>
                           </div>
-                          <div className="text-right flex-shrink-0">
-                            {c.Email && (
-                              <a
-                                href={`mailto:${c.Email}`}
-                                className="text-[12.5px] text-[#1E1E1E] tracking-[-0.003em] hover:text-[#7C5E3C] hover:underline decoration-[#C8924B]/40 underline-offset-2 transition-colors"
-                              >
-                                {c.Email}
-                              </a>
-                            )}
-                            {c.Phone && (
-                              <a
-                                href={`tel:${c.Phone.replace(/[^+\d]/g, '')}`}
-                                className="block text-[11.5px] text-[#8A8278] mt-0.5 hover:text-[#7C5E3C] hover:underline decoration-[#C8924B]/40 underline-offset-2 transition-colors"
-                              >
-                                {c.Phone}
-                              </a>
-                            )}
+                          <div className="flex-shrink-0">
+                            <button
+                              onClick={() => handleScreenContact(c)}
+                              disabled={scr?.screening}
+                              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[6px] bg-white border border-[#E7E7E7] text-[#1E1E1E] text-[12px] font-semibold hover:border-[#D1D5DB] hover:bg-[#FDFBF6] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Screening AML Chainalysis × ComplyCube sur ce contact"
+                            >
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                              </svg>
+                              {scr?.screening ? 'Analyse…' : scrBadge ? 'Re-screener' : 'Screener'}
+                            </button>
                           </div>
                         </li>
                       );

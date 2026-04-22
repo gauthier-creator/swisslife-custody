@@ -80,9 +80,17 @@ export function getKycCheckResult(checkId) {
   return jsonGet(`/api/kyc/check/${checkId}`);
 }
 
-// Run AML screening for a client
-export function runAmlScreening({ salesforceAccountId, clientName, initiatedByEmail }) {
-  return jsonPost('/api/kyc/aml-screen', { salesforceAccountId, clientName, initiatedByEmail });
+// Run AML screening for a client — serveur auto-détecte person vs company
+// depuis accountType. Pour une personne morale, screene automatiquement
+// la raison sociale + tous les contacts SFDC (représentants légaux / UBO).
+export function runAmlScreening({ salesforceAccountId, clientName, accountType, initiatedByEmail }) {
+  return jsonPost('/api/kyc/aml-screen', { salesforceAccountId, clientName, accountType, initiatedByEmail });
+}
+
+// Screen a single Salesforce Contact as person — utilisé par le bouton
+// "Screener" sur chaque ligne de l'onglet Contacts.
+export function screenContact({ salesforceAccountId, contactId, firstName, lastName, email, role, initiatedByEmail }) {
+  return jsonPost('/api/kyc/screen-contact', { salesforceAccountId, contactId, firstName, lastName, email, role, initiatedByEmail });
 }
 
 // Get full KYC status for a client (all checks + overall status)

@@ -3651,149 +3651,330 @@ app.post('/api/kyc/upload-document', upload.single('file'), async (req, res) => 
   }
 });
 
+// ============================================================
+// COMPLYCUBE helpers — screening party-by-party (person OR company)
+// ============================================================
+
+// Type guess depuis SFDC Account.Type. Par défaut personne physique
+// (pattern SwissLife Banque Privée). Les cas "Institutional", "Partner",
+// "Other" etc. traités comme personnes morales.
+function detectClientTypeFromAccount(accountType) {
+  const t = String(accountType || '').toLowerCase();
+  if (!t) return 'person';                       // défaut prudent
+  if (t.includes('customer - direct')) return 'person';
+  if (t.includes('individual'))         return 'person';
+  return 'company';
+}
+
+// Runs a single AML screening against ComplyCube. Works for both person
+// and company. Returns { id, complyCubeClientId, status, result, entity }.
+//
+//   entity = { type: 'person'|'company', name, id? (SFDC entity id), role? }
+//
+// Used by the main /aml-screen (iterates on company + contacts) and by
+// /screen-contact (single contact).
+async function runSingleScreening({ type, displayName, firstName, lastName, email, entityId, reusableClientId }) {
+  if (KYC_DEMO_MODE) {
+    const outcome = demoAmlOutcome(displayName);
+    return {
+      id: demoCheckId(),
+      complyCubeClientId: reusableClientId || demoClientId(entityId || displayName),
+      status: outcome.status,
+      result: outcome.result,
+      mode: 'sandbox',
+    };
+  }
+
+  let complyCubeClientId = reusableClientId;
+  if (!complyCubeClientId) {
+    const body = type === 'company'
+      ? {
+          type: 'company',
+          email: email || `${entityId || 'corp'}@custody.swisslife.com`,
+          companyDetails: { name: displayName },
+        }
+      : {
+          type: 'person',
+          email: email || `${entityId || 'indiv'}@custody.swisslife.com`,
+          personDetails: {
+            firstName: firstName || (displayName || '').split(' ')[0] || 'Client',
+            lastName:  lastName  || (displayName || '').split(' ').slice(1).join(' ') || entityId || 'SwissLife',
+          },
+        };
+    const ccClient = await complyCubeRequest('POST', '/clients', body);
+    complyCubeClientId = ccClient.id;
+  }
+
+  const check = await complyCubeRequest('POST', '/checks', {
+    clientId: complyCubeClientId,
+    type: process.env.COMPLYCUBE_SCREENING_TYPE || 'standard_screening_check',
+  });
+
+  return {
+    id: check.id,
+    complyCubeClientId,
+    status: check.status === 'complete'
+      ? (check.result?.outcome === 'clear' ? 'complete' : 'failed')
+      : 'processing',
+    result: check.result || {},
+    mode: 'live',
+  };
+}
+
+// Fetch Salesforce Contacts linked to an Account (= représentants légaux,
+// UBOs, signataires). Filtre par défaut Custody_Is_Legal_Rep__c OU
+// Custody_Is_UBO__c si le flag existe — sinon retourne tous les Contacts.
+async function fetchAccountContacts(salesforceAccountId) {
+  if (!SF_CONFIGURED) return [];
+  try {
+    const { accessToken, instanceUrl } = await getSalesforceToken();
+    const soql = `SELECT Id, FirstName, LastName, Email, Title FROM Contact WHERE AccountId = '${salesforceAccountId}' LIMIT 50`;
+    const r = await fetch(`${instanceUrl}/services/data/v59.0/query/?q=${encodeURIComponent(soql)}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!r.ok) return [];
+    const data = await r.json();
+    return data.records || [];
+  } catch (err) {
+    console.warn('[AML] Failed to fetch contacts for', salesforceAccountId, err.message);
+    return [];
+  }
+}
+
 // POST /api/kyc/aml-screen — Run AML screening
+// Payload : { salesforceAccountId, clientName, accountType?, initiatedByEmail }
+//
+// Behaviour selon accountType :
+//   · person  → un seul screening sur le nom du client (comportement legacy)
+//   · company → screening de la raison sociale + screening en parallèle de
+//               TOUS les contacts SFDC liés (représentants légaux + UBOs).
+//               Verdict agrégé : status=complete ssi TOUS sont clean,
+//               sinon failed. Breakdown retourné par entité pour que
+//               l'UI puisse détailler qui a flagué.
+//
+// Référence : AMLD5 art. L.561-2 (personne morale) + L.561-2-2 (UBO).
 app.post('/api/kyc/aml-screen', async (req, res) => {
   try {
-    const { salesforceAccountId, clientName, initiatedByEmail } = req.body;
-
+    const { salesforceAccountId, clientName, accountType, initiatedByEmail } = req.body;
     if (!salesforceAccountId) {
       return res.status(400).json({ error: 'salesforceAccountId is required' });
     }
 
-    // Small simulated latency so the UI animation feels real (also matches
-    // live-mode round-trip latency to ComplyCube closely enough for demos).
-    await new Promise(r => setTimeout(r, 900));
+    await new Promise(r => setTimeout(r, 400));  // latence UI
 
-    let screenResult;
+    const detectedType = detectClientTypeFromAccount(accountType);
 
-    if (KYC_DEMO_MODE) {
-      // ── DEMO / sandbox mode ──
-      const outcome = demoAmlOutcome(clientName);
-      screenResult = {
-        id: demoCheckId(),
-        complyCubeClientId: demoClientId(salesforceAccountId),
-        status: outcome.status,
-        result: outcome.result,
-      };
-    } else {
-      // ── LIVE ComplyCube screening ──
-      // Reuse an existing ComplyCube client if one was created by an earlier
-      // LIVE-mode check; otherwise provision a fresh one. On filtre
-      // strictement sur provider='complycube' pour ignorer les anciens
-      // demo_cli_... laissés par des runs sandbox passés (leur réutilisation
-      // provoque une erreur "'clientId' is invalid" chez ComplyCube).
-      const { data: existingChecks } = await supabaseAdmin
-        .from('kyc_checks')
-        .select('complycube_client_id')
-        .eq('salesforce_account_id', salesforceAccountId)
-        .eq('provider', 'complycube')
-        .not('complycube_client_id', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(1);
+    // Réutilise un ComplyCube client existant en LIVE pour éviter de re-créer
+    const { data: existingChecks } = await supabaseAdmin
+      .from('kyc_checks')
+      .select('complycube_client_id, entity_kind')
+      .eq('salesforce_account_id', salesforceAccountId)
+      .eq('provider', 'complycube')
+      .is('entity_id', null)                                 // le check "principal" (pas un contact)
+      .not('complycube_client_id', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    const reusableMainClientId = existingChecks?.[0]?.complycube_client_id;
 
-      let complyCubeClientId = existingChecks?.[0]?.complycube_client_id;
+    // ── Screening principal (person ou company) ──
+    const mainScreen = await runSingleScreening({
+      type: detectedType,
+      displayName: clientName,
+      entityId: salesforceAccountId,
+      email: initiatedByEmail,
+      reusableClientId: reusableMainClientId,
+    });
 
-      if (!complyCubeClientId) {
-        const ccClient = await complyCubeRequest('POST', '/clients', {
-          type: 'person',
-          email: initiatedByEmail || `${salesforceAccountId}@custody.swisslife.com`,
-          personDetails: {
-            firstName: (clientName || '').split(' ')[0] || 'Client',
-            lastName: (clientName || '').split(' ').slice(1).join(' ') || salesforceAccountId,
-          },
-        });
-        complyCubeClientId = ccClient.id;
-      }
+    // Persist main check
+    const { data: mainCheck } = await supabaseAdmin.from('kyc_checks').insert({
+      salesforce_account_id: salesforceAccountId,
+      client_name: clientName,
+      complycube_client_id: mainScreen.complyCubeClientId || null,
+      complycube_check_id: mainScreen.id,
+      provider: KYC_DEMO_MODE ? 'demo' : 'complycube',
+      provider_check_id: mainScreen.id,
+      check_type: 'screening_check',
+      entity_kind: detectedType,
+      status: mainScreen.status,
+      result: mainScreen.result,
+      initiated_by_email: initiatedByEmail,
+    }).select().single();
 
-      // ComplyCube a déprécié 'screening_check' (2024+). Les nouveaux types :
-      //   · standard_screening_check  — OFAC/EU/UN/UK HMT + PEP de base
-      //   · extensive_screening_check — + adverse media + RCA (Relatives & Close Associates)
-      // Pour la démo custody bank, Standard suffit (AMLD5 + Tracfin).
-      const check = await complyCubeRequest('POST', '/checks', {
-        clientId: complyCubeClientId,
-        type: process.env.COMPLYCUBE_SCREENING_TYPE || 'standard_screening_check',
-      });
-
-      screenResult = {
-        id: check.id,
-        complyCubeClientId,
-        status: check.status === 'complete' ? (check.result?.outcome === 'clear' ? 'complete' : 'failed') : 'processing',
-        result: check.result || {},
-      };
+    // ── Si personne morale : iterate sur contacts (représentants légaux) ──
+    const subScreens = [];
+    if (detectedType === 'company') {
+      const contacts = await fetchAccountContacts(salesforceAccountId);
+      // Screening en parallèle, tolérant aux erreurs individuelles
+      const results = await Promise.all(contacts.map(async (c) => {
+        const displayName = [c.FirstName, c.LastName].filter(Boolean).join(' ') || c.LastName || 'Contact';
+        try {
+          const s = await runSingleScreening({
+            type: 'person',
+            displayName,
+            firstName: c.FirstName,
+            lastName: c.LastName,
+            email: c.Email,
+            entityId: c.Id,
+          });
+          // Persist each contact screening
+          await supabaseAdmin.from('kyc_checks').insert({
+            salesforce_account_id: salesforceAccountId,
+            client_name: displayName,
+            complycube_client_id: s.complyCubeClientId || null,
+            complycube_check_id: s.id,
+            provider: KYC_DEMO_MODE ? 'demo' : 'complycube',
+            provider_check_id: s.id,
+            check_type: 'contact_screening',
+            entity_kind: 'person',
+            entity_id: c.Id,                                // lie au Contact SFDC
+            entity_role: c.Title || null,
+            status: s.status,
+            result: s.result,
+            initiated_by_email: initiatedByEmail,
+          });
+          return { contactId: c.Id, name: displayName, role: c.Title, status: s.status, outcome: s.result?.outcome, checkId: s.id };
+        } catch (err) {
+          console.warn('[AML] contact screen failed for', c.Id, err.message);
+          return { contactId: c.Id, name: displayName, role: c.Title, status: 'error', error: err.message };
+        }
+      }));
+      subScreens.push(...results);
     }
 
-    // Save to Supabase — check_type = 'screening_check' en valeur générique
-    // (le filtre UI cherche ce label pour compter les AML screens). Le type
-    // ComplyCube réel (standard_screening_check / extensive_screening_check)
-    // est conservé dans screenResult.result.provider_type pour traçabilité audit.
-    const { data: kycCheck, error: dbError } = await supabaseAdmin
-      .from('kyc_checks')
-      .insert({
-        salesforce_account_id: salesforceAccountId,
-        client_name: clientName,
-        complycube_client_id: screenResult.complyCubeClientId || null,
-        complycube_check_id: screenResult.id,
-        provider: KYC_DEMO_MODE ? 'demo' : 'complycube',
-        provider_check_id: screenResult.id,
-        check_type: 'screening_check',
-        status: screenResult.status,
-        result: screenResult.result,
-        initiated_by_email: initiatedByEmail,
-      })
-      .select()
-      .single();
+    // ── Agrégation du verdict ──
+    const allClean = mainScreen.status === 'complete'
+      && subScreens.every(s => s.status === 'complete');
+    const aggregatedStatus = allClean ? 'complete' : 'failed';
 
-    if (dbError) throw dbError;
-
-    // Audit log
+    // Audit
     await logAudit({
       userEmail: initiatedByEmail,
       action: 'kyc.aml_screening',
       category: 'compliance',
       entityType: 'kyc_check',
-      entityId: kycCheck.id,
+      entityId: mainCheck?.id,
       clientName,
       salesforceAccountId,
-      details: { status: screenResult.status, outcome: screenResult.result?.outcome },
-      severity: screenResult.status === 'failed' ? 'warning' : 'info',
+      details: {
+        detectedType,
+        mainStatus: mainScreen.status,
+        mainOutcome: mainScreen.result?.outcome,
+        subScreens: subScreens.map(s => ({ contactId: s.contactId, name: s.name, status: s.status })),
+        aggregatedStatus,
+      },
+      severity: aggregatedStatus === 'failed' ? 'warning' : 'info',
       req,
     });
 
-    // If AML failed, auto-create compliance alert (schema: type/severity/message)
-    if (screenResult.status === 'failed') {
-      const { error: alertErr } = await supabaseAdmin.from('compliance_alerts').insert({
+    // Alerte Tracfin si verdict global ≠ clean
+    if (aggregatedStatus === 'failed') {
+      await supabaseAdmin.from('compliance_alerts').insert({
         type: 'sanctions_match',
         severity: 'critical',
         salesforce_account_id: salesforceAccountId,
         client_name: clientName,
-        message: `Alerte AML — ${clientName} : correspondance potentielle détectée sur les listes de sanctions. Revue manuelle requise.`,
-        details: screenResult.result,
+        message: detectedType === 'company'
+          ? `Alerte AML personne morale — ${clientName} : correspondance détectée (raison sociale ou représentant légal). Revue manuelle requise.`
+          : `Alerte AML — ${clientName} : correspondance potentielle. Revue manuelle requise.`,
+        details: { main: mainScreen.result, subScreens },
         status: 'open',
       });
-      if (alertErr) console.error('[KYC] compliance_alerts insert error:', alertErr.message);
     }
 
-    // Patch Salesforce so Custody_Sanctions_Clear__c reflects the outcome
-    // (the Éligibilité dossier reads this flag to decide progress).
+    // Salesforce : flag Sanctions_Clear sur Account
     if (SF_CONFIGURED) {
       try {
         const { accessToken, instanceUrl } = await getSalesforceToken();
-        const sfRes = await fetch(`${instanceUrl}/services/data/v59.0/sobjects/Account/${salesforceAccountId}`, {
+        await fetch(`${instanceUrl}/services/data/v59.0/sobjects/Account/${salesforceAccountId}`, {
           method: 'PATCH',
-          headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ Custody_Sanctions_Clear__c: screenResult.status === 'complete' }),
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ Custody_Sanctions_Clear__c: aggregatedStatus === 'complete' }),
         });
-        if (!sfRes.ok && sfRes.status !== 204) {
-          console.error('[KYC] Salesforce patch status', sfRes.status);
-        }
       } catch (sfErr) {
-        console.error('[KYC] Salesforce sanctions flag patch failed:', sfErr.message);
+        console.error('[KYC] SFDC patch failed:', sfErr.message);
       }
     }
 
-    res.json(kycCheck);
+    res.json({
+      ...mainCheck,
+      detectedType,
+      aggregatedStatus,
+      subScreens,
+    });
   } catch (err) {
     console.error('KYC AML screening error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/kyc/screen-contact — Screen a single Salesforce Contact as a
+// person. Utilisé par le bouton "Screener ce contact" dans l'onglet
+// Contacts du client. Permet au banquier de faire un ad-hoc check sur
+// un représentant légal, signataire ou UBO sans relancer tout le
+// screening corporate.
+app.post('/api/kyc/screen-contact', async (req, res) => {
+  try {
+    const { salesforceAccountId, contactId, firstName, lastName, email, role, initiatedByEmail } = req.body;
+    if (!contactId || !salesforceAccountId) {
+      return res.status(400).json({ error: 'contactId et salesforceAccountId requis' });
+    }
+
+    const displayName = [firstName, lastName].filter(Boolean).join(' ') || lastName || 'Contact';
+
+    const screen = await runSingleScreening({
+      type: 'person',
+      displayName,
+      firstName,
+      lastName,
+      email,
+      entityId: contactId,
+    });
+
+    // Persist
+    const { data: check } = await supabaseAdmin.from('kyc_checks').insert({
+      salesforce_account_id: salesforceAccountId,
+      client_name: displayName,
+      complycube_client_id: screen.complyCubeClientId || null,
+      complycube_check_id: screen.id,
+      provider: KYC_DEMO_MODE ? 'demo' : 'complycube',
+      provider_check_id: screen.id,
+      check_type: 'contact_screening',
+      entity_kind: 'person',
+      entity_id: contactId,
+      entity_role: role || null,
+      status: screen.status,
+      result: screen.result,
+      initiated_by_email: initiatedByEmail,
+    }).select().single();
+
+    await logAudit({
+      userEmail: initiatedByEmail,
+      action: 'kyc.contact_screening',
+      category: 'compliance',
+      entityType: 'contact',
+      entityId: contactId,
+      clientName: displayName,
+      salesforceAccountId,
+      details: { role, status: screen.status, outcome: screen.result?.outcome },
+      severity: screen.status === 'failed' ? 'warning' : 'info',
+      req,
+    });
+
+    if (screen.status === 'failed') {
+      await supabaseAdmin.from('compliance_alerts').insert({
+        type: 'sanctions_match',
+        severity: 'critical',
+        salesforce_account_id: salesforceAccountId,
+        client_name: displayName,
+        message: `Alerte AML contact — ${displayName}${role ? ` (${role})` : ''} : correspondance détectée. Revue manuelle requise.`,
+        details: screen.result,
+        status: 'open',
+      });
+    }
+
+    res.json({ ...check, contactId, role, displayName });
+  } catch (err) {
+    console.error('Contact screening error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
