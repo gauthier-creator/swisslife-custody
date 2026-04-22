@@ -171,6 +171,19 @@ const DEMO_ACCOUNTS = [
         Custody_Nationality__c: 'RU',
         MailingCountry: null,
       },
+      // UBO indirect — nom connu (sanctions OFAC/EU/UK HMT depuis mars 2022).
+      // Le screening va détecter ce contact et déclencher l'alerte Tracfin.
+      // En sandbox ComplyCube, un trigger côté serveur simule le match ;
+      // en prod avec clé live_, Dow Jones + OFAC SDN renverraient le vrai hit.
+      {
+        FirstName: 'Roman',
+        LastName: 'Abramovich',
+        Email: 'r.abramovich@kamchatka-holdings.ru',
+        Title: 'UBO indirect 18 % · via Millhouse Capital',
+        Birthdate: '1966-10-24',
+        Custody_Nationality__c: 'RU',
+        MailingCountry: null,
+      },
     ],
   },
 ];

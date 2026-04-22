@@ -3751,6 +3751,61 @@ async function runSingleScreening({
     }
   }
 
+  // ── Demo override sandbox ──────────────────────────────────
+  // Les clés ComplyCube test_ (sandbox) retournent TOUJOURS outcome='clear'
+  // quelle que soit l'identité — elles ne tapent pas les vraies bases Dow
+  // Jones PEP / OFAC SDN / EU Consolidated. En prod avec une clé live_,
+  // ces noms (Putin, Maduro, Kim Jong-un…) match naturellement.
+  //
+  // Pour qu'une démo montre le flow "match détecté → alerte Tracfin"
+  // sans clé LIVE payante, on surcharge le résultat si le nom contient
+  // un mot-clé trigger. C'est purement visuel — le vrai check ComplyCube
+  // a bien été effectué (ID, timestamp, audit log persistés).
+  const isSandbox = COMPLYCUBE_KEY && COMPLYCUBE_KEY.startsWith('test_');
+  const DEMO_TRIGGERS = [
+    // Chefs d'État / sanctions confirmées (match réel en LIVE)
+    'putin', 'kim jong', 'maduro', 'lukashenko', 'khamenei', 'assad',
+    'abramovich', 'deripaska', 'rotenberg', 'prigozhin',
+    // Trigger names explicites pour les démos
+    'sanctioned', 'sanction match', 'pep match', 'reject test', 'fail screening',
+    'osama bin', 'saddam hussein',
+  ];
+  const lowerName = String(displayName || '').toLowerCase();
+  const triggered = isSandbox && DEMO_TRIGGERS.some(t => lowerName.includes(t));
+  if (triggered && check.result?.outcome === 'clear') {
+    // Synthétise un résultat réaliste basé sur les patterns ComplyCube LIVE
+    const isPEP = /putin|kim|maduro|lukashenko|khamenei|assad|pep match/i.test(lowerName);
+    const isSanctions = /abramovich|deripaska|rotenberg|prigozhin|osama|saddam|sanction/i.test(lowerName);
+    check.result = {
+      outcome: 'attention',
+      breakdown: {
+        summary: {
+          pep: { level1: isPEP ? 'attention' : 'clear', level2: 'not_processed', level3: 'not_processed', level4: 'not_processed' },
+          watchlist: {
+            terror: 'clear',
+            warCrimes: isSanctions ? 'attention' : 'clear',
+            sanctionsLists: isSanctions || isPEP ? 'attention' : 'clear',
+            otherOfficialLists: 'clear',
+            otherExclusionLists: 'not_processed',
+          },
+          adverseMedia: isPEP || isSanctions ? 'attention' : 'clear',
+        },
+        matches: [
+          {
+            name: displayName,
+            type: isPEP ? 'PEP' : 'Sanctions',
+            lists: isPEP
+              ? ['Dow Jones PEP Level 1 — Head of state']
+              : ['OFAC SDN', 'EU Consolidated List', 'UK HMT'],
+            confidence: 0.94,
+            source: 'ComplyCube demo override — basé sur données publiques',
+          },
+        ],
+      },
+      _demoOverride: true,          // flag visible dans l'audit
+    };
+  }
+
   return {
     id: check.id,
     complyCubeClientId,
@@ -3758,7 +3813,7 @@ async function runSingleScreening({
       ? (check.result?.outcome === 'clear' ? 'complete' : 'failed')
       : 'processing',
     result: check.result || {},
-    mode: 'live',
+    mode: isSandbox ? (triggered ? 'sandbox-demo-override' : 'sandbox') : 'live',
   };
 }
 
