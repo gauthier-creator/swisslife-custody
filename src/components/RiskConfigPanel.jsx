@@ -60,7 +60,11 @@ function roundToThousand(n) { return Math.max(0, Math.round(n / 1000) * 1000); }
 function deriveRiskDefaults(client = {}) {
   const aum = Number(client.aum) || 0;
   const type = String(client.type || '').toLowerCase();
-  const country = String(client.country || '').toUpperCase().slice(0, 2);
+  // Pays d'incorporation (custom field) prioritaire sur BillingCountry,
+  // car l'org SFDC peut avoir une state/country picklist restreinte qui
+  // empêche certains pays (Russie, Iran…). Le custom field est libre.
+  const countryRaw = client.Custody_Incorporation_Country__c || client.country || '';
+  const country = String(countryRaw).toUpperCase().slice(0, 2);
   const industry = String(client.industry || '').toLowerCase();
   const createdAt = client.createdDate ? new Date(client.createdDate) : new Date();
   const ageMonths = Math.max(0, (Date.now() - createdAt.getTime()) / (30 * 86_400_000));

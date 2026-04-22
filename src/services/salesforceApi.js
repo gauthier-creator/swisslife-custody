@@ -15,7 +15,7 @@ export async function getSalesforceStatus() {
 }
 
 const BASE_FIELDS = 'Id, Name, Phone, Industry, Type, AnnualRevenue, CreatedDate, BillingStreet, BillingCity, BillingPostalCode, BillingCountry, Website, Description, NumberOfEmployees, OwnerId, AccountNumber';
-const CUSTODY_FIELDS = ', Custody_KYC_Status__c, Custody_Risk_Level__c, Custody_Sanctions_Clear__c, Custody_Adequacy_Done__c, Custody_Contract_Signed__c, Custody_Eligible__c'
+const CUSTODY_FIELDS = ', Custody_KYC_Status__c, Custody_Risk_Level__c, Custody_Sanctions_Clear__c, Custody_Adequacy_Done__c, Custody_Contract_Signed__c, Custody_Eligible__c, Custody_SIREN__c, Custody_LEI__c, Custody_Incorporation_Country__c, Custody_Entity_Type__c'
   + ', Custody_AUM_Liquidity__c, Custody_AUM_Securities__c, Custody_AUM_RealEstate__c, Custody_AUM_Crypto_Target__c';
 
 export async function fetchClients(search = '') {
@@ -126,6 +126,11 @@ function mapAccount(a) {
     Custody_Adequacy_Done__c: !!a.Custody_Adequacy_Done__c,
     Custody_Contract_Signed__c: !!a.Custody_Contract_Signed__c,
     Custody_Eligible__c: !!a.Custody_Eligible__c,
+    // Identité société
+    Custody_SIREN__c: a.Custody_SIREN__c || null,
+    Custody_LEI__c: a.Custody_LEI__c || null,
+    Custody_Incorporation_Country__c: a.Custody_Incorporation_Country__c || null,
+    Custody_Entity_Type__c: a.Custody_Entity_Type__c || null,
     // Patrimoine consolidé — éditables banquier dans SFDC
     Custody_AUM_Liquidity__c: a.Custody_AUM_Liquidity__c,
     Custody_AUM_Securities__c: a.Custody_AUM_Securities__c,
