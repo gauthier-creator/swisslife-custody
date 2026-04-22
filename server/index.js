@@ -3729,10 +3729,27 @@ async function runSingleScreening({
     complyCubeClientId = ccClient.id;
   }
 
-  const check = await complyCubeRequest('POST', '/checks', {
+  let check = await complyCubeRequest('POST', '/checks', {
     clientId: complyCubeClientId,
     type: process.env.COMPLYCUBE_SCREENING_TYPE || 'standard_screening_check',
   });
+
+  // ComplyCube retourne souvent `status: 'processing'` d'abord et passe
+  // à `complete` en <10s. On poll le GET /checks/:id jusqu'à 15s pour
+  // renvoyer un résultat final au client (plutôt que laisser l'UI en
+  // "en attente" indéfiniment).
+  const POLL_MAX_MS = 15_000;
+  const POLL_INTERVAL_MS = 1_500;
+  const startedAt = Date.now();
+  while (check.status !== 'complete' && Date.now() - startedAt < POLL_MAX_MS) {
+    await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+    try {
+      check = await complyCubeRequest('GET', `/checks/${check.id}`);
+    } catch (err) {
+      console.warn('[ComplyCube poll] failed:', err.message);
+      break;
+    }
+  }
 
   return {
     id: check.id,

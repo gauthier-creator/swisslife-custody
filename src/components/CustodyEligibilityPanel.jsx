@@ -847,13 +847,15 @@ function EligibleDossierCard({ client, salesforceDeepLink, openInSalesforce, run
    Nom + rôle à gauche, statut à droite. */
 function ScreeningQueueRow({ entity }) {
   const { status, displayName, role, kind, result } = entity;
-  const isDone  = status === 'complete' || status === 'failed' || status === 'error';
+  // 'processing' ← ComplyCube pas encore fini (timeout poll) : on le traite
+  // comme 'running' pour que l'UI affiche un spinner jusqu'au prochain refresh.
+  const isRunning = status === 'running' || status === 'processing';
   const isClean = status === 'complete';
   const isWarn  = status === 'failed';
   const isErr   = status === 'error';
-  const bg = isClean ? '#ECFDF5' : isWarn ? '#FEF2F2' : isErr ? '#FEF2F2' : status === 'running' ? '#FDFBF6' : '#F5F3EE';
-  const fg = isClean ? '#0F9868' : isWarn ? '#DC2626' : isErr ? '#991B1B' : status === 'running' ? '#7C5E3C' : '#8A8278';
-  const badge = isClean ? 'Clean' : isWarn ? 'Attention' : isErr ? 'Erreur' : status === 'running' ? 'Analyse…' : 'En attente';
+  const bg = isClean ? '#ECFDF5' : isWarn ? '#FEF2F2' : isErr ? '#FEF2F2' : isRunning ? '#FDFBF6' : '#F5F3EE';
+  const fg = isClean ? '#0F9868' : isWarn ? '#DC2626' : isErr ? '#991B1B' : isRunning ? '#7C5E3C' : '#8A8278';
+  const badge = isClean ? 'Clean' : isWarn ? 'Attention' : isErr ? 'Erreur' : isRunning ? 'Analyse…' : 'En attente';
 
   return (
     <li className="flex items-center gap-3 py-1.5 px-2 -mx-2 rounded-[6px] hover:bg-white transition-colors">
@@ -873,7 +875,7 @@ function ScreeningQueueRow({ entity }) {
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         )}
-        {status === 'running' && (
+        {isRunning && (
           <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
             <path d="M12 2a10 10 0 0110 10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
