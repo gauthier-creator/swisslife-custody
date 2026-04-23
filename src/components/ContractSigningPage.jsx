@@ -96,7 +96,7 @@ export default function ContractSigningPage({ token }) {
           <h1 className="text-[15px] font-semibold text-[#0A0A0A]">Lien invalide</h1>
           <p className="text-[13px] text-[#5D5D5D] mt-2 leading-relaxed">{error}</p>
           <p className="mt-6 pt-4 border-t border-[#E7E7E7] text-[11px] text-[#8A8278] font-medium uppercase tracking-wider">
-            SwissLife Banque Privée
+            Demo Bank
           </p>
         </Card>
       </div>
@@ -121,7 +121,7 @@ export default function ContractSigningPage({ token }) {
           </p>
           <div className="mt-8 pt-5 border-t border-[#E7E7E7]">
             <p className="text-[11px] text-[#8A8278] font-medium uppercase tracking-wider">
-              SwissLife Banque Privée · Paris
+              Demo Bank · Paris
             </p>
             <p className="text-[11px] text-[#8A8278] mt-1">
               Signature électronique · Art. 1367 C. civ.
@@ -159,7 +159,7 @@ export default function ContractSigningPage({ token }) {
             <div className="w-6 h-6 bg-[#0A0A0A] rounded-md flex items-center justify-center">
               <span className="text-white text-[10px] font-bold tracking-tight">SL</span>
             </div>
-            <span className="text-[13px] font-semibold text-[#0A0A0A] tracking-tight">SwissLife Custody</span>
+            <span className="text-[13px] font-semibold text-[#0A0A0A] tracking-tight">Demo Bank Custody</span>
             <Badge variant="info">Conservation</Badge>
           </div>
           <Button size="sm" variant="secondary" onClick={handlePrint}>
@@ -181,7 +181,7 @@ export default function ContractSigningPage({ token }) {
             Contrat de conservation d'actifs numériques
           </h1>
           <p className="mt-3 text-[13px] text-[#5D5D5D] leading-relaxed max-w-xl">
-            Veuillez prendre le temps de lire ce document en entier. Il décrit les conditions selon lesquelles SwissLife Banque Privée assure la garde de vos actifs numériques, conformément au règlement européen MiCA et au Code monétaire et financier.
+            Veuillez prendre le temps de lire ce document en entier. Il décrit les conditions selon lesquelles Demo Bank assure la garde de vos actifs numériques, conformément au règlement européen MiCA et au Code monétaire et financier.
           </p>
         </div>
 
@@ -191,7 +191,7 @@ export default function ContractSigningPage({ token }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pb-6 border-b border-[#E7E7E7]">
             <div>
               <p className="label text-[11px] font-semibold text-[#5D5D5D] uppercase tracking-wider mb-1.5">La Banque</p>
-              <p className="text-[14px] font-semibold text-[#0A0A0A]">SwissLife Banque Privée</p>
+              <p className="text-[14px] font-semibold text-[#0A0A0A]">Demo Bank</p>
               <div className="mt-1.5 text-[12px] text-[#5D5D5D] leading-relaxed">
                 Société Anonyme · 7 rue Belgrand<br />
                 92300 Levallois-Perret<br />
@@ -236,7 +236,7 @@ export default function ContractSigningPage({ token }) {
               </div>
               <div className="border-t border-[#0A0A0A] pt-2">
                 <p className="text-[11px] font-semibold text-[#5D5D5D] uppercase tracking-wider mb-1">La Banque</p>
-                <p className="text-[13px] font-medium text-[#0A0A0A]">SwissLife Banque Privée</p>
+                <p className="text-[13px] font-medium text-[#0A0A0A]">Demo Bank</p>
               </div>
             </div>
           </div>
@@ -280,7 +280,7 @@ export default function ContractSigningPage({ token }) {
         {/* ── Footer ──────────────────────────────────── */}
         <footer className="mt-8 pt-4 border-t border-[#E7E7E7] flex items-center justify-between">
           <p className="text-[11px] text-[#8A8278] font-medium uppercase tracking-wider">
-            SwissLife Banque Privée · Paris
+            Demo Bank · Paris
           </p>
           <p className="text-[11px] text-[#8A8278] font-medium uppercase tracking-wider">
             AMF · ACPR · MiCA Art. 60

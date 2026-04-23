@@ -233,7 +233,7 @@ export default function CommandPalette({ open, onClose, onNavigate, isAdmin = fa
           </div>
           <span className="flex items-center gap-1.5">
             <span className="w-1 h-1 rounded-full bg-[#7C5E3C]" />
-            <span className="uppercase tracking-[0.08em] font-medium text-[#8A8278]">SwissLife Custody</span>
+            <span className="uppercase tracking-[0.08em] font-medium text-[#8A8278]">Demo Bank Custody</span>
           </span>
         </div>
       </div>

@@ -1,5 +1,5 @@
 // ============================================================
-// MiFID II · Questionnaire d'adéquation — SwissLife Custody
+// MiFID II · Questionnaire d'adéquation — Demo Bank Custody
 // ============================================================
 // Test d'adéquation pour la conservation d'actifs numériques.
 // Conforme MiFID II Art. 25(2) — "connaissances et expérience",

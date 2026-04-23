@@ -1053,7 +1053,7 @@ export function EmptyState({ title, description, action, icon, illustration }) {
           {icon}
         </div>
       ) : (
-        /* Default: the SwissLife compass brand glyph — monochrome, quiet */
+        /* Default: the Demo Bank compass brand glyph — monochrome, quiet */
         <div className="mx-auto flex items-center justify-center text-[#D1D5DB]">
           <BrandGlyph name="compass" size={28} />
         </div>
@@ -1207,7 +1207,7 @@ export function LinkList({ children, className = '' }) {
 }
 
 // ─── PageHeader ───────────────────────────────────────
-// Editorial SwissLife page header — unified across ALL pages so the product
+// Editorial Demo Bank page header — unified across ALL pages so the product
 // feels like one publication, not five dashboards glued together.
 //
 // Structure (top to bottom):
@@ -1593,7 +1593,7 @@ export function SectionCard({ title, caption, action, children, className = '', 
 // ─── FooterDisclosure ─────────────────────────────────
 // Sober regulatory strip — reused across pages. Small brand glyph sits
 // centred between the two halves as a quiet watermark.
-export function FooterDisclosure({ left = "SwissLife Banque Privée · Paris", right = "AMF · ACPR · Tracfin · MiCA Art. 60" }) {
+export function FooterDisclosure({ left = "Demo Bank · Paris", right = "AMF · ACPR · Tracfin · MiCA Art. 60" }) {
   return (
     <footer className="pt-6 mt-12 border-t border-[#E7E7E7] flex items-center justify-between text-[11px] text-[#8A8278] flex-wrap gap-4">
       <span>{left}</span>
@@ -1627,7 +1627,7 @@ export function Logo({ size = 'md', variant = 'full' }) {
       {variant === 'full' && (
         <div className="flex flex-col leading-none">
           <span className="font-display text-[#0A0A0A]" style={{ fontSize: `${s.title}px`, letterSpacing: '-0.02em' }}>
-            SwissLife
+            Demo Bank
           </span>
           <span className="text-[#5D5D5D] font-medium mt-1" style={{ fontSize: `${s.sub}px`, letterSpacing: '0.02em' }}>
             Custody · Banque Privée

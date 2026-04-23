@@ -213,7 +213,7 @@ function generateContractPDF({ clientName, clientAddress, clientPhone, signerNam
     doc.font('Helvetica-Bold').fontSize(11).text('Entre :');
     doc.moveDown(0.3);
     doc.font('Helvetica').fontSize(10);
-    doc.text('SwissLife Banque Privee');
+    doc.text('Demo Bank');
     doc.text('Societe Anonyme');
     doc.text('Siege social : 7 rue Belgrand, 92300 Levallois-Perret');
     doc.text('Agreee en qualite de Prestataire de Services sur Actifs Numeriques (CASP)');
@@ -275,7 +275,7 @@ function generateContractPDF({ clientName, clientAddress, clientPhone, signerNam
 
     doc.font('Helvetica-Bold').fontSize(10).fillColor('#000000');
     doc.text(signerName || clientName, leftX, lineY + 6);
-    doc.text('SwissLife Banque Privee', rightX, lineY + 6);
+    doc.text('Demo Bank', rightX, lineY + 6);
 
     // Signature metadata
     doc.moveDown(2);
@@ -405,7 +405,7 @@ function generateAdequacyPDF({ clientName, clientAddress, clientPhone, answers =
 
     doc.font('Helvetica-Bold').fontSize(10).fillColor('#000000');
     doc.text(signerName || clientName, leftX, lineY + 6);
-    doc.text(assessedBy || 'SwissLife Banque Privee', rightX, lineY + 6);
+    doc.text(assessedBy || 'Demo Bank', rightX, lineY + 6);
 
     // Signature metadata
     doc.moveDown(2);
@@ -429,7 +429,7 @@ async function uploadPDFToSalesforce(pdfBuffer, fileName, accountId) {
     const jsonPart = JSON.stringify({
       Title: fileName.replace('.pdf', ''),
       PathOnClient: fileName,
-      Description: 'Document custody genere automatiquement — SwissLife Banque Privee',
+      Description: 'Document custody genere automatiquement — Demo Bank',
     });
 
     const bodyParts = [
@@ -3565,7 +3565,7 @@ app.post('/api/kyc/upload-document', upload.single('file'), async (req, res) => 
       if (!complyCubeClientId) {
         const ccClient = await complyCubeRequest('POST', '/clients', {
           type: 'person',
-          email: initiatedByEmail || `${salesforceAccountId}@custody.swisslife.com`,
+          email: initiatedByEmail || `${salesforceAccountId}@custody.demobank.com`,
           personDetails: {
             firstName: clientName?.split(' ')[0] || 'Client',
             lastName: clientName?.split(' ').slice(1).join(' ') || salesforceAccountId,
@@ -3656,7 +3656,7 @@ app.post('/api/kyc/upload-document', upload.single('file'), async (req, res) => 
 // ============================================================
 
 // Type guess depuis SFDC Account.Type. Par défaut personne physique
-// (pattern SwissLife Banque Privée). Les cas "Institutional", "Partner",
+// (pattern Demo Bank). Les cas "Institutional", "Partner",
 // "Other" etc. traités comme personnes morales.
 function detectClientTypeFromAccount(accountType) {
   const t = String(accountType || '').toLowerCase();
@@ -3709,19 +3709,19 @@ async function runSingleScreening({
       if (entityType) companyDetails.entityType = entityType;
       body = {
         type: 'company',
-        email: email || `${entityId || 'corp'}@custody.swisslife.com`,
+        email: email || `${entityId || 'corp'}@custody.demobank.com`,
         companyDetails,
       };
     } else {
       const personDetails = {
         firstName: firstName || (displayName || '').split(' ')[0] || 'Client',
-        lastName:  lastName  || (displayName || '').split(' ').slice(1).join(' ') || entityId || 'SwissLife',
+        lastName:  lastName  || (displayName || '').split(' ').slice(1).join(' ') || entityId || 'Demo Bank',
       };
       if (dob) personDetails.dob = dob;                          // YYYY-MM-DD
       if (nationality) personDetails.nationality = nationality;  // ISO 3166-1 alpha-2
       body = {
         type: 'person',
-        email: email || `${entityId || 'indiv'}@custody.swisslife.com`,
+        email: email || `${entityId || 'indiv'}@custody.demobank.com`,
         personDetails,
       };
     }
@@ -4612,7 +4612,7 @@ app.post('/api/kyc/create-client', async (req, res) => {
       return res.json({
         id: demoClientId(salesforceAccountId),
         type: personType || 'person',
-        email: email || `${salesforceAccountId}@custody.swisslife.com`,
+        email: email || `${salesforceAccountId}@custody.demobank.com`,
         personDetails: {
           firstName: clientName?.split(' ')[0] || 'Client',
           lastName: clientName?.split(' ').slice(1).join(' ') || salesforceAccountId,
@@ -4624,7 +4624,7 @@ app.post('/api/kyc/create-client', async (req, res) => {
     // LIVE ComplyCube
     const ccClient = await complyCubeRequest('POST', '/clients', {
       type: personType || 'person',
-      email: email || `${salesforceAccountId}@custody.swisslife.com`,
+      email: email || `${salesforceAccountId}@custody.demobank.com`,
       personDetails: {
         firstName: clientName?.split(' ')[0] || 'Client',
         lastName: clientName?.split(' ').slice(1).join(' ') || salesforceAccountId,
@@ -5022,7 +5022,7 @@ app.patch('/api/compliance/sar/:id/close', requireAdmin, async (req, res) => {
 // déposer une Déclaration de Soupçon. Structure inspirée du schéma
 // officiel ds.xsd (Tracfin) — en production, remplacer les SIREN /
 // code déclarant / coordonnées RCSI par les valeurs réelles de
-// SwissLife Banque Privée, et valider l'XML contre l'XSD fournie
+// Demo Bank, et valider l'XML contre l'XSD fournie
 // par Tracfin avant dépôt.
 // Référence légale : Code monétaire et financier Art. L.561-15
 // et Art. R.561-31 (obligation de déclaration), L.562-4 (gel des
@@ -5044,7 +5044,7 @@ function xmlEscape(s) {
 // The declarant metadata (bank SIREN, RCSI contact) is pulled from
 // env vars so production deployment only needs to set them once.
 function buildErmesXml(sar) {
-  const DECLARANT_RAISON_SOCIALE = process.env.TRACFIN_DECLARANT_NAME || 'SWISSLIFE BANQUE PRIVEE';
+  const DECLARANT_RAISON_SOCIALE = process.env.TRACFIN_DECLARANT_NAME || 'DEMO BANK';
   const DECLARANT_SIREN = process.env.TRACFIN_DECLARANT_SIREN || '322215021';
   const DECLARANT_CODE_PROFESSION = process.env.TRACFIN_DECLARANT_CODE || '10';  // 10 = Etablissement de crédit
   const DECLARANT_ADRESSE = process.env.TRACFIN_DECLARANT_ADDRESS || '7 rue Belgrand';
@@ -5054,7 +5054,7 @@ function buildErmesXml(sar) {
   const RCSI_NOM = process.env.TRACFIN_RCSI_LAST_NAME || 'CUSSET';
   const RCSI_PRENOM = process.env.TRACFIN_RCSI_FIRST_NAME || 'Marie';
   const RCSI_TEL = process.env.TRACFIN_RCSI_PHONE || '+33140825020';
-  const RCSI_EMAIL = process.env.TRACFIN_RCSI_EMAIL || 'rcsi@swisslifebanque.fr';
+  const RCSI_EMAIL = process.env.TRACFIN_RCSI_EMAIL || 'rcsi@demobank.com';
 
   const today = new Date().toISOString().slice(0, 10);
   const reference = sar.reference_number || `DS-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
@@ -5124,7 +5124,7 @@ ${operations.length === 0
       <Montant>${Number(sar.total_amount_involved || 0).toFixed(2)}</Montant>
       <Devise>${xmlEscape(sar.currency || 'EUR')}</Devise>
       <Nature>Activité suspecte — conservation crypto-actifs</Nature>
-      <Canal>Wallet MPC DFNS · garde SwissLife</Canal>
+      <Canal>Wallet MPC DFNS · garde Demo Bank</Canal>
     </Operation>`
   : operations.map((op, i) => `    <Operation>
       <Identifiant>${xmlEscape(op.id || `OP-${i + 1}`)}</Identifiant>
@@ -6034,7 +6034,7 @@ app.get('/api/compliance/ubos/:accountId/declaration-pdf', requireAuth, async (r
     doc.font('Helvetica').fontSize(10).fillColor('#000000');
     doc.text(`Identifiant Salesforce : ${req.params.accountId}`);
     doc.text(`Date de la declaration  : ${today}`);
-    doc.text(`Etablissement declarant : SwissLife Banque Privee (SIREN ${process.env.TRACFIN_DECLARANT_SIREN || '322215021'})`);
+    doc.text(`Etablissement declarant : Demo Bank (SIREN ${process.env.TRACFIN_DECLARANT_SIREN || '322215021'})`);
     doc.moveDown(0.8);
 
     doc.moveTo(60, doc.y).lineTo(535, doc.y).stroke('#cccccc');
@@ -6375,7 +6375,7 @@ app.get('/api/compliance/reporting/acpr/export', requireAdmin, async (req, res) 
     const filename = `rapport-acpr-${period.from.slice(0, 7)}.csv`;
 
     const rows = [
-      ['Rapport ACPR - SwissLife Banque Privee France'],
+      ['Rapport ACPR - Demo Bank France'],
       [`Periode: ${periodLabel}`, `Du: ${period.from}`, `Au: ${period.toDisplay}`],
       [`Genere le: ${new Date().toISOString().slice(0, 19)}`],
       [],

@@ -15,7 +15,7 @@
 const SIZE = 24;
 
 const paths = {
-  /* Four-point compass rose with a pinpoint centre (signature SwissLife mark) */
+  /* Four-point compass rose with a pinpoint centre (signature Demo Bank mark) */
   compass: (
     <g fill="currentColor">
       <path d="M12 2 L13.2 10.8 L22 12 L13.2 13.2 L12 22 L10.8 13.2 L2 12 L10.8 10.8 Z" />
@@ -263,7 +263,7 @@ const paths = {
   ),
 
   /* ══════════════════════════════════════════════════════
-     SwissLife signature set — each icon features the
+     Demo Bank signature set — each icon features the
      "Swiss precision" motif: a tiny centre dot or a set of
      tick marks (like watch dial indicators). Consistent
      visual DNA makes them instantly recognisable as ours.

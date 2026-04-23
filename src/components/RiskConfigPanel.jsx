@@ -11,7 +11,7 @@ const fmtDate = (d) =>
   d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
 
 /* ─────────────────────────────────────────────────────────
-   Risk vocabulary — SwissLife bronze palette
+   Risk vocabulary — Demo Bank bronze palette
    (no purple, no indigo). Each level has a Badge variant
    so the display stays on-brand with the rest of the app.
    ───────────────────────────────────────────────────────── */

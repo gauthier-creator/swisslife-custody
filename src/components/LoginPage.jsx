@@ -49,7 +49,7 @@ export default function LoginPage() {
               <span className="font-display text-[13px] leading-none" style={{ letterSpacing: '-0.04em' }}>Sℓ</span>
             </span>
             <span className="font-display text-[19px] text-[#1E1E1E] leading-none" style={{ letterSpacing: '-0.01em' }}>
-              swisslife
+              Demo Bank
             </span>
           </div>
         </div>
@@ -64,7 +64,7 @@ export default function LoginPage() {
             <div className="flex items-center gap-2.5 text-[#8A8278]">
               <BrandGlyph name="compass" size={14} />
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em]">
-                SwissLife Banque Privée · Custody
+                Demo Bank · Custody
               </p>
             </div>
 
@@ -94,7 +94,7 @@ export default function LoginPage() {
             </div>
 
             <p className="text-[11.5px] text-[#8A8278] leading-relaxed">
-              SwissLife Banque Privée · 11 Quai André Citroën, Paris — Services de conservation
+              Demo Bank · 11 Quai André Citroën, Paris — Services de conservation
               et d'administration d'actifs numériques pour le compte de tiers, conformément au
               règlement (UE) 2023/1114.
             </p>
@@ -112,7 +112,7 @@ export default function LoginPage() {
               <p className="mt-1.5 text-[13.5px] text-[#5D5D5D]">
                 {mode === 'login'
                   ? 'Accédez au registre de conservation et à vos mandats clients.'
-                  : "Rejoignez l'équipe de gestion et d'administration SwissLife Custody."}
+                  : "Rejoignez l'équipe de gestion et d'administration Demo Bank Custody."}
               </p>
             </div>
 
@@ -144,7 +144,7 @@ export default function LoginPage() {
                   inputMode="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="vous@swisslife.fr"
+                  placeholder="vous@demobank.com"
                   className={inputCls}
                   required
                 />
@@ -229,8 +229,8 @@ export default function LoginPage() {
       {/* Minimal footer */}
       <footer className="border-t border-[#E7E7E7]">
         <div className="max-w-[1240px] mx-auto px-10 h-12 flex items-center justify-between text-[11px] text-[#8A8278]">
-          <span>© 2026 SwissLife Banque Privée</span>
-          <span>support@swisslife-custody.com</span>
+          <span>© 2026 Demo Bank</span>
+          <span>support@demobank-custody.com</span>
         </div>
       </footer>
     </div>

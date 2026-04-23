@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SwissLife Custody — Bespoke Icon System
+   Demo Bank Custody — Bespoke Icon System
    Generated with Google Stitch (Gemini 3.1 Pro), post-edited
    for consistency: 24×24 viewBox, 1.6px stroke, currentColor.
 

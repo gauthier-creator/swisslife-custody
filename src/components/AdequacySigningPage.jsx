@@ -120,7 +120,7 @@ export default function AdequacySigningPage({ token }) {
           <h1 className="text-[15px] font-semibold text-[#0A0A0A]">Lien invalide</h1>
           <p className="text-[13px] text-[#5D5D5D] mt-2 leading-relaxed">{error}</p>
           <p className="mt-6 pt-4 border-t border-[#E7E7E7] text-[11px] text-[#8A8278] font-medium uppercase tracking-wider">
-            SwissLife Banque Privée
+            Demo Bank
           </p>
         </Card>
       </div>
@@ -158,7 +158,7 @@ export default function AdequacySigningPage({ token }) {
           )}
           <div className="mt-8 pt-5 border-t border-[#E7E7E7]">
             <p className="text-[11px] text-[#8A8278] font-medium uppercase tracking-wider">
-              SwissLife Banque Privée · Paris
+              Demo Bank · Paris
             </p>
             <p className="text-[11px] text-[#8A8278] mt-1">MiCA Art. 66 · MiFID II Art. 25 · Signature électronique</p>
           </div>
@@ -179,7 +179,7 @@ export default function AdequacySigningPage({ token }) {
             <div className="w-6 h-6 bg-[#0A0A0A] rounded-md flex items-center justify-center">
               <span className="text-white text-[10px] font-bold tracking-tight">SL</span>
             </div>
-            <span className="text-[13px] font-semibold text-[#0A0A0A] tracking-tight">SwissLife Custody</span>
+            <span className="text-[13px] font-semibold text-[#0A0A0A] tracking-tight">Demo Bank Custody</span>
             <Badge variant="info">MiFID II · MiCA 66</Badge>
           </div>
           <span className="text-[11.5px] font-medium text-[#5D5D5D] tabular-nums">
@@ -309,7 +309,7 @@ export default function AdequacySigningPage({ token }) {
         {/* ── Footer ──────────────────────────────────── */}
         <footer className="pt-4 border-t border-[#E7E7E7] flex items-center justify-between">
           <p className="text-[11px] text-[#8A8278] font-medium uppercase tracking-wider">
-            SwissLife Banque Privée · Paris
+            Demo Bank · Paris
           </p>
           <p className="text-[11px] text-[#8A8278] font-medium uppercase tracking-wider">
             AMF · ACPR · MiCA Art. 66

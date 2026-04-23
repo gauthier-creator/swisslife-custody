@@ -33,7 +33,7 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
   const [linkCopied, setLinkCopied] = useState(false);
   const [adequacyLinkCopied, setAdequacyLinkCopied] = useState(false);
 
-  // Salesforce deep-link (KYC is managed upstream by Swisslife teams in Salesforce)
+  // Salesforce deep-link (KYC is managed upstream by Demo Bank teams in Salesforce)
   const [sfInstanceUrl, setSfInstanceUrl] = useState(null);
   useEffect(() => {
     let mounted = true;
@@ -225,7 +225,7 @@ export default function CustodyEligibilityPanel({ client, onUpdate }) {
       key: 'kyc',
       idx: 1,
       title: 'Vérification KYC',
-      caption: 'Géré par les équipes Swisslife dans Salesforce · identité, domicile, origine des fonds',
+      caption: 'Géré par les équipes Demo Bank dans Salesforce · identité, domicile, origine des fonds',
       done: client.Custody_KYC_Status__c === 'Valide',
       action: (
         <div className="flex items-center gap-2 flex-wrap justify-end">

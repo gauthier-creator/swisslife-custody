@@ -221,14 +221,14 @@ export default function ClientList({ onSelectClient, onNavigate }) {
       )}
 
       {/* ── Services Custody — the identity block ──────────
-         Ramify-inspired ProductCards showing SwissLife's 5 custody rails.
+         Ramify-inspired ProductCards showing Demo Bank's 5 custody rails.
          Every card is clickable and jumps to the relevant module, so it's
          also a shortcut-oriented nav for the banker.
        */}
       {!loading && clients.length > 0 && (
         <ProductCarousel
           eyebrow="Explorez les services"
-          title="Les rails institutionnels SwissLife Custody."
+          title="Les rails institutionnels Demo Bank Custody."
         >
           <ProductCard
             category="Conservation"

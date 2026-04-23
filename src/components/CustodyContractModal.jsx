@@ -109,7 +109,7 @@ export default function CustodyContractModal({ isOpen, onClose, client, onSigned
               <strong>Entre :</strong>
             </p>
             <p style={{ marginBottom: '4px' }}>
-              <strong>SwissLife Banque Privee</strong><br />
+              <strong>Demo Bank</strong><br />
               Societe Anonyme au capital de XXX euros<br />
               Siege social : 7 rue Belgrand, 92300 Levallois-Perret<br />
               RCS Nanterre XXX<br />
@@ -200,7 +200,7 @@ export default function CustodyContractModal({ isOpen, onClose, client, onSigned
             <div style={{ width: '45%' }}>
               <p style={{ fontSize: '12px', color: '#666', marginBottom: '40px' }}>La Banque :</p>
               <div style={{ borderTop: '1px solid #333', paddingTop: '8px', fontSize: '13px' }}>
-                SwissLife Banque Privee
+                Demo Bank
               </div>
             </div>
           </div>

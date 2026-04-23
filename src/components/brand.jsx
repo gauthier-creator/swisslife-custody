@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════
-   SwissLife Custody — Brand identity primitives
+   Demo Bank Custody — Brand identity primitives
    ───────────────────────────────────────────────────────
    Modern fintech language inspired by ElevenLabs, Revolut,
    Mercury, Ramp. Mesh gradients · conic rings · live halos

@@ -123,7 +123,7 @@ export default function Layout({ children, section, onNavigate }) {
   const adminItems = isAdmin ? [{ id: 'config', label: 'Configuration', Icon: IconConfig, shortcut: '5' }] : [];
 
   const displayName = profile?.full_name || profile?.email || '?';
-  const roleLabel = profile?.role === 'admin' ? 'Admin · SwissLife' : 'Banquier privé';
+  const roleLabel = profile?.role === 'admin' ? 'Admin · Demo Bank' : 'Banquier privé';
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] text-[#1E1E1E] flex">
@@ -153,7 +153,7 @@ export default function Layout({ children, section, onNavigate }) {
             </span>
             {!collapsed && (
               <span className="font-display text-[19px] text-[#1E1E1E] leading-none" style={{ letterSpacing: '-0.01em' }}>
-                swisslife
+                Demo Bank
               </span>
             )}
           </button>
